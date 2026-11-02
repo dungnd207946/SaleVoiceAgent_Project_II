@@ -31,8 +31,9 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       // 5273 chứ không 5173 (mặc định vite): xem ../docs/dev-ports.md — dải cổng
-      // riêng của odyssey, vì máy dev còn chạy vài project khác.
-      port: 5273,
+      // riêng của odyssey, vì máy dev còn chạy vài project khác. Đổi bằng
+      // PORTAL_FE_DEV_PORT trong .env khi chạy song song một bản checkout khác.
+      port: Number(env['PORTAL_FE_DEV_PORT'] || 5273),
       // Mặc định Vite chỉ nghe 127.0.0.1 — máy khác trong LAN gõ IP vào là
       // connection refused. `host: true` nghe trên mọi interface để dev server
       // in ra thêm dòng «Network: http://<IP LAN>:5273/».
