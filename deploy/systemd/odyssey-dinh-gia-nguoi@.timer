@@ -1,0 +1,22 @@
+; Nhịp hằng đêm cho lượt nguội. Xem odyssey-dinh-gia-nguoi@.service.
+
+[Unit]
+Description=Nhịp hằng đêm — định giá usage (lượt nguội, 48h)
+Documentation=file://%f/deploy/systemd/README.md
+
+[Timer]
+; 03:10 giờ máy. Lệch 10 phút khỏi mốc tròn có chủ đích: 03:00 là chỗ mọi job đêm
+; khác tụ về, và một lượt định giá 48h tranh I/O với backup thì cả hai đều lâu.
+OnCalendar=*-*-* 03:10:00
+
+; Persistent=true — máy tắt qua đêm thì lượt này PHẢI chạy bù khi lên. Không bù
+; thì ba ca ở `.service` không còn lượt nào nhìn tới: hôm sau cửa sổ 48h vẫn phủ,
+; nhưng hôm sau nữa thì không — thiếu tiền vĩnh viễn.
+Persistent=true
+
+; Tán 5 phút để hai môi trường trên cùng một máy không cùng lúc quét 48h.
+RandomizedDelaySec=5min
+Unit=odyssey-dinh-gia-nguoi@%i.service
+
+[Install]
+WantedBy=timers.target

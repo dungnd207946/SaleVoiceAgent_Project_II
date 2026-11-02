@@ -1,0 +1,26 @@
+# Dockerfile chỉ COPY những đường dẫn nó cần, nên file này không phải để giữ
+# image nhỏ — nó để build context không mang theo thứ không nên rời máy dev:
+# .venv (nặng và sai kiến trúc), .env (secret thật), .git (lịch sử đầy đủ).
+.git
+.gitignore
+.venv
+.env
+.env.*
+!.env.example
+
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+
+tests
+docs
+contracts
+scripts
+Makefile
+README.md
+CLAUDE.md
+docker-compose.dev.yml
+.gitlab-ci.yml
+Dockerfile
+.dockerignore

@@ -1,0 +1,1118 @@
+{
+  "version": "v1",
+  "tools": {
+    "core": [
+      "update_customer",
+      "kb_search",
+      "find_project",
+      "escalate"
+    ],
+    "optional": [
+      "discover_projects",
+      "get_project_overview",
+      "get_document",
+      "search_units",
+      "check_inventory",
+      "recommend_units",
+      "booking",
+      "send_media"
+    ],
+    "rendered": [
+      "send_media",
+      "escalate",
+      "booking",
+      "kb_search"
+    ]
+  },
+  "media_item": {
+    "title": "MediaItem",
+    "description": "Một phần tử của `items[]`. Duyệt hết mảng, không lấy riêng phần tử đầu.\n\nCó ba `kind`, và `video` có hai biến thể tuỳ nguồn. Caption nằm ở `title` với `video`, ở `label` với `image` và `tour`.",
+    "oneOf": [
+      {
+        "title": "image",
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "image"
+          },
+          "url": {
+            "type": "string",
+            "description": "Ảnh gốc, có thể vài MB. Lưới nên dùng `thumb` khi có."
+          },
+          "label": {
+            "type": "string",
+            "description": "Caption."
+          },
+          "thumb": {
+            "type": "string",
+            "description": "Tuỳ chọn. Không có thì dùng `url`."
+          }
+        },
+        "required": [
+          "kind",
+          "url",
+          "label"
+        ]
+      },
+      {
+        "title": "video — YouTube",
+        "type": "object",
+        "description": "Nhận ra qua host YouTube. Không có `url`.",
+        "properties": {
+          "kind": {
+            "const": "video"
+          },
+          "video_id": {
+            "type": "string",
+            "description": "YouTube id. Nhúng `youtube.com/embed/<id>`; thumb rẻ: `img.youtube.com/vi/<id>/hqdefault.jpg`."
+          },
+          "title": {
+            "type": "string",
+            "description": "Caption."
+          }
+        },
+        "required": [
+          "kind",
+          "video_id",
+          "title"
+        ]
+      },
+      {
+        "title": "video — nguồn khác",
+        "type": "object",
+        "description": "Google Drive, Vimeo, mp4… Không có `video_id`.\n\nClient đòi `video_id` mới render sẽ **bỏ phần tử này im lặng**. Nhận cả hai biến thể bằng cách phân nhánh trên `video_id` có hay không, đừng cho nó là bắt buộc.",
+        "properties": {
+          "kind": {
+            "const": "video"
+          },
+          "url": {
+            "type": "string",
+            "description": "Link video. Với Drive là link chia sẻ, không nhúng được trực tiếp trong `<img>`."
+          },
+          "title": {
+            "type": "string",
+            "description": "Caption."
+          },
+          "embed_url": {
+            "type": "string",
+            "description": "Chỉ có với Drive: trang player nhúng được bằng iframe. Dùng cho lightbox."
+          },
+          "thumb": {
+            "type": "string",
+            "description": "Ảnh đại diện. Với Drive đây là hình DUY NHẤT của thẻ, không phải bản đẹp hơn của `url`."
+          }
+        },
+        "required": [
+          "kind",
+          "url",
+          "title"
+        ]
+      },
+      {
+        "title": "tour",
+        "type": "object",
+        "description": "Tour 360. Được xếp lên đầu `items` khi có, và có trần riêng nên không cạnh tranh slot với ảnh.",
+        "properties": {
+          "kind": {
+            "const": "tour"
+          },
+          "url": {
+            "type": "string",
+            "description": "Link tour 360."
+          },
+          "label": {
+            "type": "string",
+            "description": "Caption."
+          },
+          "thumb": {
+            "type": "string",
+            "description": "Tuỳ chọn."
+          }
+        },
+        "required": [
+          "kind",
+          "url",
+          "label"
+        ]
+      }
+    ]
+  },
+  "tool_results": {
+    "kb_search": {
+      "title": "ToolResult_kb_search",
+      "description": "Hai hình dạng. Không có ảnh nguồn ⇒ result là CHUỖI TRẦN (ngữ cảnh). Có ảnh ⇒ JSON `{context, items}`. Bắt card theo sự hiện diện của `items`, đừng bắt theo tên tool.\n\n`items[].index` là số tấm ảnh, và câu trả lời của agent trỏ tới nó bằng chữ — «(xem ảnh 3)». Số DUY NHẤT trong cả cuộc trò chuyện, không phải trong một lượt: ảnh 3 ở lượt trước vẫn là ảnh 3 bây giờ. Client nên hiện số đó cạnh ảnh, nếu không người đọc không biết «ảnh 3» là tấm nào.",
+      "oneOf": [
+        {
+          "type": "string",
+          "title": "không có ảnh",
+          "description": "Ngữ cảnh đã ghép từ các đoạn khớp, không có ảnh nguồn. Không parse JSON."
+        },
+        {
+          "type": "object",
+          "title": "có ảnh",
+          "properties": {
+            "context": {
+              "type": "string",
+              "description": "Ngữ cảnh đã ghép từ các đoạn khớp."
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "image"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string",
+                    "description": "Caption. Bắt buộc, cùng nghĩa với `label` của `MediaItem.image`."
+                  },
+                  "thumb": {
+                    "type": "string"
+                  },
+                  "index": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Số tấm ảnh, duy nhất trong cả cuộc trò chuyện."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "url",
+                  "label",
+                  "index"
+                ]
+              }
+            }
+          },
+          "required": [
+            "context",
+            "items"
+          ]
+        }
+      ]
+    },
+    "send_media": {
+      "title": "ToolResult_send_media",
+      "oneOf": [
+        {
+          "type": "object",
+          "title": "có media",
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "project_name": {
+              "type": "string",
+              "description": "Tên dự án. Rơi về mã nếu không tra được."
+            },
+            "caption": {
+              "type": "string",
+              "description": "`{danh từ} dự án {project_name}`, danh từ là `Hình ảnh`, `Video` hoặc `Tour 360`."
+            },
+            "count": {
+              "type": "integer",
+              "description": "Bằng `items.length`."
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/MediaItem"
+              }
+            },
+            "message": {
+              "type": "string",
+              "description": "Câu agent nói. Dùng làm chú thích dưới card."
+            }
+          },
+          "required": [
+            "ok",
+            "project_name",
+            "caption",
+            "count",
+            "items",
+            "message"
+          ]
+        },
+        {
+          "type": "object",
+          "title": "no_media",
+          "description": "Không dựng card, agent tự nói bằng lời.\n\nKênh voice không gửi biến thể này: không có media thì không có event nào. Tắt spinner theo `tool_done`, không theo event `media`.",
+          "properties": {
+            "ok": {
+              "const": false
+            },
+            "items": {
+              "type": "array",
+              "maxItems": 0
+            },
+            "count": {
+              "const": 0
+            },
+            "note": {
+              "const": "no_media"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "ok",
+            "items",
+            "count",
+            "note",
+            "message"
+          ]
+        },
+        {
+          "type": "object",
+          "title": "lỗi tham số",
+          "description": "Tham số sai.",
+          "properties": {
+            "ok": {
+              "const": false
+            },
+            "error": {
+              "type": "string"
+            },
+            "retry": {
+              "const": true
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "ok",
+            "error",
+            "retry",
+            "message"
+          ]
+        }
+      ]
+    },
+    "escalate": {
+      "title": "ToolResult_escalate",
+      "description": "Tool này có thể được hệ thống tự gọi khi một tool khác không có dữ liệu. Client sẽ thấy cặp `tool_start`/`tool_done` cho `escalate` mà agent không nhắc tới.",
+      "oneOf": [
+        {
+          "type": "object",
+          "title": "transfer_completed",
+          "description": "`action=transfer`. Dựng card đang kết nối chuyên viên.",
+          "properties": {
+            "status": {
+              "const": "transfer_completed"
+            },
+            "department": {
+              "type": "string",
+              "default": "CVTV"
+            },
+            "priority": {
+              "type": "string",
+              "default": "normal"
+            },
+            "summary": {
+              "type": "string",
+              "description": "`Khách: …, SĐT: …, Dự án: …. Lý do chuyển: …`"
+            },
+            "working_hours": {
+              "type": "boolean",
+              "description": "`false` là ngoài 8h-21h: đổi nội dung card thành chuyên viên liên hệ ngày làm việc tiếp theo."
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "department",
+            "priority",
+            "summary",
+            "working_hours",
+            "message"
+          ]
+        },
+        {
+          "type": "object",
+          "title": "check_state",
+          "description": "`action=check_state`. Không dựng card, agent tự kiểm tra điều kiện.",
+          "properties": {
+            "has_name": {
+              "type": "boolean"
+            },
+            "has_phone": {
+              "type": "boolean"
+            },
+            "transfer_ready": {
+              "type": "boolean",
+              "description": "Bằng `has_name AND has_phone`."
+            },
+            "working_hours": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "has_name",
+            "has_phone",
+            "transfer_ready",
+            "working_hours"
+          ]
+        }
+      ]
+    },
+    "booking": {
+      "title": "ToolResult_booking",
+      "description": "Bắt card theo `ok && appointment_id`. Result không có field `action` và không có `project_name`; `project` là mã dự án, ví dụ `NCR`.",
+      "oneOf": [
+        {
+          "type": "object",
+          "title": "đã đặt",
+          "description": "`action=schedule` thành công. Dựng card đặt lịch.",
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "success": {
+              "const": true
+            },
+            "appointment_id": {
+              "type": "string",
+              "description": "`APT` kèm 5 chữ số."
+            },
+            "project": {
+              "type": "string",
+              "description": "Mã dự án đã chuẩn hoá."
+            },
+            "preferred_date": {
+              "type": "string",
+              "description": "`dd/mm/yyyy`."
+            },
+            "preferred_time": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "ok",
+            "success",
+            "appointment_id",
+            "project",
+            "preferred_date",
+            "preferred_time",
+            "message"
+          ]
+        },
+        {
+          "type": "object",
+          "title": "lỗi validate",
+          "description": "Ngày hoặc dự án không hợp lệ.",
+          "properties": {
+            "ok": {
+              "const": false
+            },
+            "success": {
+              "const": false
+            },
+            "errors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "message": {
+              "type": "string",
+              "description": "`errors` nối bằng dấu chấm phẩy."
+            }
+          },
+          "required": [
+            "ok",
+            "success",
+            "errors",
+            "message"
+          ]
+        },
+        {
+          "type": "object",
+          "title": "needs_info",
+          "description": "Thiếu thông tin, agent sẽ hỏi tiếp. Không dựng card.",
+          "properties": {
+            "ok": {
+              "const": false
+            },
+            "success": {
+              "const": false
+            },
+            "needs_info": {
+              "const": true
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "ok",
+            "success",
+            "needs_info",
+            "message"
+          ]
+        },
+        {
+          "type": "object",
+          "title": "duplicate",
+          "description": "Đã có lịch trùng dự án, ngày và giờ.",
+          "properties": {
+            "ok": {
+              "const": false
+            },
+            "duplicate": {
+              "const": true
+            },
+            "error": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "ok",
+            "duplicate",
+            "error"
+          ]
+        },
+        {
+          "type": "object",
+          "title": "list",
+          "description": "`action=list`. Không cần card.",
+          "properties": {
+            "bookings": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "count": {
+              "type": "integer"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "bookings",
+            "count",
+            "message"
+          ]
+        }
+      ]
+    }
+  },
+  "events": {
+    "chat": {
+      "session_id": {
+        "type": "object",
+        "description": "Event đầu tiên, luôn có. Gửi trước khi worker kiểm tải và khởi tạo LLM, nên nhận được nó chưa chắc đã sẵn sàng: ngay sau đó vẫn có thể là `error` kèm close 4029.",
+        "properties": {
+          "type": {
+            "const": "session_id"
+          },
+          "session_id": {
+            "type": "string",
+            "description": "12 hex, worker sinh."
+          }
+        },
+        "required": [
+          "type",
+          "session_id"
+        ]
+      },
+      "user_text": {
+        "type": "object",
+        "description": "Echo câu vừa gửi.",
+        "properties": {
+          "type": {
+            "const": "user_text"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "text"
+        ]
+      },
+      "metrics": {
+        "type": "object",
+        "description": "Gửi ngay trước token đầu tiên.",
+        "properties": {
+          "type": {
+            "const": "metrics"
+          },
+          "stage": {
+            "const": "first_token"
+          },
+          "ttft_ms": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "type",
+          "stage",
+          "ttft_ms"
+        ]
+      },
+      "token": {
+        "type": "object",
+        "description": "Nối vào bong bóng đang mở.",
+        "properties": {
+          "type": {
+            "const": "token"
+          },
+          "text": {
+            "type": "string",
+            "description": "Một mẩu văn bản, không phải một từ."
+          }
+        },
+        "required": [
+          "type",
+          "text"
+        ]
+      },
+      "tool_start": {
+        "type": "object",
+        "description": "Chốt bong bóng hiện tại và hiện chip đang xử lý. Token kế tiếp mở bong bóng mới. Tối đa 5 vòng tool mỗi lượt.",
+        "properties": {
+          "type": {
+            "const": "tool_start"
+          },
+          "tool": {
+            "type": "string",
+            "enum": [
+              "update_customer",
+              "kb_search",
+              "find_project",
+              "escalate",
+              "discover_projects",
+              "get_project_overview",
+              "get_document",
+              "search_units",
+              "check_inventory",
+              "recommend_units",
+              "booking",
+              "send_media"
+            ],
+            "description": "Workspace có thể cài tool riêng, nên luôn có nhãn fallback cho tool lạ."
+          },
+          "args": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "type",
+          "tool"
+        ]
+      },
+      "tool_done": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "tool_done"
+          },
+          "tool": {
+            "type": "string",
+            "enum": [
+              "update_customer",
+              "kb_search",
+              "find_project",
+              "escalate",
+              "discover_projects",
+              "get_project_overview",
+              "get_document",
+              "search_units",
+              "check_inventory",
+              "recommend_units",
+              "booking",
+              "send_media"
+            ],
+            "description": "Workspace có thể cài tool riêng, nên luôn có nhãn fallback cho tool lạ."
+          },
+          "result": {
+            "type": "string",
+            "contentMediaType": "application/json",
+            "description": "Chuỗi chứa JSON, không phải object. Parse trong try/catch vì vài tool trả text thuần.\n\nĐây là chỗ duy nhất ở kênh chat mang dữ liệu card. Schema bên trong xem `ToolResult_*`.",
+            "contentSchema": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ToolResult_send_media"
+                },
+                {
+                  "$ref": "#/components/schemas/ToolResult_escalate"
+                },
+                {
+                  "$ref": "#/components/schemas/ToolResult_booking"
+                },
+                {
+                  "type": "object",
+                  "title": "payload thô, không render"
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "type",
+          "tool",
+          "result"
+        ]
+      },
+      "agent_switch": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "agent_switch"
+          },
+          "agent": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "done": {
+        "type": "object",
+        "description": "Kết thúc lượt, mở lại ô nhập. Các field metric là tuỳ chọn; `ttft_ms` có thể null nếu lượt không sinh token.",
+        "properties": {
+          "type": {
+            "const": "done"
+          },
+          "turn_id": {
+            "type": "string"
+          },
+          "ttft_ms": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "tokens": {
+            "type": "integer"
+          },
+          "gen_ms": {
+            "type": "integer"
+          },
+          "tokens_per_sec": {
+            "type": "number"
+          },
+          "total_ms": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "type",
+          "turn_id"
+        ]
+      },
+      "suggestions": {
+        "type": "object",
+        "description": "Đến sau `done`, dạng fire-and-forget và có thể không bao giờ đến. Không chờ nó và không dựng layout phụ thuộc nó. Bấm chip là gửi `items[].text` như một lượt bình thường.",
+        "properties": {
+          "type": {
+            "const": "suggestions"
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "maxLength": 24
+                },
+                "text": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "label",
+                "text"
+              ]
+            }
+          }
+        },
+        "required": [
+          "type",
+          "items"
+        ]
+      },
+      "reset_ok": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "reset_ok"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "customer_ok": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "customer_ok"
+          },
+          "customer": {
+            "type": "object",
+            "description": "Các field đã áp dụng."
+          }
+        },
+        "required": [
+          "type",
+          "customer"
+        ]
+      },
+      "error": {
+        "type": "object",
+        "description": "Lỗi giữa lượt vẫn có `done` sau đó, nên UI không kẹt ở trạng thái đang trả lời.",
+        "properties": {
+          "type": {
+            "const": "error"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "message"
+        ]
+      },
+      "tts_begin": {
+        "type": "object",
+        "description": "Chỉ có khi lượt bật TTS. Sau nó là các BINARY frame PCM16 mono little-endian, raw không header.",
+        "properties": {
+          "type": {
+            "const": "tts_begin"
+          },
+          "turn_id": {
+            "type": "string"
+          },
+          "sample_rate": {
+            "type": "integer",
+            "description": "Hiện 24000. Đọc từ đây, không hardcode."
+          }
+        },
+        "required": [
+          "type",
+          "turn_id",
+          "sample_rate"
+        ]
+      },
+      "tts_end": {
+        "type": "object",
+        "description": "Đến sau `done`. Audio stream song song với `token`.",
+        "properties": {
+          "type": {
+            "const": "tts_end"
+          },
+          "turn_id": {
+            "type": "string"
+          },
+          "bytes": {
+            "type": "integer"
+          },
+          "tts_ms": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "type",
+          "turn_id"
+        ]
+      }
+    },
+    "voice": {
+      "partial_transcript": {
+        "type": "object",
+        "description": "STT tạm, bắn nhiều lần. Ghi đè bản trước trên UI, không append.",
+        "properties": {
+          "type": {
+            "const": "partial_transcript"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "text"
+        ]
+      },
+      "transcript": {
+        "type": "object",
+        "description": "Bản chốt lời khách, mở đầu một turn.",
+        "properties": {
+          "type": {
+            "const": "transcript"
+          },
+          "text": {
+            "type": "string"
+          },
+          "turn_id": {
+            "type": "string"
+          },
+          "stt_ms": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "type",
+          "text",
+          "turn_id"
+        ]
+      },
+      "agent_speaking": {
+        "type": "object",
+        "description": "Bắn theo từng câu, ngay trước khi audio câu đó phát. Append các event cùng `turn_id` thành một bong bóng.",
+        "properties": {
+          "type": {
+            "const": "agent_speaking"
+          },
+          "text": {
+            "type": "string"
+          },
+          "turn_id": {
+            "type": "string",
+            "description": "`greeting`, `idle_0`, `idle_1`, hoặc uuid của turn thường."
+          },
+          "sentence_id": {
+            "type": "integer",
+            "description": "Tăng dần trong turn. Chỉ có ở turn thường."
+          },
+          "ttfb_ms": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "type",
+          "text",
+          "turn_id"
+        ]
+      },
+      "agent_done": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "agent_done"
+          },
+          "turn_id": {
+            "type": "string"
+          },
+          "metrics": {
+            "type": "object",
+            "description": "Chỉ có khi đo được. Biến thể greeting và idle không có field này.",
+            "properties": {
+              "llm_ttft_ms": {
+                "type": "integer"
+              },
+              "llm_total_ms": {
+                "type": "integer"
+              },
+              "interrupted": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "required": [
+          "type",
+          "turn_id"
+        ]
+      },
+      "agent_interrupted": {
+        "type": "object",
+        "description": "Khách ngắt lời, audio agent dừng. Sau nó vẫn có `agent_done` với `metrics.interrupted` là true.",
+        "properties": {
+          "type": {
+            "const": "agent_interrupted"
+          },
+          "turn_id": {
+            "type": "string"
+          },
+          "last_completed_sentence_id": {
+            "type": "integer",
+            "description": "`sentence_id` cuối đã phát trọn, `-1` nếu chưa câu nào."
+          }
+        },
+        "required": [
+          "type",
+          "turn_id"
+        ]
+      },
+      "tool_start": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "tool_start"
+          },
+          "tool": {
+            "type": "string",
+            "enum": [
+              "update_customer",
+              "kb_search",
+              "find_project",
+              "escalate",
+              "discover_projects",
+              "get_project_overview",
+              "get_document",
+              "search_units",
+              "check_inventory",
+              "recommend_units",
+              "booking",
+              "send_media"
+            ],
+            "description": "Workspace có thể cài tool riêng, nên luôn có nhãn fallback cho tool lạ."
+          },
+          "args": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "type",
+          "tool"
+        ]
+      },
+      "tool_done": {
+        "type": "object",
+        "description": "Kênh voice không mang `result`. Media đi qua event `media`; kết quả khác chỉ thể hiện qua lời agent.",
+        "properties": {
+          "type": {
+            "const": "tool_done"
+          },
+          "tool": {
+            "type": "string",
+            "enum": [
+              "update_customer",
+              "kb_search",
+              "find_project",
+              "escalate",
+              "discover_projects",
+              "get_project_overview",
+              "get_document",
+              "search_units",
+              "check_inventory",
+              "recommend_units",
+              "booking",
+              "send_media"
+            ],
+            "description": "Workspace có thể cài tool riêng, nên luôn có nhãn fallback cho tool lạ."
+          }
+        },
+        "required": [
+          "type",
+          "tool"
+        ]
+      },
+      "media": {
+        "title": "media",
+        "description": "Chỉ có ở kênh voice. Payload là biến thể `có media` của `send_media`, trải phẳng cạnh `type`. Chỉ bắn khi `items[]` không rỗng.",
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "media"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/ToolResult_send_media"
+          }
+        ]
+      },
+      "error": {
+        "type": "object",
+        "description": "Lỗi phía worker. Phiên có thể vẫn tiếp tục.",
+        "properties": {
+          "type": {
+            "const": "error"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "message"
+        ]
+      },
+      "session_ended": {
+        "type": "object",
+        "description": "Worker tự đóng phiên, sau đó gateway đóng WS.",
+        "properties": {
+          "type": {
+            "const": "session_ended"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "idle_timeout"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "reason"
+        ]
+      }
+    }
+  },
+  "close_codes": [
+    {
+      "code": 4001,
+      "reason": "no_bearer",
+      "nghia": "Không gửi key"
+    },
+    {
+      "code": 4001,
+      "reason": "bad_credential",
+      "nghia": "Key sai hoặc đã thu hồi"
+    },
+    {
+      "code": 4001,
+      "reason": "auth_api_unavailable",
+      "nghia": "Hệ thống auth lỗi. Không phải lỗi key, thử lại được"
+    },
+    {
+      "code": 4004,
+      "reason": "unknown_route",
+      "nghia": "Path không phải `/v1/chat` hoặc `/v1/voice`"
+    },
+    {
+      "code": 4008,
+      "reason": "handshake_timeout",
+      "nghia": "Không gửi frame handshake trong 10 giây"
+    },
+    {
+      "code": 4029,
+      "reason": "chat_at_capacity",
+      "nghia": "Worker đầy tải, mặc định 200 phiên"
+    },
+    {
+      "code": 4403,
+      "reason": "gateway_secret_mismatch",
+      "nghia": "Lỗi cấu hình hạ tầng"
+    }
+  ]
+}

@@ -1,0 +1,197 @@
+
+caption:
+  model: qwen-vl-max
+  max_tokens: 150
+  temperature: 0.2
+  prompt: |
+    Mô tả ngắn gọn hình này của một dự án bất động sản bằng tiếng Việt, 1-2 câu.
+    Ảnh chụp thì tả cảnh; sơ đồ, bản đồ vị trí hay ảnh tiến độ thì nói nó thể hiện cái gì.
+    Viết tự nhiên như đang giới thiệu cho khách, vào thẳng nội dung.
+    Chỉ tả thứ nhìn thấy. Không suy đoán tên dự án, giá hay vị trí.
+    Không đọc hay liệt kê chữ, nhãn, số hiệu trên hình.
+    Không nhắc tới bản thân bức ảnh: đừng viết "ảnh này", "hình cho thấy", "chủ thể chính".
+
+caption_danh_muc:
+  model: qwen-vl-max
+  max_tokens: 200
+  temperature: 0.2
+  prompt: |
+    Mô tả ngắn gọn hình này của một dự án bất động sản bằng tiếng Việt, 1-2 câu.
+    Ảnh chụp thì tả cảnh; sơ đồ, bản đồ vị trí hay ảnh tiến độ thì nói nó thể hiện cái gì.
+    Viết tự nhiên như đang giới thiệu cho khách, vào thẳng nội dung.
+    Chỉ tả thứ nhìn thấy. Không suy đoán tên dự án, giá hay vị trí.
+    Không đọc hay liệt kê chữ, nhãn, số hiệu trên hình.
+    Không nhắc tới bản thân bức ảnh: đừng viết "ảnh này", "hình cho thấy", "chủ thể chính".
+
+    Sau phần mô tả, xuống dòng và ghi đúng một dòng cuối:
+    Danh mục: <tối đa hai nhãn, cách nhau bằng dấu phẩy>
+    Chọn trong: tổng quan, ngoại thất, nội thất, tiện ích, mặt bằng, vị trí, tiến độ.
+    Không chắc thì bỏ hẳn dòng đó, đừng đoán bừa.
+
+video_describe:
+  model: gemini-2.5-flash
+  max_tokens: 250
+  temperature: 0.2
+  prompt: |
+    Mô tả ngắn gọn video bất động sản này bằng tiếng Việt, 2-3 câu.
+    Nêu công trình hoặc khu vực được quay và trạng thái nhìn thấy được.
+    Viết tự nhiên, vào thẳng nội dung.
+    Không thuật lại chữ trên màn hình hay lời thuyết minh.
+    Không nhắc tới bản thân video: đừng viết "video này", "đoạn phim cho thấy".
+
+ocr_markdown:
+  model: qwen-vl-max
+  max_tokens: 2000
+  temperature: 0.0
+  prompt: |
+    Đọc toàn bộ chữ trong trang tài liệu này và trả về dưới dạng Markdown.
+    Giữ đúng cấu trúc: tiêu đề thành heading, bảng thành bảng Markdown, danh sách thành list.
+    Giữ nguyên số liệu và dấu tiếng Việt. Không tóm tắt, không thêm lời bình.
+    Nếu trang trống hoặc không có chữ, trả về chuỗi rỗng.
+
+openie_triple:
+  model: qwen-plus
+  max_tokens: 1024
+  temperature: 0.0
+  prompt: |
+    Bóc các quan hệ trong đoạn văn dưới đây thành danh sách triple.
+    Mỗi triple là ["chủ thể", "quan hệ", "đối tượng"]: chủ thể và đối tượng là thực thể có
+    tên (dự án, phân khu, địa danh, tiện ích, loại sản phẩm, chính sách, mốc thời gian),
+    quan hệ là một cụm động từ ngắn.
+    Chỉ bóc quan hệ nói THẲNG trong đoạn. Không suy diễn, không thêm kiến thức ngoài đoạn.
+    Giữ nguyên dấu tiếng Việt và cách viết tên riêng đúng như trong đoạn.
+    Trả về DUY NHẤT một mảng JSON. Không giải thích, không bọc code fence.
+    Không có quan hệ nào thì trả về [].
+
+web_tag:
+  model: qwen3.7-flash
+  max_tokens: 800
+  temperature: 0
+  prompt: |
+    Đọc bài báo và trả về đúng một JSON: {"relevant": true|false, "projects": [...], "location": [...]}.
+    relevant = true khi bài nói về bất động sản, thị trường nhà đất, hạ tầng giao thông, quy hoạch,
+    hoặc tiện ích khu vực (trường học, bệnh viện, trung tâm thương mại, công viên).
+    projects: tên đầy đủ các dự án được nhắc tới, tối đa 10 dự án. CHỈ gồm khu đô thị, chung cư, dự án nhà ở/
+    bất động sản có tên thương mại. KHÔNG đưa vào: tuyến metro/đường sắt, đường, cầu, nút giao, sân bay, ga,
+    khu công nghiệp, bệnh viện, trường học, sân golf, trung tâm thương mại, công viên, cơ quan nhà nước.
+    location: tên đường/phố, khu đô thị, xã/phường, quận/huyện, tỉnh/thành được nhắc tới, viết như trong bài,
+    tối đa 10 địa danh.
+    Bài nhắc nhiều hơn 10 thì chọn những cái được nói tới nhiều nhất. Không có thì để mảng rỗng. Chỉ trả JSON.
+
+web_dossier:
+  model: qwen3.7-flash
+  max_tokens: 16000
+  temperature: 0.2
+  prompt: |
+    Bạn viết hồ sơ "điểm cộng" của một dự án bất động sản từ các nguồn được đánh số [1], [2], ...
+    Trả về đúng một JSON: {"items": [{"text": "...", "cites": [1, 2]}]}, tối đa 25 mục.
+    Mỗi item là MỘT chủ đề và mở đầu bằng đúng một nhãn trong danh sách CHỦ ĐỀ, theo sau là dấu hai chấm
+    (vd "Tiện ích – Y tế: ..."). Gộp MỌI công trình, thông tin cùng chủ đề vào một item: bệnh viện và phòng
+    khám vào "Tiện ích – Y tế", trung tâm thương mại và siêu thị vào "Tiện ích – Thương mại"; item
+    "Tiện ích nội khu" liệt kê đủ các tiện ích trong dự án. Chỉ viết thêm item thứ hai cùng nhãn khi một item
+    đã dài quá 300 từ. Chủ đề nào nguồn không nói tới thì bỏ. Mỗi item dài 80–300 từ, đủ ý: tên công trình,
+    số liệu, khoảng cách, quy mô, tiến độ hiện tại, lịch sử các mốc, ý nghĩa với dự án.
+    Sau mỗi vế câu ghi số nguồn dạng [n], mỗi số một cặp ngoặc riêng ([2][3], không viết [2, 3]).
+    Chỉ dùng số có trong danh sách nguồn.
+    Nguồn nào có giá (giá bán, giá rao, đơn giá/m², giá thuê, giá chuyển nhượng, mặt bằng giá khu vực) thì
+    BẮT BUỘC có item "Mặt bằng giá": ghi từng con số kèm nguồn và thời điểm của nó.
+    Đây là hồ sơ điểm cộng để tư vấn khách: chỉ viết thông tin tích cực hoặc trung tính. Bỏ tin tiêu cực
+    về dự án và khu vực (vi phạm, xử phạt, tranh chấp, chậm tiến độ, đấu thầu ế, giá giảm…).
+    Luật bắt buộc:
+    1. Dữ liệu chính thức của chủ đầu tư được cho sẵn là đúng nhất. Không viết điều trái với nó;
+       chỉ bổ sung phần nó chưa có.
+    2. Hai nguồn khác thời điểm nói khác nhau thì dùng nguồn mới nhất, ghi thêm mốc cũ đã thay đổi thế nào.
+    3. Mốc "dự kiến" đã qua so với ngày hôm nay mà không có tin mới: ghi rõ "chưa có cập nhật".
+    4. Cùng thời điểm mà khác số: ghi cả hai hoặc gộp thành khoảng, kèm nguồn của từng số.
+    5. Hai nguồn trái ngược hoàn toàn: ghi cả hai; nguồn chính thống thắng nếu có.
+    6. Khác đơn vị, khác đoạn tuyến, khác khái niệm (thông xe kỹ thuật và khai thác) không phải mâu thuẫn: giữ nguyên định ngữ.
+    7. Không thêm nhận định, đánh giá hay suy đoán không có trong nguồn. Giữ nguyên tên hành chính như trong nguồn.
+    Hồ sơ hiện có: giữ thông tin vẫn đúng (giữ số nguồn của chúng), sửa phần có tin mới, thêm thông tin mới;
+    item cũ chưa có nhãn hoặc tách rời cùng chủ đề thì viết lại theo nhãn và gộp lại.
+    Hồ sơ chỉ nói về DỰ ÁN này. Dự án khác chỉ được nhắc bằng TÊN khi cần chỉ vị trí ("liền kề Saigon
+    Peninsula", "cách Vinhomes Ocean Park 2 năm phút"); KHÔNG mô tả quy mô, tiện ích, giá, vốn đầu tư hay chủ đầu
+    tư của dự án khác, không viết item so sánh với dự án khác.
+
+web_card:
+  model: qwen3.7-flash
+  max_tokens: 1500
+  temperature: 0.2
+  prompt: |
+    Viết thẻ thông tin của MỘT dự án bất động sản từ các nguồn được đánh số [1], [2], ...
+    Trả về đúng một JSON: {"text": "...", "cites": [1, 2], "location": [...], "residential": true}.
+    Dài 120–300 từ gồm: chủ đầu tư, vị trí,
+    quy mô, loại hình, giá rao (ghi rõ theo nguồn nào, ngày nào), pháp lý, tiến độ.
+    Sau mỗi vế câu ghi số nguồn [n], mỗi số một cặp ngoặc riêng ([2][3]). Không thêm nhận định không có trong nguồn.
+    Thẻ dùng khi tư vấn so sánh, không được nói xấu dự án: chỉ viết thông tin tích cực hoặc trung tính. Bỏ tin
+    tiêu cực (vi phạm, xử phạt, tranh chấp, chậm tiến độ, chậm cấp sổ, khó khăn tài chính, giá giảm…).
+    Chỉ viết về đúng dự án có tên ở dòng "DỰ ÁN:" — nguồn nào không nói về dự án đó thì bỏ qua,
+    không lấy thông tin của dự án khác, kể cả dự án trùng hoặc gần trùng tên ở tỉnh/thành khác
+    (vd "Green City Bình Dương" khi DỰ ÁN là Green City ở Đan Phượng) và tin chung của cả thị trường.
+    Không viết lời khuyên, cảnh báo hay nhận định của riêng mình ("người mua cần thận trọng",
+    "tiềm năng tăng giá"); chỉ thuật lại điều nguồn nói. Không có gì để viết về dự án đó thì trả {"items": []}.
+    Có thẻ cũ thì cập nhật nó theo nguồn mới, giữ phần vẫn đúng.
+    location: xã/phường, quận/huyện, tỉnh/thành NƠI DỰ ÁN TOẠ LẠC theo nguồn, tối đa 4 — không phải mọi địa danh
+    được nhắc tới trong nguồn. Mỗi phần tử MỘT địa danh, tiếng Việt, không ghi số nhà/cả địa chỉ
+    (["Nghĩa Trụ", "Văn Giang", "Hưng Yên"]). Nguồn không nói dự án nằm ở đâu thì để mảng rỗng.
+    residential: true nếu đây là dự án nhà ở (khu đô thị, chung cư, nhà ở xã hội, biệt thự, đất nền, căn hộ
+    nghỉ dưỡng); false nếu là trung tâm thương mại, khu vui chơi, khách sạn, văn phòng, tuyến giao thông,
+    khu công nghiệp hay công trình khác.
+
+web_digest:
+  model: qwen3.7-flash
+  max_tokens: 5000
+  temperature: 0.2
+  prompt: |
+    Chọn tối đa 10 tin bất động sản quan trọng nhất từ các nguồn được đánh số [1], [2], ...
+    Trả về đúng một JSON: {"items": [{"text": "...", "cites": [1]}]}. Mỗi item là một tin, dài
+    80–200 từ, đủ ý: chuyện gì, ở đâu, số liệu, ảnh hưởng tới thị trường. Sau mỗi vế câu ghi [n].
+    Gộp các nguồn cùng nói một tin vào một item. Không thêm nhận định không có trong nguồn.
+
+web_grounding:
+  model: gemini-2.5-flash
+  max_tokens: 800
+  temperature: 0
+  prompt: ""
+
+web_topic_draft:
+  model: qwen3.7-flash
+  max_tokens: 800
+  temperature: 0.3
+  prompt: |
+    Người dùng muốn thêm một chủ đề vào hồ sơ dự án bất động sản. Từ TÊN và MÔ TẢ chủ đề, soạn cách tìm bài báo:
+    trả về đúng một JSON {"queries": [...], "keywords": [...]}.
+    queries: 2–4 câu gõ vào Google để tìm bài về chủ đề đó quanh một dự án; mỗi câu phải chứa {project} (tên dự án)
+    hoặc {location} (xã/huyện của dự án), viết tiếng Việt tự nhiên, không dấu ngoặc kép.
+    keywords: 3–8 từ/cụm từ tiếng Việt thường gặp trong bài về chủ đề đó (viết thường, có dấu) — dùng để nhận bài.
+    Chỉ trả JSON.
+
+conflict_check:
+  model: gemini-2.5-flash
+  max_tokens: 8000
+  temperature: 0
+  prompt: |
+    Bạn kiểm tra dữ liệu của MỘT dự án bất động sản để tìm thông tin mâu thuẫn.
+    Đầu vào gồm: các trường đã điền (mỗi dòng có mã [field:...]), các đoạn cần kiểm [D1], [D2]...,
+    và các đoạn đối chiếu [C1], [C2]...
+    Chỉ so mỗi đoạn D với các đoạn C và với các trường đã điền. Không so hai đoạn D với nhau.
+    Mâu thuẫn = hai nguồn cho hai giá trị KHÁC NHAU của CÙNG MỘT thuộc tính của CÙNG MỘT đối tượng
+    (cùng dự án/phân khu/toà, cùng chính sách), và hai giá trị không thể cùng đúng.
+    Ví dụ đúng: "Chủ đầu tư: Công ty A" và "Chủ đầu tư: Công ty B"; "Bàn giao xây thô" và "Bàn giao nội thất đầy đủ".
+    KHÔNG phải mâu thuẫn:
+    - hai thuộc tính khác nhau dù cùng chủ đề: "miễn phí quản lý 24 tháng" (thời gian) và "phí quản lý 12.000 đ/m²/tháng" (mức phí);
+    - hai giá trị khác loại đại lượng (số tháng với số tiền, % với diện tích);
+    - thông tin chỉ có ở một nguồn, nguồn kia không nói tới thuộc tính đó;
+    - khác cách viết của cùng một giá trị (4,3 ha và 43.000 m²; 2 tỷ và 2.000 triệu);
+    - hai đối tượng khác nhau (hai phân khu, hai đợt chính sách).
+    Giữa một đoạn D và một đoạn C: tối đa một mục; nhiều điểm lệch thì gộp vào một dòng tóm tắt.
+    Giữa một đoạn D và các trường: tối đa một mục cho mỗi trường.
+    "attribute" là tên thuộc tính đang so, cụ thể, ví dụ "chủ đầu tư", "mức phí quản lý mỗi tháng".
+    "value" là giá trị của thuộc tính đó ở từng nguồn, CHÉP NGUYÊN VĂN từ "quote" (không tóm tắt, không diễn đạt lại,
+    không suy ra), ngắn, kèm đơn vị nếu có, ví dụ "24 tháng", "12.000".
+    Nguồn nào không GHI RÕ giá trị cho thuộc tính đó thì KHÔNG được tạo mục; không tự suy "không có" thành "0".
+    "quote" phải chép NGUYÊN VĂN một cụm ngắn (dưới 200 ký tự) có chứa "value", lấy từ đúng nguồn được nêu.
+    "summary" là một câu tiếng Việt ngắn nói thuộc tính nào khác nhau, ví dụ "Chủ đầu tư khác nhau".
+    Trả về đúng một JSON:
+    {"conflicts": [{"summary": "...", "attribute": "...", "left": {"ref": "D1", "quote": "...", "value": "..."}, "right": {"ref": "C2", "quote": "...", "value": "..."}}]}
+    "ref" phía phải là mã đoạn C hoặc mã trường, ví dụ "field:projects.12.investor".
+    Không có mâu thuẫn thì trả {"conflicts": []}. Chỉ trả JSON.

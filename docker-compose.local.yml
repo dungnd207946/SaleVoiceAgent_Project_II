@@ -1,0 +1,194 @@
+# File của MÁY DEV — đủ hạ tầng bằng container, chạy offline, không cần AWS
+# credential. File deploy là docker-compose.dev.yml (không có postgres/minio).
+# `up` file này trên máy deploy là dựng một Postgres rỗng bên cạnh Aurora, và triệu
+# chứng là "đọc sai database" chứ không phải một lỗi.
+#
+# Cần `docker network create odyssey-network` trước. Cổng đều lệch mặc định — xem
+# ../docs/dev-ports.md; dùng cổng mặc định là nối vào đúng cổng nhưng sai database
+# của project khác trên cùng máy.
+name: odyssey-portal-backend
+
+services:
+  postgres:
+    # ⚠️ Tag này không khớp major của Aurora ở production và CI không bắt được sai
+    # lệch đó (README §6.1). Đổi ở đây thì đổi cả tests/conftest.py.
+    image: postgres:18-alpine
+    # Giá trị lấy từ `.env` (xem `.env.example` §Postgres). Default ở đây chỉ là
+    # lưới an toàn cho máy chưa có `.env` — nguồn sự thật là `.env`.
+    environment:
+      POSTGRES_USER: ${PORTAL_PG_USER:-portal_migrator}
+      POSTGRES_PASSWORD: ${PORTAL_PG_PASSWORD:-dev}
+      POSTGRES_DB: ${PORTAL_PG_DB:-portal}
+    ports: ["${PORTAL_PG_PORT:-5442}:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PORTAL_PG_USER:-portal_migrator} -d ${PORTAL_PG_DB:-portal}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # Có mật khẩu như ở deploy, để dev chạy đúng đường code đó (DSN có `:pass@`).
+  # Đổi ở đây thì đổi cả REDIS_URL trong `.env` và trong service `backend` dưới đây.
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "${PORTAL_REDIS_PASSWORD:-devredis}"]
+    ports: ["${PORTAL_REDIS_PORT:-6382}:6379"]
+
+  # Không volume nào trong file này — `make reset` phải xoá được sạch mọi kho.
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "${PORTAL_QDRANT_PORT:-6343}:6333"
+      - "${PORTAL_QDRANT_GRPC_PORT:-6344}:6334"
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    # Cùng cặp khoá với S3_ACCESS_KEY/S3_SECRET_KEY trong `.env`: MinIO là kho, và
+    # portal nối vào chính nó — hai chỗ lệch nhau là 403 lúc phát tệp, không phải
+    # lỗi lúc khởi động.
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    ports:
+      - "${PORTAL_MINIO_PORT:-9002}:9000"
+      - "${PORTAL_MINIO_CONSOLE_PORT:-9003}:9001"
+
+  # ═══ Ứng dụng — profile `app`, KHÔNG chạy mặc định ═════════════════════════
+  #
+  # Bốn service trên là hạ tầng: `make dev` dựng chúng rồi API chạy trên host bằng
+  # `make api` (hot-reload). Hai service dưới là đường đi thứ hai — API trong
+  # container; `profiles: [app]` giữ `make dev`/`reset` và testcontainers không đổi.
+  #
+  # ⚠️ Giữa `migrate` và `backend` phải có `make grant-api-dev` từ HOST: migration
+  # 0003 tạo `portal_api` NOLOGIN không mật khẩu (README §3). Thiếu bước đó thì
+  # `backend` lên rồi chết với "password authentication failed for user portal_api".
+  #
+  #   make dev && make migrate && make grant-api-dev
+  #   docker compose -f docker-compose.local.yml --profile app up -d --wait
+
+  migrate:
+    profiles: ["app", "crawl"]
+    build: .
+    command: ["migrate"]
+    environment:
+      MIGRATOR_URL: postgresql://${PORTAL_PG_USER:-portal_migrator}:${PORTAL_PG_PASSWORD:-dev}@postgres:5432/${PORTAL_PG_DB:-portal}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    profiles: ["app"]
+    build: .
+    container_name: odyssey-portal-backend
+    environment:
+      # ⚠️ KHÔNG khai MIGRATOR_URL và không dùng `env_file: .env` (.env của máy dev
+      # có cả hai DSN): entrypoint từ chối vai `serve` nếu thấy nó (README §1-§2).
+      # HOST là tên service (`postgres`/`redis`/…), KHÔNG phải localhost — đó là
+      # thứ duy nhất khác `.env` của host. Credential thì lấy từ `.env`.
+      DATABASE_URL: postgresql://${PORTAL_API_DB_USER:-portal_api}:${PORTAL_API_DB_PASSWORD:-apidev}@postgres:5432/${PORTAL_PG_DB:-portal}
+      REDIS_URL: redis://:${PORTAL_REDIS_PASSWORD:-devredis}@redis:6379/${PORTAL_REDIS_DB:-0}
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_BUCKET: ${S3_BUCKET:-odyssey}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      AGENT_MASTER_KEY: ${AGENT_MASTER_KEY:-}
+      TOKEN_ENC_KEY: ${TOKEN_ENC_KEY:-}
+      PLATFORM_ADMIN_TOKEN: ${PLATFORM_ADMIN_TOKEN:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+    ports:
+      # 8101 chứ không 8100: 8100 là chỗ `make api` đứng, hai đường phải chạy được
+      # đồng thời để so sánh "trên host thì đúng, trong container thì sai".
+      - "${PORTAL_API_DOCKER_PORT:-8101}:8100"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+
+  # Hàng đợi `control.jobs` — chạy được trong container để thử ĐÚNG khuôn production.
+  # Trên máy dev thì `make worker` (uv run, có reload nhanh hơn) vẫn là đường thường
+  # dùng; service này tồn tại để bắt những lỗi chỉ hiện trong container: thiếu biến
+  # env, `python -m portal.worker` không có trên PATH của tầng runtime, vai `worker`
+  # gõ sai trong entrypoint.
+  #
+  # KHÔNG có QDRANT_URL/S3_* thiếu chỗ nào so với `backend`: handler `kb_index` cần
+  # Qdrant, handler `publish` cần MinIO. Worker thiếu một biến mà backend có là lỗi
+  # chỉ nổ lúc có job thật — muộn hơn hẳn một bậc.
+  worker:
+    profiles: ["app"]
+    build: .
+    command: ["worker"]
+    environment:
+      DATABASE_URL: postgresql://${PORTAL_API_DB_USER:-portal_api}:${PORTAL_API_DB_PASSWORD:-apidev}@postgres:5432/${PORTAL_PG_DB:-portal}
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_BUCKET: ${S3_BUCKET:-odyssey}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      AGENT_MASTER_KEY: ${AGENT_MASTER_KEY:-}
+      TOKEN_ENC_KEY: ${TOKEN_ENC_KEY:-}
+      KB_EMBED_URL: ${KB_EMBED_URL:-}
+      KB_SANTA_MODELS_TOKEN: ${KB_SANTA_MODELS_TOKEN:-}
+      KB_VLM_API_KEY: ${KB_VLM_API_KEY:-}
+      KB_VLM_BASE_URL: ${KB_VLM_BASE_URL:-https://dashscope-intl.aliyuncs.com/compatible-mode/v1}
+      KB_GEMINI_API_KEY: ${KB_GEMINI_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  # Worker RIÊNG của kb/web (`kbweb_run`/`kbweb_project` + lịch theo tenant) — không dùng `worker` ở trên, nhịp
+  # tải khác hẳn (trafilatura + LLM + Gemini). REDIS_URL cần cho `Grounding`
+  # (bộ đếm trần Gemini/ngày, `pipeline.open_deps`) — `worker` ở trên không cần nó
+  # vì handler kb_index/kb_delete không đọc Redis; đừng chép khuôn thiếu dòng đó.
+  #
+  # profiles: ["crawl"], KHÔNG "app": thiếu KB_VLM_API_KEY thì tiến trình chết
+  # lúc khởi động, và `--profile app up -d --wait` hỏng cho mọi dev không có key
+  # DashScope. Bật riêng: `docker compose -f docker-compose.local.yml --profile crawl
+  # up -d crawl-worker` (`migrate` cũng thuộc profile `crawl` để phụ thuộc này đứng được).
+  crawl-worker:
+    profiles: ["crawl"]
+    build:
+      context: .
+      target: crawl
+    command: ["crawl-worker"]
+    environment:
+      DATABASE_URL: postgresql://${PORTAL_API_DB_USER:-portal_api}:${PORTAL_API_DB_PASSWORD:-apidev}@postgres:5432/${PORTAL_PG_DB:-portal}
+      REDIS_URL: redis://:${PORTAL_REDIS_PASSWORD:-devredis}@redis:6379/${PORTAL_REDIS_DB:-0}
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      KB_EMBED_URL: ${KB_EMBED_URL:-}
+      KB_SANTA_MODELS_TOKEN: ${KB_SANTA_MODELS_TOKEN:-}
+      KB_VLM_API_KEY: ${KB_VLM_API_KEY:-}
+      KB_GEMINI_API_KEY: ${KB_GEMINI_API_KEY:-}
+      KB_WEB_GROUNDING_DAILY_CAP: ${KB_WEB_GROUNDING_DAILY_CAP:-1200}
+      KB_WEB_BROWSER_ENABLED: ${KB_WEB_BROWSER_ENABLED:-true}
+    cpus: "1.5"
+    mem_limit: 2g
+    shm_size: 512m
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      qdrant:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+
+networks:
+  default:
+    name: odyssey-network
+    external: true

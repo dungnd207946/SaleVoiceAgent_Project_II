@@ -1,0 +1,31 @@
+; Lượt NGUỘI — phủ lùi 48h. Cặp với odyssey-dinh-gia-nguoi@.timer.
+;
+; VÌ SAO CẦN LƯỢT NÀY khi trigger `usage_events_dinh_gia` (`0950`) đã tính tiền
+; ngay trong câu INSERT: nó vá BA lỗ trigger không với tới —
+;   ① usage tới TRƯỚC khi có dòng giá phủ nó (trigger chạy một lần rồi thôi);
+;   ② trigger ném và bị khối `EXCEPTION WHEN OTHERS` nuốt — cố ý, để không làm vỡ
+;      câu INSERT vào SỔ GỐC `usage_events`, nhưng cái giá là phải có ai tính lại;
+;   ③ dữ liệu ghi TRƯỚC `0950`, chưa từng qua trigger.
+; Cả ba đều hỏng theo kiểu THIẾU TIỀN, IM LẶNG. Bỏ unit này là chấp nhận cả ba.
+; Chi tiết: deploy/systemd/README.md.
+
+[Unit]
+Description=Odyssey — định giá usage (lượt nguội, phủ lùi 48h)
+Documentation=file://%f/deploy/systemd/README.md
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=%f
+
+; Không cờ ⇒ cửa sổ mặc định KHOANG_RE_RUN_GIO = 48h
+; (src/portal/cli/dinh_gia_usage.py). Cố ý không viết `--gio 48` ở đây: hằng đó
+; là một quyết định nghiệp vụ, và có hai chỗ khai nó là có hai chỗ để lệch.
+ExecStart=/usr/bin/docker compose -f docker-compose.dev.yml run --rm dinh-gia
+
+; 48h dữ liệu có thể lâu. Nửa giờ là trần rộng, không phải kỳ vọng.
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=multi-user.target

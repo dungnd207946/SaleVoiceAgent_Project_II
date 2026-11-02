@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+# MỌI biến thể của .env, KHÔNG chỉ đúng tên `.env`: một bản sao lưu tay
+# (`.env.bak.20260820-111418`) đã lọt vào develop ngày 2026-08-20 kèm DSN thật của
+# `portal_api` và `portal_migrator`. `.env` trần không phủ được nó.
+# `!` giữ lại các bản MẪU — chúng phải được commit.
+.env.*
+!.env.example
+# Bản env deploy ĐÃ ĐIỀN giá trị thật (khác `*.env.example` — bản đó là mẫu và
+# được commit). Không có dòng này thì `deploy/odyssey-portal-backend.env` chứa
+# access key của kho tệp sẽ vào git ngay lần `git add deploy/` đầu tiên.
+deploy/*.env
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+.idea/
+.superpowers/
+# Đồ thử tay chỉ chạy trên máy local (xem experiments/README.md). Test của chúng nằm
+# CẠNH file nó kiểm chứ không ở `tests/` — `testpaths=["tests"]` mà thư mục này bị
+# ignore, nên test ở đó sẽ đỏ trên mọi máy không có file.
+experiments/
