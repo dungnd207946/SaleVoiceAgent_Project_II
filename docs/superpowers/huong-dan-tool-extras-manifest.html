@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hướng dẫn: Tool / Extras / ToolParam / Manifest</title>
+<style>
+  :root {
+    --bg:#f7f8fa; --card:#fff; --ink:#1a1d21; --muted:#6b7280; --line:#e5e7eb;
+    --accent:#2563eb; --code:#f1f5f9; --codeink:#0f172a; --chip:#eef2ff; --chipink:#3730a3;
+    --warn-bg:#fff7ed; --warn-line:#fdba74; --ok-bg:#ecfdf5; --ok-line:#6ee7b7;
+    --tab:#eef2ff; --tabink:#3730a3; --tabon:#2563eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0f1115; --card:#171a21; --ink:#e6e8eb; --muted:#9aa3af; --line:#2a2f3a;
+      --accent:#60a5fa; --code:#0d1017; --codeink:#d7dbe2; --chip:#1e2540; --chipink:#c7d2fe;
+      --warn-bg:#2a1f12; --warn-line:#a86432; --ok-bg:#0f2820; --ok-line:#2f6b52;
+      --tab:#1e2540; --tabink:#c7d2fe; --tabon:#60a5fa;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:16px/1.62 -apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif; }
+  .wrap { max-width:940px; margin:0 auto; padding:30px 20px 90px; }
+  h1 { font-size:26px; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 22px; }
+  .tabs { display:flex; flex-wrap:wrap; gap:8px; position:sticky; top:0; background:var(--bg);
+          padding:12px 0; border-bottom:1px solid var(--line); z-index:10; }
+  .tabs button { font:600 14px/1 inherit; cursor:pointer; border:1px solid var(--line);
+                 background:var(--tab); color:var(--tabink); padding:9px 14px; border-radius:9px; }
+  .tabs button[aria-selected="true"] { background:var(--tabon); color:#fff; border-color:var(--tabon); }
+  .panel { display:none; animation:fade .15s ease; }
+  .panel.active { display:block; }
+  @keyframes fade { from{opacity:.4} to{opacity:1} }
+  h2 { font-size:21px; margin:24px 0 4px; }
+  h3 { font-size:15px; margin:22px 0 6px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .lead { color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 18px; margin:14px 0; }
+  ol.steps { counter-reset:s; list-style:none; padding:0; margin:14px 0; }
+  ol.steps > li { position:relative; padding:2px 0 16px 40px; margin:0; border-left:2px solid var(--line); margin-left:14px; }
+  ol.steps > li:last-child { border-left:2px solid transparent; }
+  ol.steps > li::before { counter-increment:s; content:counter(s); position:absolute; left:-15px; top:0;
+      width:28px; height:28px; border-radius:50%; background:var(--accent); color:#fff;
+      font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center; }
+  ol.steps > li b { display:block; margin-bottom:4px; }
+  .file { font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--chipink);
+          background:var(--chip); padding:1px 7px; border-radius:6px; display:inline-block; margin-bottom:6px; }
+  pre { background:var(--code); color:var(--codeink); border:1px solid var(--line); border-radius:10px;
+        padding:13px 15px; overflow-x:auto; font-family:ui-monospace,Menlo,monospace; font-size:13px; line-height:1.5; margin:8px 0; }
+  code { font-family:ui-monospace,Menlo,monospace; font-size:.92em; background:var(--code); padding:1px 5px; border-radius:5px; }
+  pre code { background:none; padding:0; }
+  .note { background:var(--warn-bg); border:1px solid var(--warn-line); border-radius:10px; padding:12px 16px; margin:14px 0; }
+  .ok   { background:var(--ok-bg);   border:1px solid var(--ok-line);   border-radius:10px; padding:12px 16px; margin:14px 0; }
+  .note b, .ok b { display:block; margin-bottom:3px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; margin:10px 0; }
+  th,td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-size:12.5px; text-transform:uppercase; }
+  .kw { color:var(--accent); font-weight:600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Hướng dẫn mở rộng: Tool · Extras · ToolParam · Manifest</h1>
+  <p class="sub">Bấm tab để chuyển chủ đề. Mỗi tab là một quy trình độc lập, có mã minh hoạ.</p>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-t="p1">1 · Tool chuẩn</button>
+    <button role="tab" aria-selected="false" data-t="p2">2 · Custom tool (1 tenant)</button>
+    <button role="tab" aria-selected="false" data-t="p3">3 · Extras (Tier-1)</button>
+    <button role="tab" aria-selected="false" data-t="p4">4 · ToolParam (Tier-2)</button>
+    <button role="tab" aria-selected="false" data-t="p5">5 · manifest.toml</button>
+  </div>
+
+  <!-- ================= TAB 1 ================= -->
+  <section id="p1" class="panel active">
+    <h2>Thêm một tool CHUẨN (built-in, mọi tenant dùng chung)</h2>
+    <div class="lead">Dùng khi năng lực mới là <b>tiêu chuẩn</b> — mọi tenant đều có thể bật.
+      Tool sống ở core, được đăng ký là built-in <code>tenant="*"</code>. Cần sửa core (chấp nhận),
+      nhưng KHÔNG đụng dispatcher (registry lo việc gọi).</div>
+
+    <ol class="steps">
+      <li><b>Viết executor</b>
+        <span class="file">agent/tools/&lt;ten&gt;.py</span>
+        <p>Một hàm async trả về <b>chuỗi</b> (thứ Luna đọc). Lấy dữ liệu từ provider/DB tuỳ ý.</p>
+<pre><code>async def run(args: dict) -&gt; str:
+    provider = providers.get_provider(get_settings())
+    data = await provider.get_inventory_summary(args.get("project_code",""))
+    if data is None:
+        return ESCALATE_SIGNAL          # không có dữ liệu → chuyển chuyên viên
+    return json.dumps(ser.inventory_json(data), ensure_ascii=False)</code></pre>
+      </li>
+
+      <li><b>Khai schema JSON</b>
+        <span class="file">agent/tools/schemas.py</span> — thêm 1 entry vào dict <code>SCHEMAS</code>
+        <p>Đây là cái LLM nhìn thấy: tên tool, mô tả (KHI NÀO gọi + LÀM GÌ + 1 ví dụ), tham số.</p>
+<pre><code>SCHEMAS["check_inventory"] = {
+  "type": "function",
+  "function": {
+    "name": "check_inventory",
+    "description": "Tóm tắt tồn kho MỘT dự án… Ví dụ 'dự án còn nhiều căn không'.",
+    "parameters": {"type":"object",
+      "properties": {"project_code": {"type":"string", "description":"Mã dự án canonical."}},
+      "required": ["project_code"]},
+  },
+}</code></pre>
+      </li>
+
+      <li><b>Đăng ký vào registry qua adapter</b>
+        <span class="file">agent/tools/builtins.py</span>
+        <p>Adapter mỏng nhận "túi kwargs" (dùng cái nào cần + <code>**_</code>), gọi executor. Rồi thêm dòng vào <code>_BUILTINS</code>.</p>
+<pre><code>async def _check_inventory(args, *, dispatcher, **_):
+    dispatcher.default_project_code(args)     # điền mã mặc định nếu để trống
+    return await check_inventory.run(args)
+
+# (name, executor, dirties_customer, read_only)
+_BUILTINS = [
+    ...
+    ("check_inventory", _check_inventory, False, False),
+]</code></pre>
+        <p><span class="kw">dirties_customer</span> = True nếu tool sửa hồ sơ khách (kích hoạt build lại prompt).
+           <span class="kw">read_only</span> = True nếu tool chỉ đọc (semcache dùng để phân loại).</p>
+      </li>
+
+      <li><b>Bật tool cho tenant</b>
+        <span class="file">tenants/&lt;id&gt;/manifest.toml</span> — thêm tên vào <code>[tools].enabled</code>
+        <p>Đăng ký ≠ được offer. Tên phải nằm trong <code>enabled</code> thì agent của tenant đó mới thấy.</p>
+      </li>
+
+      <li><b>Dạy Luna khi nào gọi</b>
+        <span class="file">tenants/&lt;id&gt;/persona/RULES.md</span> — thêm dòng vào bảng "Tool catalog"
+        <p>Không có bước này, LLM biết tool tồn tại nhưng không rõ tình huống nào nên gọi.</p>
+      </li>
+    </ol>
+    <div class="note"><b>Nhớ:</b> tên tool trong 4 chỗ (schema key + <code>function.name</code> + builtins + manifest) phải <b>trùng khít</b>. Test: <code>make test-unit</code>.</div>
+  </section>
+
+  <!-- ================= TAB 2 ================= -->
+  <section id="p2" class="panel">
+    <h2>Thêm CUSTOM TOOL riêng cho MỘT tenant</h2>
+    <div class="ok"><b>Điểm mạnh:</b> thả <b>một file</b>, KHÔNG sửa core, KHÔNG sửa dispatcher/schemas/builtins.
+      Tool chỉ tenant đó thấy; có thể ghi đè built-in cùng tên (chỉ cho tenant đó).</div>
+
+    <ol class="steps">
+      <li><b>Tạo file tool trong bundle tenant</b>
+        <span class="file">tenants/&lt;id&gt;/tools/&lt;ten&gt;.py</span>
+        <p>Decorate bằng <code>@tool</code>. Executor nhận túi kwargs — lấy <code>provider</code>, <code>tenant</code> + <code>**_</code>.
+           Đây là mẫu thật <code>demo_acme/tools/loan.py</code>:</p>
+<pre><code>from noble_agent.agent.tools.registry import tool
+
+_SCHEMA = {
+  "type": "function",
+  "function": {
+    "name": "check_loan",
+    "description": "Kiểm tra điều kiện vay (custom tool của Acme).",
+    "parameters": {"type":"object",
+      "properties": {"amount": {"type":"number"}}, "required": []},
+  },
+}
+
+@tool(name="check_loan", schema=_SCHEMA, tenant="demo_acme", read_only=True)
+async def check_loan(args, *, provider, tenant, **_):
+    # provider = nguồn dữ liệu của chính tenant này; gọi API riêng tuỳ ý
+    return f"loan:{tenant}:{args.get('amount', 0)}"</code></pre>
+      </li>
+
+      <li><b>Để trống file <code>__init__.py</code></b>
+        <span class="file">tenants/&lt;id&gt;/tools/__init__.py</span>
+        <p>KHÔNG viết <code>from . import loan</code>. Loader tự <code>pkgutil</code>-walk mọi file trong <code>tools/</code> lúc boot,
+           nên chỉ cần thả file là decorator tự chạy → tự đăng ký.</p>
+      </li>
+
+      <li><b>Bật trong manifest</b>
+        <span class="file">tenants/&lt;id&gt;/manifest.toml</span>
+<pre><code>[tools]
+enabled = [ "find_project", "kb_search", ..., "check_loan" ]   # ← thêm tên</code></pre>
+      </li>
+
+      <li><b>(Tuỳ chọn) Ghi vào RULES.md của tenant</b> để Luna biết khi nào gọi.</li>
+    </ol>
+
+    <h3>Chữ ký executor — túi kwargs có sẵn</h3>
+    <table>
+      <tr><th>kwarg</th><th>Là gì</th></tr>
+      <tr><td><code>args</code></td><td>Tham số LLM điền (positional đầu tiên)</td></tr>
+      <tr><td><code>provider</code></td><td>Nguồn dữ liệu đang hoạt động (gọi API riêng của tenant)</td></tr>
+      <tr><td><code>tenant</code></td><td>Id tenant hiện tại</td></tr>
+      <tr><td><code>state / customer / session_id</code></td><td>Ngữ cảnh phiên (nếu cần)</td></tr>
+      <tr><td><code>callbacks / rag / dispatcher</code></td><td>Ít dùng; lấy qua <code>**_</code></td></tr>
+    </table>
+    <div class="note"><b>Isolation:</b> <code>resolve("acme","check_loan")</code> ra tool này; <code>resolve("noble","check_loan")</code> ra <code>None</code>. Tenant khác không thấy.</div>
+  </section>
+
+  <!-- ================= TAB 3 ================= -->
+  <section id="p3" class="panel">
+    <h2>Thêm EXTRAS (Tier-1) — field phụ cho Luna THẤY</h2>
+    <div class="lead">Khi nguồn có field mà form chuẩn không mô hình hoá, và bạn chỉ muốn <b>hiển thị</b> nó
+      (không lọc). Ví dụ thật: <code>nbx.fundType</code> → "Loại quỹ căn".</div>
+
+    <div class="note"><b>Quan trọng — khai ở ĐÂU:</b> hiện tại extras khai trên <b>class provider</b>
+      (thuộc tính <code>extra_specs</code>), KHÔNG phải trong <code>manifest.toml</code>. Vì vậy nó gắn theo
+      <b>nguồn dữ liệu</b> (provider), không theo tenant. (Việc đưa vào manifest là slice tương lai — đang deferred.)</div>
+
+    <ol class="steps">
+      <li><b>Khai metadata trên provider</b>
+        <span class="file">data/providers/&lt;provider&gt;.py</span>
+<pre><code>extra_specs = (
+    base.ExtraFieldSpec(
+        key="fund_type",          # key trong túi extras
+        label="Loại quỹ căn",     # nhãn VN Luna đọc
+        entity="unit",            # unit | project | pricing
+        type="string",
+        unit="",                  # "vnd" | "m2" | "pct" | "" → tự thêm hậu tố nhãn
+        description="Nhóm quỹ căn (vd 'hot').",
+    ),
+)</code></pre>
+      </li>
+      <li><b>Nhét giá trị vào <code>extras</code> khi build DTO</b>
+<pre><code>extras = {}
+if (fund := (raw.get("fundType") or "").strip()):
+    extras["fund_type"] = fund
+return base.Unit(..., extras=extras)</code></pre>
+      </li>
+      <li><b>Xong.</b> Serializer tự render <code>{"Loại quỹ căn": "hot"}</code> vào JSON tool trả về,
+        và system prompt tự sinh phụ lục "Trường dữ liệu bổ sung". <b>Không sửa tool, không sửa manifest.</b></li>
+    </ol>
+    <div class="ok"><b>Nhớ:</b> extras chỉ để <b>đọc/hiển thị</b>. Muốn khách <b>lọc</b> theo field này → sang Tab 4 (ToolParam).</div>
+  </section>
+
+  <!-- ================= TAB 4 ================= -->
+  <section id="p4" class="panel">
+    <h2>Thêm TOOL PARAM (Tier-2) — ô lọc mới cho tool chuẩn</h2>
+    <div class="lead">Khi bạn muốn LLM <b>truyền được một tham số lọc mới</b> mà tool chuẩn không có sẵn.
+      Framework tự thêm ô vào schema + tự lọc kết quả. <b>Không viết code lọc.</b></div>
+
+    <div class="note"><b>Khai ở ĐÂU:</b> giống extras — khai trên <b>class provider</b> (thuộc tính <code>tool_params</code>),
+      chưa phải manifest. Gắn theo nguồn dữ liệu.</div>
+
+    <ol class="steps">
+      <li><b>Khai param trên provider</b>
+        <span class="file">data/providers/&lt;provider&gt;.py</span>
+<pre><code>tool_params = (
+    base.ToolParamSpec(
+        tool="search_units",      # tool đích được thêm ô
+        name="fund_type",         # tên param LLM điền
+        type="string",
+        description="Lọc căn theo nhóm quỹ căn. Chỉ truyền khi khách nêu rõ.",
+        maps_to="fund_type",      # key trong extras để so khớp
+        match="eq",               # eq|substring|gte|lte|exists|contains
+    ),
+)</code></pre>
+      </li>
+      <li><b>Đảm bảo field có trong <code>extras</code></b> (như Tab 3) — <code>maps_to</code> trỏ vào đúng key đó.</li>
+      <li><b>Xong.</b> Ba việc tự động, không cần code:
+        <table>
+          <tr><th>Tầng</th><th>Framework tự làm</th></tr>
+          <tr><td>Schema</td><td><code>build_schemas</code> bơm ô <code>fund_type</code> vào tool <code>search_units</code></td></tr>
+          <tr><td>Dispatch</td><td>Gom giá trị param vào <code>UnitQuery.custom_params</code></td></tr>
+          <tr><td>Lọc</td><td>So <code>unit.extras["fund_type"]</code> với giá trị theo <code>match</code> (safety net)</td></tr>
+        </table>
+      </li>
+    </ol>
+    <h3>6 toán tử <code>match</code></h3>
+    <table>
+      <tr><th>match</th><th>Ý nghĩa</th></tr>
+      <tr><td><code>eq</code></td><td>Bằng đúng</td></tr>
+      <tr><td><code>substring</code></td><td>Chứa chuỗi con (không phân biệt hoa/thường)</td></tr>
+      <tr><td><code>gte</code> / <code>lte</code></td><td>≥ / ≤ (số)</td></tr>
+      <tr><td><code>exists</code></td><td>Có/không có field (value truthy = phải có)</td></tr>
+      <tr><td><code>contains</code></td><td>Giá trị nằm trong list</td></tr>
+    </table>
+    <div class="ok"><b>Tối ưu (tuỳ chọn):</b> adapter đọc <code>query.custom_params</code> trong <code>search_units</code> để lọc thẳng ở DB.
+      Framework vẫn re-apply filter sau đó (idempotent) nên không sai.</div>
+  </section>
+
+  <!-- ================= TAB 5 ================= -->
+  <section id="p5" class="panel">
+    <h2>Viết <code>manifest.toml</code> cho từng trường hợp</h2>
+    <div class="lead">Manifest = nguồn chân lý runtime của một tenant: bật tool nào, dùng nguồn nào, brand gì, ranker nào.
+      Nằm ở <span class="file">tenants/&lt;id&gt;/manifest.toml</span>.</div>
+
+    <h3>Bộ khung đầy đủ (chú thích từng dòng)</h3>
+<pre><code>tenant_id   = "acme"          # id tenant (trùng tên thư mục)
+data_source = "nbx"           # PHẢI mirror NOBLE_DATA_SOURCE đang chạy (test guard)
+persona_dir = "persona"       # thư mục persona con (SOUL/RULES/…)
+
+[tools]
+enabled = [                   # DANH SÁCH TOOL ĐƯỢC OFFER cho agent này
+    "find_project", "kb_search", "discover_projects",
+    "get_project_overview", "search_units", "recommend_units",
+    "booking", "escalate", "send_media", "check_inventory",
+    "check_loan",             # ← custom tool riêng tenant (Tab 2)
+]
+rankers = ["feng_shui"]       # [] = bỏ → recommend_units tự gỡ param phong thuỷ + bỏ overlay
+media_channel = "acme_app"    # kênh gửi media (mới template tên app)
+
+[brand]
+company  = "Acme"             # thay {{ brand.company }} trong tool desc + persona
+app_name = "AcmeApp"          # thay {{ brand.app_name }}</code></pre>
+
+    <h3>Mỗi trường hợp cần sửa gì trong manifest?</h3>
+    <table>
+      <tr><th>Trường hợp</th><th>Sửa manifest?</th></tr>
+      <tr><td><b>Thêm tool chuẩn</b> (Tab 1)</td><td>CÓ — thêm tên vào <code>[tools].enabled</code></td></tr>
+      <tr><td><b>Thêm custom tool</b> (Tab 2)</td><td>CÓ — thêm tên vào <code>[tools].enabled</code></td></tr>
+      <tr><td><b>Thêm extras</b> (Tab 3)</td><td><b>KHÔNG</b> — khai trên provider (interim). Manifest không đụng.</td></tr>
+      <tr><td><b>Thêm tool param</b> (Tab 4)</td><td><b>KHÔNG</b> — khai trên provider (interim). Manifest không đụng.</td></tr>
+      <tr><td>Bật/tắt phong thuỷ</td><td>CÓ — <code>rankers = ["feng_shui"]</code> hoặc <code>[]</code></td></tr>
+      <tr><td>Đổi thương hiệu/giọng</td><td>CÓ — <code>[brand]</code> + sửa file trong <code>persona/</code></td></tr>
+    </table>
+
+    <div class="note"><b>Ba điều loader BẮT LỖI ngay lúc boot (fail-loud):</b>
+      thiếu thư mục tenant, TOML hỏng, hoặc thiếu một trong <code>data_source</code> / <code>persona_dir</code> / <code>[tools].enabled</code>.</div>
+
+    <h3>Nhắc lại phân biệt "khai ở đâu"</h3>
+    <table>
+      <tr><th>Thứ</th><th>Khai ở</th></tr>
+      <tr><td>Tool được offer + brand + ranker + data_source</td><td><code>manifest.toml</code> (theo tenant)</td></tr>
+      <tr><td>Custom tool (code)</td><td><code>tenants/&lt;id&gt;/tools/*.py</code> (theo tenant)</td></tr>
+      <tr><td>Extras + ToolParam</td><td><code>data/providers/&lt;provider&gt;.py</code> (theo nguồn dữ liệu)</td></tr>
+      <tr><td>Tool chuẩn (code)</td><td>core: <code>agent/tools/</code> + <code>builtins.py</code></td></tr>
+    </table>
+  </section>
+</div>
+
+<script>
+  const btns = document.querySelectorAll('.tabs button');
+  btns.forEach(b => b.addEventListener('click', () => {
+    btns.forEach(x => x.setAttribute('aria-selected', x === b));
+    document.querySelectorAll('.panel').forEach(p =>
+      p.classList.toggle('active', p.id === b.dataset.t));
+  }));
+</script>
+</body>
+</html>

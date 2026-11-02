@@ -1,0 +1,10 @@
+# Demo/isolation-fixture tenant — proves the custom-tool self-registration
+# path (pkgutil walk in tenant/loader.py::_import_tenant_tools) through the
+# REAL boot path (in-package tenant, not a test-only fixture directory).
+# Only active if TENANT_ID=demo_acme, which no deploy sets.
+tenant_id = "demo_acme"
+data_source = "nbx"
+persona_dir = "persona"
+
+[tools]
+enabled = ["check_loan"]

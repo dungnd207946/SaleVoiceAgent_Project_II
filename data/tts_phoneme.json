@@ -1,0 +1,648 @@
+{
+  "_description": "Custom pronunciation for TTS. phoneme = sea-g2p format override (only for Vietnamese abbreviations that sea-g2p misreads). normalized = Vietnamese text replacement (for ElevenLabs or text-based TTS). English words have empty phoneme — sea-g2p reads them correctly by default.",
+  "_usage_vieneu": "phonemize_with_dict(text, phoneme_dict={word: entry[\"phoneme\"] for word, entry in data.items() if entry[\"phoneme\"]})",
+  "_usage_elevenlabs": "for word, entry in data.items(): text = text.replace(word, entry[\"normalized\"])",
+  "_note": "phoneme values use sea-g2p output format. Only abbreviations/acronyms need phoneme override.",
+  "noble": {
+    "phoneme": "",
+    "normalized": "Nô-bồ"
+  },
+  "noblex": {
+    "phoneme": "",
+    "normalized": "Nô-bồ Ích"
+  },
+  "crystal": {
+    "phoneme": "",
+    "normalized": "Crít-tồn"
+  },
+  "palace": {
+    "phoneme": "",
+    "normalized": "Pa-lát"
+  },
+  "mansion": {
+    "phoneme": "",
+    "normalized": "Men-sần",
+    "preferred": "normalized"
+  },
+  "river": {
+    "phoneme": "",
+    "normalized": "Ri-vơ"
+  },
+  "golf": {
+    "phoneme": "",
+    "normalized": "Gôn",
+    "preferred": "normalized"
+  },
+  "boutique": {
+    "phoneme": "",
+    "normalized": "Bu-tíc",
+    "preferred": "raw"
+  },
+  "worldhotels": {
+    "phoneme": "",
+    "normalized": "Uơn-hô-ten"
+  },
+  "residence": {
+    "phoneme": "",
+    "normalized": "Re-di-đần",
+    "preferred": "raw"
+  },
+  "emirates": {
+    "phoneme": "",
+    "normalized": "E-my-rết",
+    "preferred": "normalized"
+  },
+  "atlantis": {
+    "phoneme": "",
+    "normalized": "Át-lan-tít",
+    "preferred": "raw"
+  },
+  "sol": {
+    "phoneme": "",
+    "normalized": "Xôn"
+  },
+  "venus": {
+    "phoneme": "",
+    "normalized": "Vi-nớt"
+  },
+  "artemis": {
+    "phoneme": "",
+    "normalized": "A-tê-mít",
+    "preferred": "normalized"
+  },
+  "legacy": {
+    "phoneme": "",
+    "normalized": "lê gơ xi",
+    "preferred": "normalized"
+  },
+  "wonder": {
+    "phoneme": "",
+    "normalized": "Oan-đơ",
+    "preferred": "normalized"
+  },
+  "harmony": {
+    "phoneme": "",
+    "normalized": "Ha-mơ-ni",
+    "preferred": "normalized"
+  },
+  "victory": {
+    "phoneme": "",
+    "normalized": "Vic-tơ-ri"
+  },
+  "ciputra": {
+    "phoneme": "",
+    "normalized": "Xi-pu-tra",
+    "preferred": "raw"
+  },
+  "vinhomes": {
+    "phoneme": "",
+    "normalized": "Vin-hôm",
+    "preferred": "normalized"
+  },
+  "riverside": {
+    "phoneme": "",
+    "normalized": "Ri-vơ-xai",
+    "preferred": "normalized"
+  },
+  "sky": {
+    "phoneme": "",
+    "normalized": "Xờ-kai",
+    "preferred": "raw"
+  },
+  "villa": {
+    "phoneme": "",
+    "normalized": "Vi-la"
+  },
+  "duplex": {
+    "phoneme": "",
+    "normalized": "Đu-plét",
+    "preferred": "raw"
+  },
+  "shophouse": {
+    "phoneme": "",
+    "normalized": "Sóp-hao",
+    "preferred": "normalized"
+  },
+  "mezzanine": {
+    "phoneme": "",
+    "normalized": "Mê-da-nin",
+    "preferred": "raw"
+  },
+  "penthouse": {
+    "phoneme": "",
+    "normalized": "Pen-hao",
+    "preferred": "raw"
+  },
+  "clubhouse": {
+    "phoneme": "",
+    "normalized": "Clắp-hao",
+    "preferred": "raw"
+  },
+  "smart": {
+    "phoneme": "",
+    "normalized": "Xmát",
+    "preferred": "normalized"
+  },
+  "home": {
+    "phoneme": "",
+    "normalized": "Hôm",
+    "preferred": "raw"
+  },
+  "gessi": {
+    "phoneme": "",
+    "normalized": "Gét-xi",
+    "preferred": "normalized"
+  },
+  "kaldewei": {
+    "phoneme": "",
+    "normalized": "Kan-đờ way",
+    "preferred": "normalized"
+  },
+  "villeroy": {
+    "phoneme": "",
+    "normalized": "Vi-lơ-roi",
+    "preferred": "normalized"
+  },
+  "boch": {
+    "phoneme": "",
+    "normalized": "Bốc"
+  },
+  "versace": {
+    "phoneme": "",
+    "normalized": "Vơ-xa-chê"
+  },
+  "dietrich": {
+    "phoneme": "",
+    "normalized": "Đi-trích"
+  },
+  "luna": {
+    "phoneme": "",
+    "normalized": "Lu-na"
+  },
+  "nexway": {
+    "phoneme": "",
+    "normalized": "Nếch-uây"
+  },
+  "rooftop": {
+    "phoneme": "",
+    "normalized": "Rúp-tóp",
+    "preferred": "normalized"
+  },
+  "wellspring": {
+    "phoneme": "",
+    "normalized": "Uen-sprinh",
+    "preferred": "raw"
+  },
+  "crown": {
+    "phoneme": "",
+    "normalized": "Crao"
+  },
+  "ferrari": {
+    "phoneme": "",
+    "normalized": "Phê-ra-ri",
+    "preferred": "raw"
+  },
+  "marazzi": {
+    "phoneme": "",
+    "normalized": "Ma ra di",
+    "preferred": "normalized"
+  },
+  "hafele": {
+    "phoneme": "",
+    "normalized": "Hắp-lơ",
+    "preferred": "normalized"
+  },
+  "oxford": {
+    "phoneme": "",
+    "normalized": "Óc-phớt"
+  },
+  "wonderland": {
+    "phoneme": "",
+    "normalized": "Oan-đơ-len",
+    "preferred": "normalized"
+  },
+  "westlake": {
+    "phoneme": "",
+    "normalized": "Oét-lếch",
+    "preferred": "normalized"
+  },
+  "view": {
+    "phoneme": "",
+    "normalized": "Viu"
+  },
+  "showroom": {
+    "phoneme": "",
+    "normalized": "Sô-rum"
+  },
+  "booking": {
+    "phoneme": "",
+    "normalized": "Búc-kinh",
+    "preferred": "raw"
+  },
+  "shop": {
+    "phoneme": "",
+    "normalized": "Sóp"
+  },
+  "club": {
+    "phoneme": "",
+    "normalized": "Clắp",
+    "preferred": "raw"
+  },
+  "wellness": {
+    "phoneme": "",
+    "normalized": "Uen-nét",
+    "preferred": "raw"
+  },
+  "fitness": {
+    "phoneme": "/ˈfɪt.nəs/",
+    "normalized": "fit nít",
+    "preferred": "normalized"
+  },
+  "water": {
+    "phoneme": "",
+    "normalized": "Uốt-tơ",
+    "preferred": "raw"
+  },
+  "cafe": {
+    "phoneme": "",
+    "normalized": "Cà-phê",
+    "preferred": "normalized"
+  },
+  "coffee": {
+    "phoneme": "",
+    "normalized": "Co-phi",
+    "preferred": "normalized"
+  },
+  "infinity": {
+    "phoneme": "",
+    "normalized": "in phi ni ti",
+    "preferred": "normalized"
+  },
+  "bowling": {
+    "phoneme": "",
+    "normalized": "Bâu-linh",
+    "preferred": "raw"
+  },
+  "sofa": {
+    "phoneme": "",
+    "normalized": "Xô-pha"
+  },
+  "wine": {
+    "phoneme": "",
+    "normalized": "why",
+    "preferred": "normalized"
+  },
+  "cigar": {
+    "phoneme": "",
+    "normalized": "Xi-gà",
+    "preferred": "normalized"
+  },
+  "zen": {
+    "phoneme": "",
+    "normalized": "Zen",
+    "preferred": "normalized"
+  },
+  "fairway": {
+    "phoneme": "",
+    "normalized": "Phe-uây",
+    "preferred": "raw"
+  },
+  "swing": {
+    "phoneme": "",
+    "normalized": "Suynh"
+  },
+  "downlight": {
+    "phoneme": "",
+    "normalized": "Đao-lai"
+  },
+  "season": {
+    "phoneme": "",
+    "normalized": "Xi-zần"
+  },
+  "faceid": {
+    "phoneme": "",
+    "normalized": "Phây Ai-đi",
+    "preferred": "normalized"
+  },
+  "switch": {
+    "phoneme": "",
+    "normalized": "Suýt"
+  },
+  "low-e": {
+    "phoneme": "",
+    "normalized": "lâu-i",
+    "preferred": "normalized"
+  },
+  "wifi": {
+    "phoneme": "",
+    "normalized": "Oai-phai"
+  },
+  "zalo": {
+    "phoneme": "",
+    "normalized": "Za-lô",
+    "preferred": "normalized"
+  },
+  "facebook": {
+    "phoneme": "",
+    "normalized": "Phết-búc",
+    "preferred": "raw"
+  },
+  "fanpage": {
+    "phoneme": "",
+    "normalized": "Phan-pết",
+    "preferred": "raw"
+  },
+  "website": {
+    "phoneme": "",
+    "normalized": "Oép-xai",
+    "preferred": "raw"
+  },
+  "fax": {
+    "phoneme": "",
+    "normalized": "Phắc",
+    "preferred": "raw"
+  },
+  "form": {
+    "phoneme": "",
+    "normalized": "Phom",
+    "preferred": "raw"
+  },
+  "life": {
+    "phoneme": "",
+    "normalized": "Lai",
+    "preferred": "normalized"
+  },
+  "wc": {
+    "phoneme": "vˈɛ sˈe",
+    "normalized": "Vệ sinh"
+  },
+  "floors": {
+    "phoneme": "",
+    "normalized": "Tầng",
+    "preferred": "raw"
+  },
+  "western": {
+    "phoneme": "",
+    "normalized": "Uét-stern",
+    "preferred": "raw"
+  },
+  "feature": {
+    "phoneme": "",
+    "normalized": "Phi-chơ",
+    "preferred": "raw"
+  },
+  "hotel": {
+    "phoneme": "",
+    "normalized": "Hô-theo",
+    "preferred": "normalized"
+  },
+  "west": {
+    "phoneme": "",
+    "normalized": "Oét",
+    "preferred": "raw"
+  },
+  "plaza": {
+    "phoneme": "",
+    "normalized": "Pla-za",
+    "preferred": "raw"
+  },
+  "full": {
+    "phoneme": "",
+    "normalized": "Phun",
+    "preferred": "normalized"
+  },
+  "fine": {
+    "phoneme": "",
+    "normalized": "Phai",
+    "preferred": "normalized"
+  },
+  "workshop": {
+    "phoneme": "",
+    "normalized": "Oớc-xóp",
+    "preferred": "normalized"
+  },
+  "enjoy": {
+    "phoneme": "",
+    "normalized": "Ìn-doi",
+    "preferred": "normalized"
+  },
+  "new": {
+    "phoneme": "",
+    "normalized": "niu"
+  },
+  "fastfood": {
+    "phoneme": "",
+    "normalized": "fast phút",
+    "preferred": "normalized"
+  },
+  "mall": {
+    "phoneme": "",
+    "normalized": "Mo",
+    "preferred": "raw"
+  },
+  "pool": {
+    "phoneme": "",
+    "normalized": "Pun"
+  },
+  "bar": {
+    "phoneme": "",
+    "normalized": "Ba",
+    "preferred": "raw"
+  },
+  "lounge": {
+    "phoneme": "",
+    "normalized": "Lao",
+    "preferred": "normalized"
+  },
+  "lobby": {
+    "phoneme": "",
+    "normalized": "Lốp-bi",
+    "preferred": "normalized"
+  },
+  "spa": {
+    "phoneme": "",
+    "normalized": "Xpa"
+  },
+  "gym": {
+    "phoneme": "",
+    "normalized": "Gim",
+    "preferred": "raw"
+  },
+  "yoga": {
+    "phoneme": "",
+    "normalized": "dô-ga",
+    "preferred": "normalized"
+  },
+  "bbq": {
+    "phoneme": "bˈi bˈi kˈiw",
+    "normalized": "Nướng Bi-bi-kiu"
+  },
+  "camping": {
+    "phoneme": "",
+    "normalized": "Cắm trại",
+    "preferred": "raw"
+  },
+  "pavilion": {
+    "phoneme": "",
+    "normalized": "Pa-vi-li-on",
+    "preferred": "raw"
+  },
+  "oasis": {
+    "phoneme": "",
+    "normalized": "Ốc đảo",
+    "preferred": "raw"
+  },
+  "sand": {
+    "phoneme": "",
+    "normalized": "Xen"
+  },
+  "vista": {
+    "phoneme": "",
+    "normalized": "Vít-ta",
+    "preferred": "normalized"
+  },
+  "skybar": {
+    "phoneme": "",
+    "normalized": "Xờ-kai-ba"
+  },
+  "lagoon": {
+    "phoneme": "",
+    "normalized": "La-gun",
+    "preferred": "raw"
+  },
+  "autobot": {
+    "phoneme": "",
+    "normalized": "Ao-tô-bốt",
+    "preferred": "normalized"
+  },
+  "led": {
+    "phoneme": "ˈɛw ˈi ɗˈi",
+    "normalized": "Lét",
+    "preferred": "normalized"
+  },
+  "design": {
+    "phoneme": "",
+    "normalized": "Đì-dai",
+    "preferred": "normalized"
+  },
+  "scg": {
+    "phoneme": "ˈɛɜt̪ sˈi z",
+    "normalized": "Ét-xê-giê",
+    "preferred": "normalized"
+  },
+  "pga": {
+    "phoneme": "pˈi z ˈəɪ",
+    "normalized": "Pi-gi-ê"
+  },
+  "aeon": {
+    "phoneme": "",
+    "normalized": "a ê on",
+    "preferred": "normalized"
+  },
+  "lotte": {
+    "phoneme": "",
+    "normalized": "Lót-tê",
+    "preferred": "normalized"
+  },
+  "best": {
+    "phoneme": "",
+    "normalized": "Bét",
+    "preferred": "raw"
+  },
+  "sunset": {
+    "phoneme": "",
+    "normalized": "Xăn-xét"
+  },
+  "hospitality": {
+    "phoneme": "",
+    "normalized": "Dịch vụ khách sạn",
+    "preferred": "raw"
+  },
+  "group": {
+    "phoneme": "",
+    "normalized": "Gờ rúp",
+    "preferred": "normalized"
+  },
+  "bank": {
+    "phoneme": "",
+    "normalized": "banh",
+    "preferred": "normalized"
+  },
+  "hdbank": {
+    "phoneme": "hˈaːɜt̪ ɗˈe bˈɛɜŋ",
+    "normalized": "hát-đê banh",
+    "preferred": "normalized"
+  },
+  "bidv": {
+    "phoneme": "bˈe ˈi ɗˈe vˈe",
+    "normalized": "Ngân hàng Bi-Ai-Đi-Vi"
+  },
+  "vpbank": {
+    "phoneme": "vˈe pˈe bˈɛɜŋ",
+    "normalized": "vi pi banh",
+    "preferred": "normalized"
+  },
+  "vat": {
+    "phoneme": "vˈe ˈaː t̪ˈe",
+    "normalized": "vê a tê",
+    "preferred": "raw"
+  },
+  "gcn": {
+    "phoneme": "zˈe sˈe ˈɛn",
+    "normalized": "Giấy chứng nhận",
+    "preferred": "normalized"
+  },
+  "hdmb": {
+    "phoneme": "hˈaːɜt̪ ɗˈe ˈɛm bˈe",
+    "normalized": "Hợp đồng mua bán"
+  },
+  "ttdc": {
+    "phoneme": "t̪ˈe t̪ˈe ɗˈe sˈe",
+    "normalized": "Thỏa thuận đặt cọc",
+    "preferred": "normalized"
+  },
+  "ttpc": {
+    "phoneme": "t̪ˈe t̪ˈe pˈe sˈe",
+    "normalized": "Thỏa thuận phí chọn",
+    "preferred": "normalized"
+  },
+  "dvkh": {
+    "phoneme": "ɗˈe vˈe kˈaː hˈaːɜt̪",
+    "normalized": "Dịch vụ khách hàng"
+  },
+  "csbh": {
+    "phoneme": "sˈe ˈɛɜt̪ bˈe hˈaːɜt̪",
+    "normalized": "Chính sách bán hàng",
+    "preferred": "normalized"
+  },
+  "nvn": {
+    "phoneme": "ˈɛn vˈe ˈɛn",
+    "normalized": "Nhà Việt Nam"
+  },
+  "nnn": {
+    "phoneme": "ˈɛn ˈɛn ˈɛn",
+    "normalized": "Nhà người nước ngoài"
+  },
+  "kdt": {
+    "phoneme": "kˈaː ɗˈe t̪ˈe",
+    "normalized": "Khu đô thị",
+    "preferred": "normalized"
+  },
+  "pccc": {
+    "phoneme": "pˈe sˈe sˈe sˈe",
+    "normalized": "Phòng cháy chữa cháy"
+  },
+  "faq": {
+    "phoneme": "ˈɛɜp ˈaː kˈiw",
+    "normalized": "Ép-ây-qiu",
+    "preferred": "normalized"
+  },
+  "bwh": {
+    "phoneme": "bˈe ɗˈaːɜp lˈiw hˈaːɜt̪",
+    "normalized": "Best Western Hotels"
+  },
+  "dewey": {
+    "phoneme": "",
+    "normalized": "Đu-uy"
+  }
+}

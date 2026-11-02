@@ -1,0 +1,42 @@
+{
+  "case_id": "S-6",
+  "title": "Khách phân vân không quyết được",
+  "setup": "Anh Tuấn, 40 tuổi, đã nghe tư vấn 2 lần nhưng vẫn trả lời 'để suy nghĩ thêm'. Lo sợ giá BĐS có thể còn xuống. DISC type: S (ổn định, ngại rủi ro, cần cộng đồng/bằng chứng xã hội để an tâm). Sale cần đào sâu nguyên nhân phân vân thực sự rồi xử lý nỗi sợ xuống giá bằng dữ liệu thị trường.",
+  "turns": [
+    {
+      "speaker": "KH",
+      "text": "Để anh suy nghĩ thêm."
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: tôn trọng quyết định; M2 đào sâu bằng câu hỏi 4 lựa chọn: vị trí / pháp lý / giá / tiến độ CĐT — anh phân vân nhất điều gì"
+    },
+    {
+      "speaker": "KH",
+      "text": "Anh sợ giá còn xuống nữa."
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: công nhận lo lắng thực tế; đưa 3 dữ kiện: (1) VARS Q3/2025 giá khu Đông chạm đáy quý trước, (2) CK 8% chỉ đợt 1 — đợt 2 tăng 6%, (3) Vingroup hiếm khi giảm giá sơ cấp; tổng kết rủi ro xuống giá < rủi ro mất chính sách; CTA cọc 50 triệu hoàn 100% trong 7 ngày để giữ chính sách hôm nay"
+    }
+  ],
+  "rubric_checkpoints": [
+    [
+      "M4 tôn trọng 'suy nghĩ thêm' — không hối thúc ngay",
+      "M2 SPIN Implication: đặt câu hỏi 4 lựa chọn cụ thể (vị trí/pháp lý/giá/tiến độ) — không hỏi chung chung",
+      "câu hỏi mở đường cho việc xử lý đúng nguyên nhân thực"
+    ],
+    [
+      "M4 công nhận nỗi sợ xuống giá là lo lắng hợp lý — không phủ nhận",
+      "M3 dữ liệu có nguồn: báo cáo VARS Q3/2025 + khu Đông chạm đáy",
+      "scarcity + FOMO: CK 8% chỉ đợt 1, đợt 2 tăng 6%",
+      "authority: Vingroup track record không giảm giá sơ cấp",
+      "framing rủi ro: rủi ro xuống giá thấp hơn rủi ro mất chính sách",
+      "M5 risk reversal CTA: cọc 50 triệu hoàn 100% trong 7 ngày"
+    ]
+  ],
+  "judge_extras": "Sales rubric P2+P4 — tập trung M2 (SPIN Implication đào nguyên nhân thực) + M4 (xử lý nỗi sợ xuống giá bằng VARS data + Vingroup history). Phạt nếu bỏ qua bước đặt câu hỏi 4 lựa chọn hoặc thiếu dữ liệu thị trường cụ thể.",
+  "max_extra_turns": 0,
+  "points": 20.0,
+  "delivery_mode": "scripted_multiturn"
+}

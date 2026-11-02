@@ -1,0 +1,395 @@
+<title>Agent Tools ↔ DB Mapping — Noble Voice Agent</title>
+<style>
+  :root {
+    --bg: #f6f8f8;
+    --surface: #ffffff;
+    --ink: #17252a;
+    --muted: #5a6e74;
+    --line: #dde5e6;
+    --accent: #0e7c86;
+    --accent-soft: #e3f1f2;
+    --group-bg: #eef3f4;
+    /* storage badge hues */
+    --b-pg-bg: #e0f0f1;   --b-pg-fg: #0b5d65;   /* tenant_data */
+    --b-api-bg: #eae6f5;  --b-api-fg: #52418f;  /* agent_api */
+    --b-ctl-bg: #f6ecda;  --b-ctl-fg: #8a5a12;  /* control */
+    --b-redis-bg: #f9e5e2;--b-redis-fg: #a03e2e;
+    --b-http-bg: #e4ecf4; --b-http-fg: #33566e;
+    --b-none-bg: #eceff0; --b-none-fg: #64747a;
+    --warn-bg: #fdf3e4;   --warn-line: #e0b264; --warn-fg: #7a5410;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101718; --surface: #161f21; --ink: #e3ecec; --muted: #93a9ad;
+      --line: #29383b; --accent: #4cc5cf; --accent-soft: #12333a; --group-bg: #1b2b2e;
+      --b-pg-bg: #123a3f;   --b-pg-fg: #7fd6dd;
+      --b-api-bg: #2a2545;  --b-api-fg: #b5a7ec;
+      --b-ctl-bg: #3a2e15;  --b-ctl-fg: #e3b96a;
+      --b-redis-bg: #3f2320;--b-redis-fg: #eb9a8b;
+      --b-http-bg: #1d2f3d; --b-http-fg: #93bcd8;
+      --b-none-bg: #232d30; --b-none-fg: #9bacb1;
+      --warn-bg: #2e2410;   --warn-line: #8a6a25; --warn-fg: #e8c476;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101718; --surface: #161f21; --ink: #e3ecec; --muted: #93a9ad;
+    --line: #29383b; --accent: #4cc5cf; --accent-soft: #12333a; --group-bg: #1b2b2e;
+    --b-pg-bg: #123a3f;   --b-pg-fg: #7fd6dd;
+    --b-api-bg: #2a2545;  --b-api-fg: #b5a7ec;
+    --b-ctl-bg: #3a2e15;  --b-ctl-fg: #e3b96a;
+    --b-redis-bg: #3f2320;--b-redis-fg: #eb9a8b;
+    --b-http-bg: #1d2f3d; --b-http-fg: #93bcd8;
+    --b-none-bg: #232d30; --b-none-fg: #9bacb1;
+    --warn-bg: #2e2410;   --warn-line: #8a6a25; --warn-fg: #e8c476;
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f8f8; --surface: #ffffff; --ink: #17252a; --muted: #5a6e74;
+    --line: #dde5e6; --accent: #0e7c86; --accent-soft: #e3f1f2; --group-bg: #eef3f4;
+    --b-pg-bg: #e0f0f1;   --b-pg-fg: #0b5d65;
+    --b-api-bg: #eae6f5;  --b-api-fg: #52418f;
+    --b-ctl-bg: #f6ecda;  --b-ctl-fg: #8a5a12;
+    --b-redis-bg: #f9e5e2;--b-redis-fg: #a03e2e;
+    --b-http-bg: #e4ecf4; --b-http-fg: #33566e;
+    --b-none-bg: #eceff0; --b-none-fg: #64747a;
+    --warn-bg: #fdf3e4;   --warn-line: #e0b264; --warn-fg: #7a5410;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.6 "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  code, .mono {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 0.86em;
+  }
+  main { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header { border-bottom: 2px solid var(--accent); padding-bottom: 20px; margin-bottom: 28px; }
+  .eyebrow {
+    text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px;
+    color: var(--accent); font-weight: 600; margin: 0 0 6px;
+  }
+  h1 { font-size: 28px; line-height: 1.25; margin: 0 0 8px; text-wrap: balance; }
+  .meta { color: var(--muted); font-size: 13.5px; margin: 0; }
+  .meta code { color: var(--ink); }
+
+  h2 { font-size: 19px; margin: 44px 0 6px; }
+  h2 + p.lead { margin: 0 0 16px; color: var(--muted); font-size: 14px; max-width: 72ch; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 18px 0 4px; align-items: center; }
+  .legend .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+  .badge {
+    display: inline-block; padding: 1.5px 8px; border-radius: 4px;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 12px; font-weight: 600; white-space: nowrap;
+  }
+  .b-pg    { background: var(--b-pg-bg);    color: var(--b-pg-fg); }
+  .b-api   { background: var(--b-api-bg);   color: var(--b-api-fg); }
+  .b-ctl   { background: var(--b-ctl-bg);   color: var(--b-ctl-fg); }
+  .b-redis { background: var(--b-redis-bg); color: var(--b-redis-fg); }
+  .b-http  { background: var(--b-http-bg);  color: var(--b-http-fg); }
+  .b-none  { background: var(--b-none-bg);  color: var(--b-none-fg); font-weight: 500; }
+
+  .rw { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; padding: 1px 6px;
+        border-radius: 3px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .rw.w { color: var(--accent); border-color: var(--accent); }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 900px; }
+  th {
+    text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--line);
+    background: var(--surface); font-weight: 600;
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 14px; }
+  tbody tr:last-child td { border-bottom: none; }
+  tr.group td {
+    background: var(--group-bg); font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); padding: 7px 14px;
+  }
+  td.tool { font-weight: 600; white-space: nowrap; }
+  td.tool .sub { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+  td .path { display: block; color: var(--muted); font-size: 12px; margin-top: 3px; }
+  td .note { color: var(--muted); font-size: 13px; }
+  td .stack { display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
+  td .row { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+
+  .callout {
+    margin: 28px 0 0; padding: 14px 18px; border-radius: 8px;
+    background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-fg);
+    font-size: 14px; max-width: 100%;
+  }
+  .callout strong { color: inherit; }
+  .callout code { color: inherit; }
+
+  .notes { margin-top: 26px; padding: 0 0 0 2px; }
+  .notes h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 10px; }
+  .notes ul { margin: 0; padding-left: 20px; display: grid; gap: 7px; max-width: 82ch; }
+  .notes li { font-size: 14px; }
+  .notes code { background: var(--accent-soft); padding: 1px 5px; border-radius: 3px; }
+
+  footer { margin-top: 48px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 14px; }
+</style>
+
+<main>
+<header>
+  <p class="eyebrow">Noble Voice Agent · db-mode (pg_kb)</p>
+  <h1>Bảng mapping: Agent Tool → nguồn dữ liệu (schema.table)</h1>
+  <p class="meta">
+    Lập từ inspect source <code>src/noble_agent/agent/tools/</code> + <code>data/providers/postgres_kb.py</code>
+    (branch <code>feat/share-agent</code>, 2026-08-06). Mọi truy cập Postgres đều đi qua
+    <code>storage/postgres_client.py::tenant_conn</code> — mỗi transaction set GUC
+    <code>app.current_tenant</code> + <code>app.tenant_id</code> để RLS tự scope theo tenant.
+  </p>
+  <div class="legend">
+    <span class="lbl">Chú giải nguồn:</span>
+    <span class="badge b-pg">tenant_data.*</span>
+    <span class="badge b-api">agent_api.*</span>
+    <span class="badge b-ctl">control.*</span>
+    <span class="badge b-redis">Redis</span>
+    <span class="badge b-http">HTTP service</span>
+    <span class="badge b-none">không DB</span>
+  </div>
+</header>
+
+<h2>1 · 15 tool của agent</h2>
+<p class="lead">4 tool lõi luôn bật · 8 tool optional bật theo config publish của tenant · 3 tool reserved đăng ký sẵn nhưng không offer cho LLM.</p>
+
+<div class="tablewrap">
+<table>
+  <thead>
+    <tr>
+      <th style="width:17%">Tool</th>
+      <th style="width:6%">R/W</th>
+      <th style="width:40%">Nguồn dữ liệu</th>
+      <th>Filter / ghi chú</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="group"><td colspan="4">Core — luôn bật</td></tr>
+
+    <tr>
+      <td class="tool">update_customer
+        <span class="sub mono">update_customer.py</span></td>
+      <td><span class="rw w">WRITE</span></td>
+      <td><div class="stack">
+        <span class="row"><span class="badge b-redis">session:{sid}:customer</span> <span class="note">hồ sơ phiên (nguồn sự thật trong call)</span></span>
+        <span class="row"><span class="badge b-pg">tenant_data.contacts</span> <span class="note">cột <code>profile</code> jsonb — upsert merge</span></span>
+      </div></td>
+      <td class="note">Persist fire-and-forget khi có phone, qua <code>session_store.save_customer_persistent → pg_data_plane.persist_customer_profile</code>. Merge chỉ field truthy, không đè tên cũ.</td>
+    </tr>
+
+    <tr>
+      <td class="tool">kb_search
+        <span class="sub mono">noble_search.py</span></td>
+      <td><span class="rw">READ</span></td>
+      <td><div class="stack">
+        <span class="row"><span class="badge b-http">kb_service :8016</span> <span class="note">backend hiện tại (<code>NOBLE_RAG_BACKEND=kb_service</code>, service team RAG)</span></span>
+      </div></td>
+      <td class="note"><strong>Không đọc Postgres.</strong> Backend khác theo env: <code>qdrant</code> (collection <code>noble_kb_hybrid</code>) / <code>flat_store</code> (npy+BM25 local) / <code>hipporag</code> / <code>grep_faq</code>. Lỗi hoặc rỗng → degrade <code>""</code>.</td>
+    </tr>
+
+    <tr>
+      <td class="tool">find_project
+        <span class="sub mono">find_project.py</span></td>
+      <td><span class="rw">READ</span></td>
+      <td><div class="stack">
+        <span class="row"><span class="badge b-pg">tenant_data.projects</span> <span class="note">gián tiếp — qua registry cache</span></span>
+      </div></td>
+      <td class="note">Index tên dự án build từ <code>db_project_registry.registry_rows() → provider.warm()</code> (<span class="mono">postgres_kb.py:86</span>). Filter <code>status='published'</code>, loại <code>__ALL__</code>. Cache TTL 120s/đầu call.</td>
+    </tr>
+
+    <tr>
+      <td class="tool">escalate
+        <span class="sub mono">support_ops.py</span></td>
+      <td><span class="rw w">WRITE</span></td>
+      <td><span class="badge b-redis">scratchpad</span></td>
+      <td class="note">Chỉ set cờ <code>escalation_transferred</code>/<code>escalation_summary</code> trong Redis state. Không query DB. (Ghi <code>conversations</code> là việc của call-end, không phải tool này.)</td>
+    </tr>
+
+    <tr class="group"><td colspan="4">Optional — bật theo config tenant · đều qua PostgresKBProvider</td></tr>
+
+    <tr>
+      <td class="tool">discover_projects
+        <span class="sub mono">projects_info.py</span></td>
+      <td><span class="rw">READ</span></td>
+      <td><div class="stack">
+        <span class="row"><span class="badge b-pg">tenant_data.projects</span></span>
+        <span class="row"><span class="badge b-pg">tenant_data.units</span> <span class="note">LEFT JOIN — <code>min(price_vnd)</code> làm giá từ</span></span>
+      </div></td>
+      <td class="note"><span class="mono">postgres_kb.py:189</span> · <code>p.status='published'</code> AND <code>project_code &lt;&gt; '__ALL__'</code>; subquery units cũng <code>status='published'</code>. Sort theo <code>sale_phase</code>.</td>
+    </tr>
+
+    <tr>
+      <td class="tool">get_project_overview
+        <span class="sub mono">projects_info.py</span></td>
+      <td><span class="rw">READ</span></td>
+      <td><span class="badge b-pg">tenant_data.projects</span></td>
+      <td class="note"><span class="mono">postgres_kb.py:142</span> · 1 row theo <code>project_code</code>, <code>status='published'</code>.</td>
+    </tr>
+
+    <tr>
+      <td class="tool">get_document
+        <span class="sub mono">get_document.py</span></td>
+      <td><span class="rw">READ</span></td>
+      <td><span class="badge b-pg">tenant_data.documents</span></td>
+      <td class="note"><span class="mono">postgres_kb.py:328</span> · <code>status='published'</code>, scope <code>project_code ∈ [mã dự án, '__ALL__']</code> (+ ILIKE title/body theo <code>query</code>).</td>
+    </tr>
+
+    <tr>
+      <td class="tool">search_units
+        <span class="sub mono">projects_info.py</span></td>
+      <td><span class="rw">READ</span></td>
+      <td><div class="stack">
+        <span class="row"><span class="badge b-pg">tenant_data.units</span></span>
+        <span class="row"><span class="badge b-pg">tenant_data.projects</span> <span class="note">JOIN USING (tenant_id, project_code)</span></span>
+      </div></td>
+      <td class="note"><span class="mono">postgres_kb.py:231</span> · cả units lẫn project cha phải <code>published</code>; filter giá/diện tích/hướng/phòng ngủ.</td>
+    </tr>
+
+    <tr>
+      <td class="tool">check_inventory
+        <span class="sub mono">check_inventory.py</span></td>
+      <td><span class="rw">READ</span></td>
+      <td><div class="stack">
+        <span class="row"><span class="badge b-pg">tenant_data.units</span></span>
+        <span class="row"><span class="badge b-pg">tenant_data.projects</span> <span class="note">JOIN</span></span>
+      </div></td>
+      <td class="note"><span class="mono">postgres_kb.py:277</span> · aggregate còn/hết theo <code>sale_status</code>, đếm theo <code>product_type</code>/<code>direction</code>. Trả summary, không trả list căn.</td>
+    </tr>
+
+    <tr>
+      <td class="tool">recommend_units
+        <span class="sub mono">projects_info.py</span></td>
+      <td><span class="rw">READ</span></td>
+      <td><div class="stack">
+        <span class="row"><span class="badge b-pg">tenant_data.units</span></span>
+        <span class="row"><span class="badge b-pg">tenant_data.projects</span> <span class="note">JOIN</span></span>
+      </div></td>
+      <td class="note"><span class="mono">postgres_kb.py:262</span> · hard-filter budget/region/bedrooms; overlay phong thủy (bát trạch/ngũ hành) tính trong code <code>agent/feng_shui.py</code>, không đụng DB.</td>
+    </tr>
+
+    <tr>
+      <td class="tool">booking
+        <span class="sub mono">booking.py → schedule_viewing.py / availability.py</span></td>
+      <td><span class="rw w">R+W</span></td>
+      <td><div class="stack">
+        <span class="row"><span class="badge b-redis">scratchpad["bookings"]</span> <span class="note">nguồn sự thật trong phiên</span></span>
+        <span class="row"><span class="badge b-pg">tenant_data.appointments</span> <span class="note">upsert best-effort theo <code>appointment_id</code></span></span>
+        <span class="row"><span class="badge b-none">check_availability = stub</span></span>
+      </div></td>
+      <td class="note"><code>schedule</code>/<code>modify</code> ghi scratchpad rồi <code>pg_data_plane.persist_appointment</code> (PG down không fail booking). <code>list</code> đọc scratchpad. <code>check_availability</code> sinh 10 ngày làm việc + 4 khung giờ cố định — <strong>không query DB</strong>.</td>
+    </tr>
+
+    <tr>
+      <td class="tool">send_media
+        <span class="sub mono">support_ops.py → media_data.py</span></td>
+      <td><span class="rw">READ</span></td>
+      <td><span class="badge b-http">media search :8015</span></td>
+      <td class="note">POST <code>MEDIA_SEARCH_URL</code> (visual-search service của team media, phía sau là Qdrant media collection). <strong>Agent không đọc <code>tenant_data.media</code> trực tiếp.</strong> Lỗi → payload <code>no_media</code>, không raise.</td>
+    </tr>
+
+    <tr class="group"><td colspan="4">Reserved — đăng ký built-in nhưng không offer (post-sale → escalate)</td></tr>
+
+    <tr>
+      <td class="tool">crm_lookup / verify_identity / support_ticket
+        <span class="sub mono">support_ops.py → data/crm_data.py</span></td>
+      <td><span class="rw">—</span></td>
+      <td><span class="badge b-none">mock in-memory</span></td>
+      <td class="note"><code>crm_data.py</code> là mock CRM (dict trong process). Không đọc bất kỳ DB nào. Chờ thay bằng CRM thật nếu được offer lại.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2>2 · Truy cập DB ngoài tool (cùng pool, db-mode)</h2>
+<p class="lead">Không phải tool LLM gọi, nhưng chạy trên cùng connection pool và cùng cơ chế RLS — liệt kê để nhìn đủ bề mặt đọc/ghi.</p>
+
+<div class="tablewrap">
+<table>
+  <thead>
+    <tr>
+      <th style="width:23%">Luồng</th>
+      <th style="width:6%">R/W</th>
+      <th style="width:33%">Quan hệ</th>
+      <th>Ghi chú</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="tool">Gateway auth</td>
+      <td><span class="rw">READ</span></td>
+      <td><div class="stack">
+        <span class="badge b-api">agent_api.tenant_status</span>
+        <span class="badge b-api">agent_api.tenant_keys</span>
+      </div></td>
+      <td class="note"><span class="mono">storage/agent_control_store.py</span> · verify bearer = so <code>sha256(plaintext)</code> hex với <code>key_sha256</code>. View tự lọc theo <code>portal.current_tenant()</code>.</td>
+    </tr>
+    <tr>
+      <td class="tool">Load config tenant</td>
+      <td><span class="rw">READ</span></td>
+      <td><span class="badge b-api">agent_api.agent_published_config</span></td>
+      <td class="note"><span class="mono">storage/agent_config_store.py:14</span> · <code>SELECT version, config WHERE tenant_id=$1</code>; last-good fallback ra đĩa khi DB lỗi.</td>
+    </tr>
+    <tr>
+      <td class="tool">Heartbeat</td>
+      <td><span class="rw w">R+W</span></td>
+      <td><div class="stack">
+        <span class="badge b-api">agent_api.deployments</span>
+        <span class="row"><span class="badge b-ctl">control.agent_heartbeats</span> <span class="note">upsert</span></span>
+      </div></td>
+      <td class="note"><span class="mono">tenant/pg_heartbeat.py</span> · đọc <code>deployment_id</code> theo (tenant, kind) rồi beat mỗi ~20s cho tenant đang có kết nối.</td>
+    </tr>
+    <tr>
+      <td class="tool">Bootstrap hồ sơ đầu call</td>
+      <td><span class="rw">READ</span></td>
+      <td><div class="stack">
+        <span class="row"><span class="badge b-pg">tenant_data.contacts</span> <span class="note">profile + snapshot theo phone</span></span>
+        <span class="row"><span class="badge b-pg">tenant_data.appointments</span> <span class="note">booking hint gần nhất</span></span>
+        <span class="row"><span class="badge b-pg">tenant_data.conversations</span> <span class="note">phiên trước cho memory snapshot</span></span>
+      </div></td>
+      <td class="note"><span class="mono">storage/session_store.py</span> + <span class="mono">agent/memory/snapshot.py</span> — đổ vào <code>customer_block</code> của system prompt.</td>
+    </tr>
+    <tr>
+      <td class="tool">Call-end persist</td>
+      <td><span class="rw w">WRITE</span></td>
+      <td><div class="stack">
+        <span class="row"><span class="badge b-pg">tenant_data.conversations</span> <span class="note">merge-upsert theo (tenant, session)</span></span>
+        <span class="row"><span class="badge b-pg">tenant_data.contacts</span> <span class="note">snapshot narrative sau merge LLM</span></span>
+      </div></td>
+      <td class="note"><span class="mono">storage/pg_data_plane.py</span> · best-effort — PG chưa cấu hình → no-op, không fail call.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="callout">
+  <strong>⚠ Mismatch tiềm ẩn với contract Portal:</strong> toàn bộ tool KB đọc <strong>thẳng
+  <code>tenant_data.*</code></strong>, trong khi lớp đọc chính thức Portal dành cho agent là các view
+  <code>agent_api.projects / zones / units / documents / media</code> (đã lọc sẵn tenant + published + loại
+  <code>__ALL__</code>). Hiện chạy được vì DSN đang là <code>odyssey_app</code> (role full-quyền của Portal backend).
+  Nếu ops đổi sang role least-privilege <code>odyssey_agent</code> (chỉ <code>agent_all</code> — <em>không có</em> GRANT
+  nào trên <code>tenant_data</code>), mọi tool ở nhóm Optional sẽ chết vì permission denied. Việc nên làm:
+  trỏ <code>postgres_kb.py</code> sang view <code>agent_api.*</code>.
+</div>
+
+<section class="notes">
+  <h3>Ghi chú đọc bảng</h3>
+  <ul>
+    <li>Agent <strong>không đọc</strong> <code>tenant_data.zones</code> và <code>tenant_data.media</code> ở bất kỳ tool nào — zones chưa có tool nào dùng; media đi qua service :8015.</li>
+    <li>Mọi query <code>tenant_data.*</code> đều dính <strong>2 filter ẩn</strong>: RLS theo tenant (GUC) và <code>status='published'</code> — row <code>draft</code>/<code>archived</code> hoặc khác tenant_id là vô hình với agent (đây chính là 2 nghi phạm của bug <code>discover_projects → total: 0</code>).</li>
+    <li><code>dispatcher.py</code> bắt exception của tool → trả <code>{"error": "tool X crashed: …"}</code> cho LLM; kết quả JSON "sạch" đồng nghĩa query đã chạy thành công.</li>
+    <li>Redis (3 key/phiên <code>meta / customer / state</code>) là storage phiên, không phải DB nghiệp vụ — chỉ liệt kê khi tool ghi vào nó như nguồn sự thật (booking, escalate, update_customer).</li>
+  </ul>
+</section>
+
+<footer>
+  Nguồn: <span class="mono">agent/tools/builtins.py</span> (đăng ký 15 tool) ·
+  <span class="mono">data/providers/postgres_kb.py</span> (SQL) ·
+  <span class="mono">storage/pg_data_plane.py</span>, <span class="mono">agent_config_store.py</span>,
+  <span class="mono">agent_control_store.py</span>, <span class="mono">tenant/pg_heartbeat.py</span> ·
+  đối chiếu contract <span class="mono">docs/api/SPEC-DB-HIEN-TAI.md</span>. Sinh ngày 2026-08-06.
+</footer>
+</main>

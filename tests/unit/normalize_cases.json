@@ -1,0 +1,849 @@
+{
+  "_comment": "Bộ test cho tts/normalize.py. Mỗi case: {in, out, note}. 'in' là CÂU hoàn chỉnh như hội thoại thật, 'out' là kết quả normalize mong muốn. Chạy: python3 tests/normalize_test.py",
+  "groups": [
+    {
+      "name": "Số thập phân trần (dấu . , không được đọc thành ngắt câu)",
+      "cases": [
+        {
+          "in": "Nhiệt độ hôm nay là 36,5°C.",
+          "out": "Nhiệt độ hôm nay là ba mươi sáu phẩy năm độ C."
+        },
+        {
+          "in": "Lãi suất vay ưu đãi chỉ 8.5% một năm.",
+          "out": "Lãi suất vay ưu đãi chỉ tám phẩy năm phần trăm một năm."
+        },
+        {
+          "in": "Giá vàng tăng 0,5% trong tuần này.",
+          "out": "Giá vàng tăng không phẩy năm phần trăm trong tuần này."
+        },
+        {
+          "in": "Hệ số sử dụng đất là 2.0 nhé.",
+          "out": "Hệ số sử dụng đất là hai nhé.",
+          "note": "X.0 -> đọc như số nguyên"
+        },
+        {
+          "in": "Chỉ số này đạt 12.75 điểm.",
+          "out": "Chỉ số này đạt mười hai phẩy bảy mươi lăm điểm."
+        }
+      ]
+    },
+    {
+      "name": "Phân cách nghìn và số lớn (tỷ)",
+      "cases": [
+        {
+          "in": "Căn hộ có giá 1.200.000 đồng mỗi mét vuông.",
+          "out": "Căn hộ có giá một triệu hai trăm nghìn đồng mỗi mét vuông."
+        },
+        {
+          "in": "Phí quản lý là 850.000đ mỗi tháng.",
+          "out": "Phí quản lý là tám trăm năm mươi nghìn đồng mỗi tháng."
+        },
+        {
+          "in": "Tổng giá trị hợp đồng là 1.432.662 đồng.",
+          "out": "Tổng giá trị hợp đồng là một triệu bốn trăm ba mươi hai nghìn sáu trăm sáu mươi hai đồng."
+        },
+        {
+          "in": "Dự án có tổng vốn 15.224.565.224 đồng.",
+          "out": "Dự án có tổng vốn mười lăm tỷ hai trăm hai mươi bốn triệu năm trăm sáu mươi lăm nghìn hai trăm hai mươi bốn đồng."
+        },
+        {
+          "in": "Chỉ số đo được là 1.200,5 hôm nay.",
+          "out": "Chỉ số đo được là một nghìn hai trăm phẩy năm hôm nay.",
+          "note": "lẫn chấm-nghìn + phẩy-thập-phân"
+        },
+        {
+          "in": "Diện tích thông thủy là 1.200,5 m2 nhé.",
+          "out": "Diện tích thông thủy là một nghìn hai trăm phẩy năm mét vuông nhé.",
+          "note": "lẫn định dạng + đơn vị phía sau"
+        },
+        {
+          "in": "Tổng cộng là 1.234.567,89 đồng.",
+          "out": "Tổng cộng là một triệu hai trăm ba mươi bốn nghìn năm trăm sáu mươi bảy phẩy tám mươi chín đồng."
+        },
+        {
+          "in": "Diện tích khu đất là 41.161,87 mét vuông ạ.",
+          "out": "Diện tích khu đất là bốn mươi mốt nghìn một trăm sáu mươi mốt phẩy tám mươi bảy mét vuông ạ."
+        },
+        {
+          "in": "Tổng mức đầu tư dự án là 1250 tỷ đồng.",
+          "out": "Tổng mức đầu tư dự án là một nghìn hai trăm năm mươi tỷ đồng.",
+          "note": "≥ nghìn tỷ (không dấu chấm), không được đọc rác"
+        },
+        {
+          "in": "Quỹ đất lên tới 2000 tỷ đồng.",
+          "out": "Quỹ đất lên tới hai nghìn tỷ đồng."
+        },
+        {
+          "in": "Giá trị hợp đồng 1.234,5 tỷ đồng.",
+          "out": "Giá trị hợp đồng một nghìn hai trăm ba mươi bốn tỷ rưỡi đồng.",
+          "note": "cả . (nghìn) và , (thập phân)"
+        },
+        {
+          "in": "Phí quản lý 850.000 đồng mỗi tháng.",
+          "out": "Phí quản lý tám trăm năm mươi nghìn đồng mỗi tháng.",
+          "note": ". là phân cách nghìn (không phải trước tỷ)"
+        }
+      ]
+    },
+    {
+      "name": "Đọc rút gọn số tiền (X,Y đơn vị -> X đơn vị Y)",
+      "cases": [
+        {
+          "in": "Căn này có giá 12,7 triệu một mét.",
+          "out": "Căn này có giá mười hai triệu bảy trăm nghìn một mét.",
+          "note": "đọc đúng giá trị: 12,7 triệu = 12 triệu 700 nghìn"
+        },
+        {
+          "in": "Giá chỉ từ 1,2 tỷ một căn thôi.",
+          "out": "Giá chỉ từ một tỷ hai trăm triệu một căn thôi."
+        },
+        {
+          "in": "Căn góc có giá 2,5 tỷ đã có sổ.",
+          "out": "Căn góc có giá hai tỷ rưỡi đã có sổ.",
+          "note": "đúng nửa đơn vị -> rưỡi"
+        },
+        {
+          "in": "Giá nền biệt thự khoảng 3.5 tỷ.",
+          "out": "Giá nền biệt thự khoảng ba tỷ rưỡi."
+        },
+        {
+          "in": "Biệt thự đơn lập giá 64,6 tỷ đồng.",
+          "out": "Biệt thự đơn lập giá sáu mươi bốn tỷ sáu trăm triệu đồng."
+        },
+        {
+          "in": "Suất ngoại giao chỉ 1,25 tỷ thôi.",
+          "out": "Suất ngoại giao chỉ một tỷ hai trăm năm mươi triệu thôi.",
+          "note": "1,25 tỷ = 1 tỷ 250 triệu"
+        }
+      ]
+    },
+    {
+      "name": "Biến thể đơn vị tiền (tỉ, tr, tr5)",
+      "cases": [
+        {
+          "in": "Lô đất đó tầm 3 tỉ.",
+          "out": "Lô đất đó tầm ba tỷ."
+        },
+        {
+          "in": "Giá thuê vào khoảng 5tr một tháng.",
+          "out": "Giá thuê vào khoảng năm triệu một tháng."
+        },
+        {
+          "in": "Thuê văn phòng chỉ 5tr5 mỗi tháng.",
+          "out": "Thuê văn phòng chỉ năm triệu rưỡi mỗi tháng."
+        }
+      ]
+    },
+    {
+      "name": "Dải giá / diện tích (A-B đơn vị)",
+      "cases": [
+        {
+          "in": "Tầm giá dao động 1,2-2,5 tỷ.",
+          "out": "Tầm giá dao động một tỷ hai trăm triệu đến hai tỷ rưỡi."
+        },
+        {
+          "in": "Ngân sách của anh khoảng 2 - 3 tỷ đúng không?",
+          "out": "Ngân sách của anh khoảng hai tỷ đến ba tỷ đúng không?"
+        },
+        {
+          "in": "Diện tích các căn từ 50-70m2.",
+          "out": "Diện tích các căn từ năm mươi mét vuông đến bảy mươi mét vuông."
+        }
+      ]
+    },
+    {
+      "name": "Số La Mã theo keyword (quý, thế kỷ, đợt, giai đoạn, ...)",
+      "cases": [
+        {
+          "in": "Dự án bàn giao vào quý I năm 2026.",
+          "out": "Dự án bàn giao vào quý một năm hai nghìn không trăm hai mươi sáu."
+        },
+        {
+          "in": "Chúng tôi mở bán quý IV/2026.",
+          "out": "Chúng tôi mở bán quý bốn năm hai nghìn không trăm hai mươi sáu."
+        },
+        {
+          "in": "Tòa nhà mang phong cách thế kỷ XXI.",
+          "out": "Tòa nhà mang phong cách thế kỷ hai mươi mốt."
+        },
+        {
+          "in": "Đợt II sẽ mở bán vào tháng sau.",
+          "out": "Đợt hai sẽ mở bán vào tháng sau."
+        },
+        {
+          "in": "Sản phẩm giai đoạn III đang được ưa chuộng.",
+          "out": "Sản phẩm giai đoạn ba đang được ưa chuộng."
+        }
+      ]
+    },
+    {
+      "name": "Tiền tố hành chính TP -> thành phố (nuốt dấu chấm)",
+      "cases": [
+        {
+          "in": "Dự án nằm tại TP. Hà Nội.",
+          "out": "Dự án nằm tại thành phố Hà Nội."
+        },
+        {
+          "in": "Chi nhánh ở TP.HCM ạ.",
+          "out": "Chi nhánh ở thành phố hồ chí minh ạ."
+        },
+        {
+          "in": "Trụ sở tại Tp. Đà Nẵng.",
+          "out": "Trụ sở tại thành phố Đà Nẵng."
+        },
+        {
+          "in": "Ngân hàng TPBank cho vay ưu đãi.",
+          "out": "Ngân hàng tê pê bank cho vay ưu đãi.",
+          "note": "TPBank KHÔNG bị nhầm thành 'thành phố'"
+        }
+      ]
+    },
+    {
+      "name": "SĐT đọc từng chữ số (các biến thể)",
+      "cases": [
+        {
+          "in": "Anh gọi giúp em số 0912345678 nhé.",
+          "out": "Anh gọi giúp em số không chín một hai ba bốn năm sáu bảy tám nhé."
+        },
+        {
+          "in": "Liên hệ 0912.345.678 để được tư vấn.",
+          "out": "Liên hệ không chín một hai ba bốn năm sáu bảy tám để được tư vấn."
+        },
+        {
+          "in": "Số của em là 0912 345 678 ạ.",
+          "out": "Số của em là không chín một hai ba bốn năm sáu bảy tám ạ."
+        },
+        {
+          "in": "Bấm 0912-345-678 để gặp tổng đài.",
+          "out": "Bấm không chín một hai ba bốn năm sáu bảy tám để gặp tổng đài."
+        },
+        {
+          "in": "Gọi ngay hotline 1900 1234 nhé.",
+          "out": "Gọi ngay hotline một chín không không một hai ba bốn nhé."
+        },
+        {
+          "in": "Số quốc tế là +84912345678 anh nhé.",
+          "out": "Số quốc tế là không chín một hai ba bốn năm sáu bảy tám anh nhé.",
+          "note": "+84 đọc như 0"
+        },
+        {
+          "in": "SĐT của chị là 0987654321 nhé.",
+          "out": "số điện thoại của chị là không chín tám bảy sáu năm bốn ba hai một nhé."
+        }
+      ]
+    },
+    {
+      "name": "CASE DỄ NHẦM: SĐT vs số tiền vs năm",
+      "cases": [
+        {
+          "in": "Nhà này bán 1200000 đồng thôi à?",
+          "out": "Nhà này bán một triệu hai trăm nghìn đồng thôi à?",
+          "note": "7 số, không đầu 0 -> là tiền, KHÔNG phải sđt"
+        },
+        {
+          "in": "Anh cứ gọi 0912345678 rồi qua xem căn 2 tỷ nhé.",
+          "out": "Anh cứ gọi không chín một hai ba bốn năm sáu bảy tám rồi qua xem căn hai tỷ nhé.",
+          "note": "sđt + giá cùng câu"
+        },
+        {
+          "in": "Dự án dự kiến khởi công năm 2026 anh ạ.",
+          "out": "Dự án dự kiến khởi công năm hai nghìn không trăm hai mươi sáu anh ạ.",
+          "note": "4 số -> là năm"
+        }
+      ]
+    },
+    {
+      "name": "Dấu . LUÔN là phân cách nghìn — chỉ , mới là thập phân",
+      "cases": [
+        {
+          "in": "Căn L3-2903 diện tích 108.2m², giá 7.038 tỷ.",
+          "out": "Căn lờ ba hai chín không ba diện tích một trăm lẻ tám phẩy hai mét vuông, giá bảy nghìn không trăm ba mươi tám tỷ.",
+          "note": "7.038 = nghìn; 108.2 (1 chữ số) không thể là nghìn -> thập phân"
+        },
+        {
+          "in": "Tổng vốn đầu tư 12.286 tỷ đồng.",
+          "out": "Tổng vốn đầu tư mười hai nghìn hai trăm tám mươi sáu tỷ đồng."
+        },
+        {
+          "in": "Căn góc này giá 5.733 tỷ thôi.",
+          "out": "Căn góc này giá năm nghìn bảy trăm ba mươi ba tỷ thôi."
+        },
+        {
+          "in": "Giá bán là 7,038 tỷ nhé.",
+          "out": "Giá bán là bảy tỷ ba mươi tám triệu nhé.",
+          "note": ", là thập phân -> 7,038 tỷ"
+        },
+        {
+          "in": "Căn này chỉ 3.5 tỷ thôi ạ.",
+          "out": "Căn này chỉ ba tỷ rưỡi thôi ạ.",
+          "note": ". + 1 chữ số -> thập phân (không thể là nghìn)"
+        }
+      ]
+    },
+    {
+      "name": "CASE DỄ NHẦM: thập phân vs phân cách nghìn",
+      "cases": [
+        {
+          "in": "Sản phẩm phiên bản 3.4 vừa ra mắt.",
+          "out": "Sản phẩm phiên bản ba phẩy bốn vừa ra mắt.",
+          "note": "1 chữ số sau dấu -> thập phân"
+        },
+        {
+          "in": "Khoảng cách chỉ 1.200 mét tới hồ.",
+          "out": "Khoảng cách chỉ một nghìn hai trăm mét tới hồ.",
+          "note": "3 chữ số sau dấu -> phân cách nghìn"
+        },
+        {
+          "in": "Giá khoảng 3.4 tỷ một căn.",
+          "out": "Giá khoảng ba tỷ bốn trăm triệu một căn."
+        }
+      ]
+    },
+    {
+      "name": "Mã căn hộ (đánh vần chữ + đọc từng chữ số)",
+      "cases": [
+        {
+          "in": "Căn hộ mã L11-2509 hiện còn trống.",
+          "out": "Căn hộ mã lờ một một hai năm không chín hiện còn trống."
+        },
+        {
+          "in": "Anh xem giúp em căn A3.1.12.01 nhé.",
+          "out": "Anh xem giúp em căn a ba một một hai không một nhé."
+        },
+        {
+          "in": "Mã căn của chị là L3A-1702 ạ.",
+          "out": "Mã căn của chị là lờ ba a một bảy không hai ạ."
+        }
+      ]
+    },
+    {
+      "name": "Chống hồi quy (phải giữ đúng như cũ)",
+      "cases": [
+        {
+          "in": "Diện tích thông thủy 85m2 rất thoáng.",
+          "out": "Diện tích thông thủy tám mươi lăm mét vuông rất thoáng."
+        },
+        {
+          "in": "Chiết khấu lên tới 10% cho khách hàng.",
+          "out": "Chiết khấu lên tới mười phần trăm cho khách hàng."
+        },
+        {
+          "in": "Ngân hàng Vietinbank hỗ trợ cho vay.",
+          "out": "Ngân hàng việt tin bank hỗ trợ cho vay."
+        },
+        {
+          "in": "Dự án NCLB hiện đang rất hot.",
+          "out": "Dự án Noble Crystal Long Biên hiện đang rất hot."
+        },
+        {
+          "in": "Ngân hàng cho vay tối đa 2 tỷ VND.",
+          "out": "Ngân hàng cho vay tối đa hai tỷ việt nam đồng."
+        },
+        {
+          "in": "Tòa A nằm ngay sát công viên.",
+          "out": "Tòa A nằm ngay sát công viên.",
+          "note": "không keyword -> KHÔNG đổi La Mã"
+        },
+        {
+          "in": "Khu C có bể bơi riêng biệt.",
+          "out": "Khu C có bể bơi riêng biệt."
+        }
+      ]
+    },
+    {
+      "name": "Đơn vị theo (dấu / = 'một', không đọc là 'trên')",
+      "cases": [
+        {
+          "in": "Giá bán 50 triệu/m² thôi.",
+          "out": "Giá bán năm mươi triệu một mét vuông thôi."
+        },
+        {
+          "in": "Đơn giá 45 triệu VNĐ/m2 nhé.",
+          "out": "Đơn giá bốn mươi lăm triệu việt nam đồng một mét vuông nhé."
+        },
+        {
+          "in": "Tính theo đồng/m² anh nhé.",
+          "out": "Tính theo đồng một mét vuông anh nhé."
+        },
+        {
+          "in": "Giá 2 tỷ/căn thôi.",
+          "out": "Giá hai tỷ một căn thôi."
+        },
+        {
+          "in": "Phí thuê 50.000đ/tháng ạ.",
+          "out": "Phí thuê năm mươi nghìn đồng một tháng ạ."
+        }
+      ]
+    },
+    {
+      "name": "Số La Mã KHÔNG ăn nhầm nhãn khối/mục/quận (chỉ I V X)",
+      "cases": [
+        {
+          "in": "Mục C trong hợp đồng.",
+          "out": "Mục C trong hợp đồng.",
+          "note": "C là nhãn mục, KHÔNG phải 100"
+        },
+        {
+          "in": "Quận C chưa có.",
+          "out": "Quận C chưa có."
+        },
+        {
+          "in": "Sản phẩm giai đoạn III đang ưa chuộng.",
+          "out": "Sản phẩm giai đoạn ba đang ưa chuộng."
+        }
+      ]
+    },
+    {
+      "name": "Giờ (HH:MM, HHhMM, HHh, dải giờ)",
+      "cases": [
+        {
+          "in": "Mở cửa 8:00 đến 17:00.",
+          "out": "Mở cửa tám giờ đến mười bảy giờ."
+        },
+        {
+          "in": "Khung giờ 8:00-11:30 nhé.",
+          "out": "Khung giờ tám giờ đến mười một giờ ba mươi phút nhé."
+        },
+        {
+          "in": "Hẹn anh 9h sáng nhé.",
+          "out": "Hẹn anh chín giờ sáng nhé."
+        },
+        {
+          "in": "Khoảng 9h30 em qua.",
+          "out": "Khoảng chín giờ ba mươi phút em qua."
+        },
+        {
+          "in": "Lúc 09:30 ạ.",
+          "out": "Lúc chín giờ ba mươi phút ạ."
+        }
+      ]
+    },
+    {
+      "name": "Ngày dd/mm/yyyy (và có tiền tố ngày/mùng)",
+      "cases": [
+        {
+          "in": "Bàn giao 02/07/2026.",
+          "out": "Bàn giao ngày hai tháng bảy năm hai nghìn không trăm hai mươi sáu."
+        },
+        {
+          "in": "Hẹn ngày 15/8/2026 nhé.",
+          "out": "Hẹn ngày mười lăm tháng tám năm hai nghìn không trăm hai mươi sáu nhé."
+        },
+        {
+          "in": "Xem nhà mùng 5/5 nhé.",
+          "out": "Xem nhà mùng năm tháng năm nhé.",
+          "note": "dd/mm neo theo ngày/mùng, không đụng phân số 3/4"
+        }
+      ]
+    },
+    {
+      "name": "Khoảng số (dấu - = 'đến', số được đọc)",
+      "cases": [
+        {
+          "in": "Từ 2-3 phòng ngủ.",
+          "out": "Từ hai đến ba phòng ngủ."
+        },
+        {
+          "in": "Căn ở tầng 5-10.",
+          "out": "Căn ở tầng năm đến mười."
+        }
+      ]
+    },
+    {
+      "name": "Dải giờ dạng h (8h-11h)",
+      "cases": [
+        {
+          "in": "Mở cửa 8h-11h nhé.",
+          "out": "Mở cửa tám giờ đến mười một giờ nhé."
+        },
+        {
+          "in": "Khung 8h30-10h nhé.",
+          "out": "Khung tám giờ ba mươi phút đến mười giờ nhé."
+        }
+      ]
+    },
+    {
+      "name": "Mét khẩu ngữ 'XmY' (3m5 = ba mét rưỡi), KHÔNG đụng m2/m3",
+      "cases": [
+        {
+          "in": "Mặt tiền 3m5 thoáng.",
+          "out": "Mặt tiền ba mét rưỡi thoáng."
+        },
+        {
+          "in": "Ngang 8m5 sâu 12m.",
+          "out": "Ngang tám mét rưỡi sâu mười hai mét."
+        },
+        {
+          "in": "Rộng 5m7 nhé.",
+          "out": "Rộng năm mét bảy nhé."
+        },
+        {
+          "in": "Diện tích 85m2.",
+          "out": "Diện tích tám mươi lăm mét vuông.",
+          "note": "m2 vẫn là mét vuông"
+        }
+      ]
+    },
+    {
+      "name": "Tiền khẩu ngữ có dấu cách (1 tỷ 2, 3 tỷ 5, 12 triệu 5)",
+      "cases": [
+        {
+          "in": "Giá 1 tỷ 2 thôi.",
+          "out": "Giá một tỷ hai trăm triệu thôi."
+        },
+        {
+          "in": "Nhà 3 tỷ 5 nhé.",
+          "out": "Nhà ba tỷ rưỡi nhé."
+        },
+        {
+          "in": "Chỉ 12 triệu 5.",
+          "out": "Chỉ mười hai triệu rưỡi."
+        },
+        {
+          "in": "Còn 3 tỷ 5 căn nữa.",
+          "out": "Còn ba tỷ 5 căn nữa.",
+          "note": "5 căn = đếm, KHÔNG phải 3,5 tỷ"
+        }
+      ]
+    },
+    {
+      "name": "Đơn vị 'k' = nghìn (500k, 50k, 2k5)",
+      "cases": [
+        {
+          "in": "Cọc 50k thôi.",
+          "out": "Cọc năm mươi nghìn thôi."
+        },
+        {
+          "in": "Phí 500k một tháng.",
+          "out": "Phí năm trăm nghìn một tháng."
+        },
+        {
+          "in": "Giá 2k5 nhé.",
+          "out": "Giá hai nghìn năm trăm nhé."
+        }
+      ]
+    },
+    {
+      "name": "Đọc brand/viết tắt (VIP)",
+      "cases": [
+        {
+          "in": "Khách VIP nhé.",
+          "out": "Khách víp nhé."
+        }
+      ]
+    },
+    {
+      "name": "Mã hợp đồng / mã căn khó (đọc literal, không bung viết tắt / không num-range)",
+      "cases": [
+        {
+          "in": "Hợp đồng số HĐMB-2026-001.",
+          "out": "Hợp đồng số hát đê mờ bê hai không hai sáu không không một."
+        },
+        {
+          "in": "Mã HĐ NCLB-2026-0123.",
+          "out": "Mã hợp đồng nờ xê lờ bê hai không hai sáu không một hai ba."
+        },
+        {
+          "in": "Số 2026/HĐMB.",
+          "out": "Số hai không hai sáu hát đê mờ bê."
+        },
+        {
+          "in": "Mã HĐMB.123/2026.",
+          "out": "Mã hát đê mờ bê một hai ba hai không hai sáu."
+        },
+        {
+          "in": "Căn 2A-15 tầng.",
+          "out": "Căn hai a một năm tầng."
+        },
+        {
+          "in": "Lô CT1.",
+          "out": "Lô xê tê một."
+        },
+        {
+          "in": "Căn góc 05A.",
+          "out": "Căn góc không năm a."
+        },
+        {
+          "in": "Tòa S1 căn 1203.",
+          "out": "Tòa ét một căn một nghìn hai trăm lẻ ba."
+        }
+      ]
+    },
+    {
+      "name": "Đô la ($ / USD)",
+      "cases": [
+        {
+          "in": "Khoảng $5000.",
+          "out": "Khoảng năm nghìn đô la."
+        },
+        {
+          "in": "Giá 5000 USD.",
+          "out": "Giá năm nghìn đô la Mỹ."
+        }
+      ]
+    },
+    {
+      "name": "Héc-ta (ha)",
+      "cases": [
+        { "in": "Khu đất 90 ha.", "out": "Khu đất chín mươi héc ta." },
+        { "in": "Dự án 100 ha.", "out": "Dự án một trăm héc ta." },
+        { "in": "Quy mô 50,5 ha.", "out": "Quy mô năm mươi phẩy năm héc ta." },
+        { "in": "Năng suất 10 tấn/ha.", "out": "Năng suất mười tấn một héc ta." }
+      ]
+    },
+    {
+      "name": "Datetime mở rộng: ngày dấu -/., tháng/năm, năm/năm, dd/mm trần, giây, tỉ số",
+      "cases": [
+        {
+          "in": "Bàn giao 02-07-2026.",
+          "out": "Bàn giao ngày hai tháng bảy năm hai nghìn không trăm hai mươi sáu."
+        },
+        {
+          "in": "Ngày 02.07.2026 nhé.",
+          "out": "ngày hai tháng bảy năm hai nghìn không trăm hai mươi sáu nhé."
+        },
+        {
+          "in": "Tháng 7/2026 mở bán.",
+          "out": "Tháng bảy năm hai nghìn không trăm hai mươi sáu mở bán."
+        },
+        {
+          "in": "Quý 3/2026.",
+          "out": "Quý ba năm hai nghìn không trăm hai mươi sáu."
+        },
+        {
+          "in": "Hợp đồng 2026/2027.",
+          "out": "Hợp đồng hai nghìn không trăm hai mươi sáu đến hai nghìn không trăm hai mươi bảy."
+        },
+        {
+          "in": "Hạn 31/12.",
+          "out": "Hạn ngày ba mươi mốt tháng mười hai."
+        },
+        {
+          "in": "Khai trương 20/11.",
+          "out": "Khai trương ngày hai mươi tháng mười một."
+        },
+        {
+          "in": "Lúc 08:30:15.",
+          "out": "Lúc tám giờ ba mươi phút mười lăm giây."
+        },
+        {
+          "in": "Khoảng 8-9h.",
+          "out": "Khoảng tám giờ đến chín giờ."
+        },
+        {
+          "in": "Tỷ lệ 1:100.",
+          "out": "Tỷ lệ một trên một trăm."
+        },
+        {
+          "in": "Còn 1/2 số căn.",
+          "out": "Còn 1/2 số căn.",
+          "note": "phân số (ngày<13) không thành ngày"
+        },
+        {
+          "in": "Tỷ lệ 3/4 là đất ở.",
+          "out": "Tỷ lệ 3/4 là đất ở.",
+          "note": "phân số không đụng"
+        }
+      ]
+    },
+    {
+      "name": "Dãy số ID dài trần (CCCD 12 số) → đọc từng chữ số",
+      "cases": [
+        {
+          "in": "CCCD của anh là 012345678901.",
+          "out": "căn cước công dân của anh là không một hai ba bốn năm sáu bảy tám chín không một."
+        }
+      ]
+    },
+    {
+      "name": "Số dính viết tắt phòng (2PN, 3PN2WC) + từ mượn (VIP, OK)",
+      "cases": [
+        {
+          "in": "Căn hộ 2PN thiết kế đẹp.",
+          "out": "Căn hộ 2 phòng ngủ thiết kế đẹp.",
+          "note": "số dính viết tắt phòng phải tách rồi bung; số 1 chữ để TTS đọc (như '1 WC')"
+        },
+        {
+          "in": "Thiết kế 3PN2WC rộng rãi.",
+          "out": "Thiết kế 3 phòng ngủ 2 vệ sinh rộng rãi.",
+          "note": "chuỗi ghép số-phòng-số-phòng"
+        },
+        {
+          "in": "Nhà mẫu 2PN1WC tối ưu.",
+          "out": "Nhà mẫu 2 phòng ngủ 1 vệ sinh tối ưu."
+        },
+        {
+          "in": "Căn 2PN2WC, giá tốt.",
+          "out": "Căn 2 phòng ngủ 2 vệ sinh, giá tốt.",
+          "note": "viết tắt sát dấu phẩy: không để lại khoảng trắng trước dấu câu"
+        },
+        {
+          "in": "Căn 2 PN đầy đủ nội thất.",
+          "out": "Căn 2 phòng ngủ đầy đủ nội thất.",
+          "note": "có dấu cách vẫn đúng, không double-space"
+        },
+        {
+          "in": "Vị trí VIP đắc địa.",
+          "out": "Vị trí víp đắc địa.",
+          "note": "từ mượn: đọc như tiếng Việt, không đánh vần"
+        },
+        {
+          "in": "Chốt vậy nha, khách nói OK.",
+          "out": "Chốt vậy nha, khách nói ô kê."
+        }
+      ]
+    },
+    {
+      "name": "Viết tắt HOA khớp phân biệt hoa/thường + 'vs' = so với",
+      "cases": [
+        {
+          "in": "So sánh căn A vs căn B.",
+          "out": "So sánh căn A so với căn B.",
+          "note": "'vs' thường = versus, KHÔNG phải VS (vệ sinh)"
+        },
+        {
+          "in": "Chung cư vs nhà phố, chọn cái nào?",
+          "out": "Chung cư so với nhà phố, chọn cái nào?"
+        },
+        {
+          "in": "Chưa gồm VAT.",
+          "out": "Chưa gồm thuế giá trị gia tăng.",
+          "note": "VS/VAT viết HOA vẫn bung đúng"
+        },
+        {
+          "in": "Có 1 WC riêng.",
+          "out": "Có 1 vệ sinh riêng."
+        },
+        {
+          "in": "Anh/chị cần gì ạ?",
+          "out": "anh chị cần gì ạ?",
+          "note": "key hoa-thường vẫn khớp không phân biệt hoa/thường"
+        }
+      ]
+    },
+    {
+      "name": "Viết tắt BĐS bổ sung (MBQH, QHCT, NT, USD)",
+      "cases": [
+        {
+          "in": "Xem MBQH chưa anh?",
+          "out": "Xem mặt bằng quy hoạch chưa anh?"
+        },
+        {
+          "in": "Dự án có QHCT rõ ràng.",
+          "out": "Dự án có quy hoạch chi tiết rõ ràng."
+        },
+        {
+          "in": "Bàn giao full NT.",
+          "out": "Bàn giao full nội thất."
+        },
+        {
+          "in": "Khoảng 200 USD một tháng.",
+          "out": "Khoảng hai trăm đô la Mỹ một tháng."
+        }
+      ]
+    },
+    {
+      "name": "Số La Mã đứng lẻ I/V/X (tên phân khu, tòa)",
+      "cases": [
+        {
+          "in": "Phân khu III đang mở bán.",
+          "out": "Phân khu ba đang mở bán."
+        },
+        {
+          "in": "Tòa nhà Landmark II.",
+          "out": "Tòa nhà Landmark hai."
+        },
+        {
+          "in": "Vinhomes III sắp ra mắt.",
+          "out": "Vinhomes ba sắp ra mắt."
+        },
+        {
+          "in": "Thi công giai đoạn II.",
+          "out": "Thi công giai đoạn hai.",
+          "note": "keyword vẫn chạy"
+        }
+      ]
+    },
+    {
+      "name": "Dải giờ dạng h (8h-17h) + mét lẻ (3m5)",
+      "cases": [
+        {
+          "in": "Mở cửa 8h-17h hằng ngày.",
+          "out": "Mở cửa tám giờ đến mười bảy giờ hằng ngày."
+        },
+        {
+          "in": "Làm việc 8h30-11h30.",
+          "out": "Làm việc tám giờ ba mươi phút đến mười một giờ ba mươi phút."
+        },
+        {
+          "in": "Trần cao 3m5.",
+          "out": "Trần cao ba mét rưỡi."
+        },
+        {
+          "in": "Chiều rộng 2m8.",
+          "out": "Chiều rộng hai mét tám."
+        },
+        {
+          "in": "Diện tích 50m2.",
+          "out": "Diện tích năm mươi mét vuông.",
+          "note": "m2 = mét vuông, KHÔNG phải mét lẻ"
+        }
+      ]
+    },
+    {
+      "name": "Dấu / giữa chữ = bỏ (digit/digit giữ nguyên)",
+      "cases": [
+        {
+          "in": "Thanh toán tiền mặt và/hoặc chuyển khoản.",
+          "out": "Thanh toán tiền mặt và hoặc chuyển khoản."
+        },
+        {
+          "in": "Nhà hướng Đông/Nam.",
+          "out": "Nhà hướng Đông Nam."
+        },
+        {
+          "in": "Tỷ lệ vay 70/30.",
+          "out": "Tỷ lệ vay bảy mươi/ba mươi.",
+          "note": "số/số giữ nguyên (tỷ lệ/phân số → TTS đọc 'trên')"
+        }
+      ]
+    },
+    {
+      "name": "Hậu tố k (nghìn), kích thước x, quý Qn, email, đô",
+      "cases": [
+        {
+          "in": "Đặt cọc 500k trước.",
+          "out": "Đặt cọc năm trăm nghìn trước."
+        },
+        {
+          "in": "Phí gửi xe 50k.",
+          "out": "Phí gửi xe năm mươi nghìn."
+        },
+        {
+          "in": "Lô đất 5x20 mét.",
+          "out": "Lô đất năm nhân hai mươi mét."
+        },
+        {
+          "in": "Kích thước 4x25.",
+          "out": "Kích thước bốn nhân hai mươi lăm."
+        },
+        {
+          "in": "Khai trương Q1/2026.",
+          "out": "Khai trương quý một năm hai nghìn không trăm hai mươi sáu."
+        },
+        {
+          "in": "Bàn giao Q4.",
+          "out": "Bàn giao quý bốn."
+        },
+        {
+          "in": "Gửi về sales@noble.vn nhé.",
+          "out": "Gửi về sales a còng noble.vn nhé."
+        },
+        {
+          "in": "Giá 1500$ một căn.",
+          "out": "Giá một nghìn năm trăm đô la một căn."
+        }
+      ]
+    }
+  ]
+}

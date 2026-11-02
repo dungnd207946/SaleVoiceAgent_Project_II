@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+  <title>Luna — Chat · NobleX</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg0:#0a1512; --bg1:#0f2019; --ink:#eef4f1; --muted:#9db3aa; --faint:#6f8a80;
+      --panel:rgba(255,255,255,.055); --panel2:rgba(255,255,255,.085); --border:rgba(255,255,255,.10);
+      --gold:#c9a35e; --gold-soft:#e6c98f; --mint:#7fe0c4; --mint-d:#3fae91; --danger:#ff9a9a;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      font-family:'Be Vietnam Pro',system-ui,-apple-system,sans-serif;
+      background:
+        radial-gradient(90% 70% at 100% 0%, rgba(201,163,94,.12), transparent 55%),
+        radial-gradient(110% 80% at 0% 0%, rgba(127,224,196,.10), transparent 55%),
+        linear-gradient(180deg,#0a1512,#060d0a);
+      display:flex;align-items:center;justify-content:center;color:var(--ink);
+    }
+    a{color:var(--mint)}
+    ::-webkit-scrollbar{width:0;height:0}
+    @keyframes dotb{0%,70%,100%{transform:translateY(0);opacity:.35}35%{transform:translateY(-4px);opacity:1}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes slideUp{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+    .app{
+      position:relative;width:100%;max-width:440px;height:100vh;height:100dvh;
+      display:flex;flex-direction:column;overflow:hidden;
+      background:
+        radial-gradient(120% 55% at 50% -8%, rgba(127,224,196,.14), transparent 60%),
+        linear-gradient(180deg,#12261f 0%,#0c1815 55%,#08110d 100%);
+    }
+    @media(min-width:480px){
+      .app{height:min(92vh,900px);border-radius:34px;box-shadow:0 44px 100px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.05)}
+    }
+
+    /* ── header ─────────────────────────────── */
+    header{
+      flex:none;display:flex;align-items:center;gap:11px;
+      padding:calc(12px + env(safe-area-inset-top)) 14px 12px;
+      background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));
+      border-bottom:1px solid var(--border);backdrop-filter:blur(16px);z-index:5;
+    }
+    .avatar{position:relative;width:40px;height:40px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;overflow:hidden;
+      background:#14312a url("/assets/luna-avatar.jpg") center/cover;
+      box-shadow:0 0 0 1.5px rgba(127,224,196,.35),0 4px 14px rgba(0,0,0,.45)}
+    .avatar span{display:none}
+    .avatar .live{position:absolute;bottom:0;right:0;width:11px;height:11px;border-radius:50%;background:#41e6b3;border:2px solid #0f2019;box-shadow:0 0 8px rgba(65,230,179,.7)}
+    .avatar.sm{width:28px;height:28px;box-shadow:0 0 0 1px rgba(127,224,196,.3)}.avatar.sm .live{display:none}
+    .htitle{flex:1;min-width:0}
+    .htitle .nm{font-size:15.5px;font-weight:600;line-height:1.15;letter-spacing:.2px}
+    .htitle .st{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:5px}
+    .hbtn{width:38px;height:38px;border-radius:50%;background:var(--panel);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+    .hbtn.plain{background:transparent;border:none}
+    .hbtn svg{fill:var(--mint)}
+
+    /* ── message list ───────────────────────── */
+    .list{flex:1;overflow:auto;padding:16px 14px 8px;display:flex;flex-direction:column;gap:12px}
+    .daysep{align-self:center;font-size:10.5px;color:var(--faint);background:rgba(255,255,255,.045);border:1px solid var(--border);padding:4px 12px;border-radius:20px}
+    .b-user{align-self:flex-end;max-width:80%;background:linear-gradient(135deg,#2f9a80,#1c6a58);color:#eafff8;padding:10px 14px;border-radius:20px;border-bottom-right-radius:6px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word;box-shadow:0 8px 20px rgba(28,106,88,.38)}
+    .row-luna{align-self:flex-start;display:flex;gap:8px;max-width:88%}
+    /* Thụt 36px = avatar 28 + gap 8, thẳng hàng bubble. */
+    .row-link{margin-left:36px}
+    .b-link{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 16px;border:1px solid rgba(127,224,196,.32);border-radius:18px;background:rgba(127,224,196,.08);color:var(--mint);font-size:13px;font-weight:500;text-decoration:none;white-space:nowrap}
+    .b-link:hover{background:rgba(127,224,196,.16)}
+    .b-luna{background:var(--panel2);color:var(--ink);padding:10px 14px;border-radius:20px;border-bottom-left-radius:6px;font-size:14px;line-height:1.55;border:1px solid var(--border);backdrop-filter:blur(8px);white-space:pre-wrap;word-break:break-word}
+    .toolchip{align-self:flex-start;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:8px 13px;margin-left:36px}
+    .toolchip .sp{width:13px;height:13px;border:2px solid rgba(201,163,94,.35);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+    .toolchip span{font-size:12.5px;color:var(--muted);font-style:italic}
+    .typing{align-self:flex-start;display:flex;gap:8px;align-items:flex-end}
+    .typing .bub{background:var(--panel2);border:1px solid var(--border);padding:12px 15px;border-radius:20px;border-bottom-left-radius:6px;display:flex;gap:4px}
+    .typing .bub i{width:7px;height:7px;border-radius:50%;background:var(--mint);animation:dotb 1.2s infinite}
+    .typing .bub i:nth-child(2){animation-delay:.18s}.typing .bub i:nth-child(3){animation-delay:.36s}
+
+    /* ── media card ─────────────────────────── */
+    .mediacard{align-self:flex-start;display:flex;gap:8px;max-width:92%}
+    .mediacard .box{background:var(--panel2);border:1px solid var(--border);border-radius:20px;border-bottom-left-radius:6px;padding:10px;width:272px;backdrop-filter:blur(8px);animation:slideUp .3s ease both}
+    .mediacard .cap{font-size:13.5px;line-height:1.5;color:var(--ink);padding:2px 4px 9px}
+    .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+    .mtile{position:relative;height:88px;border-radius:12px;overflow:hidden;cursor:pointer;background-size:cover;background-position:center}
+    .mtile .lb{position:absolute;left:8px;bottom:7px;font-family:ui-monospace,monospace;font-size:8.5px;letter-spacing:.6px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+    .mvideo{position:relative;height:150px;border-radius:14px;overflow:hidden;cursor:pointer;margin-top:5px;background:#0c1512;background-size:cover;background-position:center}
+    .mvideo .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.5))}
+    .yt-badge{position:absolute;top:8px;left:8px;display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.6);padding:3px 7px;border-radius:5px}
+    .yt-badge .r{width:13px;height:9px;background:#ff0000;border-radius:2px;position:relative}
+    .yt-badge .r::after{content:"";position:absolute;left:4.5px;top:2px;width:0;height:0;border-left:4px solid #fff;border-top:2.5px solid transparent;border-bottom:2.5px solid transparent}
+    .yt-badge span{font-size:9px;color:#fff;font-weight:600}
+    .mvideo .dur{position:absolute;top:8px;right:8px;font-size:10px;color:#fff;background:rgba(0,0,0,.6);padding:2px 6px;border-radius:4px}
+    .playbtn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.94);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+    .playbtn i{width:0;height:0;border-left:15px solid #0c1512;border-top:9px solid transparent;border-bottom:9px solid transparent;margin-left:4px}
+    .mvideo .vt{position:absolute;left:10px;bottom:9px;right:10px;font-size:11.5px;color:#fff;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.7)}
+    .mmeta{display:flex;align-items:center;gap:5px;padding:8px 4px 2px;font-size:10.5px;color:var(--faint)}
+
+    /* ── escalation / booking cards ─────────── */
+    .card{align-self:flex-start;width:280px;margin-left:36px;background:var(--panel2);border:1px solid var(--border);border-radius:16px;overflow:hidden;backdrop-filter:blur(8px);animation:slideUp .3s ease both}
+    .card.esc{box-shadow:0 10px 26px rgba(0,0,0,.35),inset 0 0 0 1px rgba(201,163,94,.18)}
+    .card.esc .hd{background:rgba(201,163,94,.16);padding:12px 14px;display:flex;align-items:center;gap:10px}
+    .card.esc .ic{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#d9b877,#b98f4e);display:flex;align-items:center;justify-content:center;color:#1b140a;font-size:14px}
+    .card.esc .t1{font-size:13px;font-weight:600;color:var(--gold-soft)}.card.esc .t2{font-size:11px;color:var(--muted)}
+    .card .bd{padding:13px 14px;font-size:12.5px;line-height:1.55;color:var(--muted)}
+    .card.bk{box-shadow:0 10px 26px rgba(0,0,0,.35),inset 0 0 0 1px rgba(127,224,196,.16)}
+    .card.bk .hd{background:rgba(127,224,196,.12);padding:12px 14px;display:flex;align-items:center;gap:10px}
+    .card.bk .ic{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#7fe0c4,#3fae91);display:flex;align-items:center;justify-content:center;color:#082019;font-size:15px}
+    .card.bk .t1{font-size:13px;font-weight:600;color:#bff0e0}.card.bk .t2{font-size:11px;color:var(--muted)}
+    .card.bk .kv{padding:13px 14px;display:flex;flex-direction:column;gap:9px}
+    .card.bk .kv .r{display:flex;justify-content:space-between;font-size:12.5px}
+    .card.bk .kv .k{color:var(--faint)}.card.bk .kv .v{color:var(--ink);font-weight:600}
+
+    /* ── quick chips ────────────────────────── */
+    .chips{flex:none;display:flex;gap:8px;padding:6px 14px 4px;overflow-x:auto}
+    .chips button{flex:none;height:34px;padding:0 14px;border:1px solid rgba(127,224,196,.32);border-radius:18px;background:rgba(127,224,196,.08);color:var(--mint);font-family:inherit;font-size:12.5px;font-weight:500;white-space:nowrap;cursor:pointer}
+    .chips button:hover{background:rgba(127,224,196,.16)}
+
+    /* ── composer ───────────────────────────── */
+    .composer{flex:none;display:flex;align-items:center;gap:9px;padding:8px 14px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.05));border-top:1px solid var(--border);backdrop-filter:blur(16px)}
+    .composer .field{flex:1;display:flex;align-items:center;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:22px;padding:0 16px;height:44px}
+    .composer input{flex:1;border:none;background:transparent;outline:none;font-family:inherit;font-size:16px;color:var(--ink)}
+    .composer input::placeholder{color:var(--faint)}
+    .composer .send{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#7fe0c4,#3fae91);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;border:none;box-shadow:0 6px 16px rgba(63,174,145,.4)}
+    .composer .send:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+    .composer .send svg{fill:#08150f}
+
+    /* ── settings sheet (identity seed / dev) ── */
+    .sheet-mask{position:absolute;inset:0;z-index:70;background:rgba(0,0,0,.55);display:none;animation:fadeIn .2s ease both}
+    .sheet-mask.open{display:block}
+    .sheet{position:absolute;left:0;right:0;bottom:0;z-index:71;background:linear-gradient(180deg,#153029,#0d1a16);border-top:1px solid var(--border);border-radius:24px 24px 0 0;padding:14px 20px calc(24px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .3s cubic-bezier(.2,.8,.2,1);max-height:82%;overflow:auto;box-shadow:0 -20px 50px rgba(0,0,0,.5)}
+    .sheet.open{transform:translateY(0)}
+    .sheet .grab{width:38px;height:5px;border-radius:99px;background:rgba(255,255,255,.2);margin:0 auto 14px}
+    .sheet h3{font-size:14px;font-weight:700;margin-bottom:2px;color:var(--ink)}
+    .sheet .sub{font-size:11.5px;color:var(--muted);margin-bottom:12px}
+    .sheet .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .sheet .f{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .sheet .f.wide{grid-column:1/-1}
+    .sheet label{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint)}
+    .sheet input{width:100%;padding:9px 11px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--ink);font-size:14px}
+    .sheet input:focus{outline:none;border-color:var(--mint)}
+    .sheet input::placeholder{color:var(--faint)}
+    .sheet .btnrow{display:flex;gap:10px;margin-top:14px}
+    .sheet .btnrow button{flex:1;height:44px;border-radius:12px;border:none;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+    .sheet .apply{background:linear-gradient(135deg,#7fe0c4,#3fae91);color:#08150f}
+    .sheet .reset{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--danger)}
+    .sheet .dbg{margin-top:14px;font-family:ui-monospace,monospace;font-size:10.5px;color:var(--faint);line-height:1.5;word-break:break-all}
+
+    /* ── lightbox / video overlays ──────────── */
+    .lb{position:absolute;inset:0;z-index:80;background:#050807;display:none;flex-direction:column;animation:fadeIn .2s ease both}
+    .lb.open{display:flex}
+    .lb .top{flex:none;display:flex;align-items:center;justify-content:space-between;padding:calc(10px + env(safe-area-inset-top)) 18px 8px}
+    .lb .x{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;cursor:pointer}
+    .lb .cnt{font-size:13px;color:rgba(255,255,255,.8)}
+    .lb .stage{flex:1;display:flex;align-items:center;justify-content:center;position:relative;padding:10px 16px}
+    .lb .img{position:relative;width:100%;height:100%;border-radius:12px;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center}
+    .lb .cap{flex:none;padding:12px 18px calc(30px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:rgba(255,255,255,.75)}
+    .lb .nav{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .lb .nav.prev{left:20px}.lb .nav.next{right:20px}
+    .lb .nav i{width:11px;height:11px;border-top:2px solid #fff;border-right:2px solid #fff}
+    .lb .nav.prev i{transform:rotate(-135deg);margin-left:4px}.lb .nav.next i{transform:rotate(45deg);margin-right:4px}
+
+    .vf{position:absolute;inset:0;z-index:85;background:#000;display:none;flex-direction:column;justify-content:center;animation:fadeIn .2s ease both}
+    .vf.open{display:flex}
+    .vf .x{position:absolute;top:calc(56px + env(safe-area-inset-top));left:16px;z-index:2;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;cursor:pointer}
+    .vf iframe{width:100%;aspect-ratio:16/9;border:0;background:#000}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="avatar"><span>L</span><div class="live"></div></div>
+      <div class="htitle">
+        <div class="nm">Luna</div>
+        <div class="st" id="status">Đang kết nối…</div>
+      </div>
+      <button class="hbtn plain" id="btn-tts" title="Đọc câu trả lời (TTS)" aria-label="TTS" style="font-size:17px">🔇</button>
+      <button class="hbtn plain" id="btn-settings" title="Hồ sơ khách / debug" aria-label="Cài đặt" style="font-size:18px;color:var(--muted)">⚙</button>
+    </header>
+
+    <div class="list" id="list">
+      <div class="daysep">Hôm nay</div>
+    </div>
+
+    <div class="chips" id="chips" style="display:none"></div>
+
+    <div class="composer">
+      <div class="field">
+        <input id="input" placeholder="Nhắn tin cho Luna…" autocomplete="off" />
+      </div>
+      <button class="send" id="btn-send" disabled aria-label="Gửi">
+        <svg width="19" height="19" viewBox="0 0 24 24"><path d="M3.4 20.4l17.5-8c.9-.4.9-1.6 0-2L3.4 2.4c-.7-.3-1.5.3-1.4 1.1L3.6 11l9 1-9 1-1.6 6.5c-.1.8.7 1.4 1.4 1z"/></svg>
+      </button>
+    </div>
+
+    <!-- settings / identity seed sheet -->
+    <div class="sheet-mask" id="sheet-mask"></div>
+    <div class="sheet" id="sheet">
+      <div class="grab"></div>
+      <h3>Kết nối tenant (Gateway)</h3>
+      <div class="sub">Chat qua gateway xác thực đầy đủ (Host→tenant + Bearer). Để TRỐNG cả hai = nối thẳng worker (dev).</div>
+      <div class="grid">
+        <div class="f wide"><label>Tenant URL (gateway WS)</label><input id="gw-url" placeholder="ws://acme.localhost:9200/v1/chat" autocomplete="off" /></div>
+        <div class="f wide"><label>API key (credential)</label><input id="gw-key" placeholder="tnt_..." autocomplete="off" /></div>
+      </div>
+      <div style="height:16px"></div>
+      <h3>Hồ sơ khách (test)</h3>
+      <div class="sub">Áp dụng TRƯỚC tin đầu để Luna nhận diện. Ô trống = không gửi.</div>
+      <div class="grid">
+        <div class="f"><label>Họ tên</label><input id="id-full_name" placeholder="Lê Viết Thúy Nga" autocomplete="off" /></div>
+        <div class="f"><label>Điện thoại</label><input id="id-phone" placeholder="0378764303" autocomplete="off" /></div>
+        <div class="f"><label>Giới tính</label><input id="id-gender" placeholder="Female" autocomplete="off" /></div>
+        <div class="f"><label>Khách Noble</label><input id="id-is_noble_customer" placeholder="false" autocomplete="off" /></div>
+        <div class="f"><label>Email</label><input id="id-email" placeholder="ngalvt@noblex.vn" autocomplete="off" /></div>
+        <div class="f"><label>Sinh nhật</label><input id="id-birthday" placeholder="25/02/1997" autocomplete="off" /></div>
+        <div class="f wide"><label>Ghi chú Noble</label><input id="id-noble_info" placeholder="VIP khách quen…" autocomplete="off" /></div>
+      </div>
+      <div class="btnrow">
+        <button class="apply" id="btn-apply">Áp dụng hồ sơ</button>
+        <button class="reset" id="btn-reset">Reset hội thoại</button>
+      </div>
+      <div class="dbg" id="dbg"></div>
+    </div>
+
+    <!-- lightbox (images) -->
+    <div class="lb" id="lb">
+      <div class="top">
+        <div class="x" id="lb-close">×</div>
+        <span class="cnt" id="lb-cnt"></span>
+        <div style="width:38px"></div>
+      </div>
+      <div class="stage">
+        <div class="img" id="lb-img"></div>
+        <div class="nav prev" id="lb-prev"><i></i></div>
+        <div class="nav next" id="lb-next"><i></i></div>
+      </div>
+      <div class="cap" id="lb-cap"></div>
+    </div>
+
+    <!-- video fullscreen (YouTube) -->
+    <div class="vf" id="vf">
+      <div class="x" id="vf-close">×</div>
+      <div id="vf-player"></div>
+    </div>
+  </div>
+
+  <script>
+    // ── elements ───────────────────────────────────────────────────────────
+    const listEl   = document.getElementById('list');
+    const statusEl = document.getElementById('status');
+    const chipsEl  = document.getElementById('chips');
+    const input    = document.getElementById('input');
+    const btnSend  = document.getElementById('btn-send');
+    const btnTts   = document.getElementById('btn-tts');
+    const dbgEl    = document.getElementById('dbg');
+    const gwUrlEl  = document.getElementById('gw-url');
+    const gwKeyEl  = document.getElementById('gw-key');
+
+    // ── gateway (tenant) connection settings — persisted in localStorage ──────
+    const LS = { url:'noblex_gw_url', key:'noblex_gw_key' };
+    let gwUrl = localStorage.getItem(LS.url) || '';
+    let gwKey = localStorage.getItem(LS.key) || '';
+    let gatewayMode = false;
+    gwUrlEl.value = gwUrl; gwKeyEl.value = gwKey;
+
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) =>
+      ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+    const randomSession = () => 'chat-' + Math.random().toString(36).slice(2, 10);
+    let session = new URLSearchParams(location.search).get('session') || randomSession();
+    let ws = null;
+    let ttsOn = false;
+    let agentBubble = null;   // active streaming Luna bubble
+    let toolChip = null;      // active tool spinner chip
+    let lastTool = null;      // {tool, args}
+
+    function setStatus(kind, text){
+      statusEl.textContent = text;
+      statusEl.style.color = kind === 'error' ? 'var(--danger)'
+        : kind === 'replying' ? 'var(--mint)' : 'var(--muted)';
+    }
+
+    // ── message DOM builders ────────────────────────────────────────────────
+    function scrollDown(){ listEl.scrollTop = listEl.scrollHeight; }
+
+    function addUser(text){
+      clearTyping(); dropChips();
+      const b = document.createElement('div');
+      b.className = 'b-user'; b.textContent = text;
+      listEl.appendChild(b); scrollDown();
+    }
+    function ensureAgentBubble(){
+      if (agentBubble) return agentBubble;
+      clearTyping();
+      const row = document.createElement('div'); row.className = 'row-luna';
+      row.innerHTML = '<div class="avatar sm"><span>L</span></div>';
+      const b = document.createElement('div'); b.className = 'b-luna';
+      row.appendChild(b); listEl.appendChild(row); scrollDown();
+      agentBubble = b; return b;
+    }
+    function appendAgent(text){ ensureAgentBubble().textContent += text; scrollDown(); }
+
+    // Bubble render bằng textContent nên link không bấm được → tách ra nút.
+    // Chạy lúc chốt bubble, không lúc stream (URL tới theo từng mảnh token).
+    const URL_RE = /https?:\/\/[^\s]+/g;
+
+    function tidyAfterUrl(t){
+      return t.replace(/\s{2,}/g, ' ')
+              .replace(/:\s*(?=[.,!?;])/g, '')
+              .replace(/\s+([.,!?;])/g, '$1')
+              .replace(/[:\s]+$/, '')
+              .trim();
+    }
+
+    function addLinkBubble(url){
+      const row = document.createElement('div'); row.className = 'row-luna row-link';
+      const a = document.createElement('a');
+      a.className = 'b-link'; a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      a.title = url;
+      a.textContent = '🔗 Mở liên kết';
+      row.appendChild(a); listEl.appendChild(row); scrollDown();
+    }
+
+    function finalizeAgentBubble(){
+      const b = agentBubble; agentBubble = null;
+      if (!b) return;
+      const urls = (b.textContent.match(URL_RE) || []).map(u => u.replace(/[.,;:!?)\]]+$/, ''));
+      if (!urls.length) return;
+      let text = b.textContent;
+      for (const u of urls) text = text.split(u).join('');
+      b.textContent = tidyAfterUrl(text);
+      if (!b.textContent) b.parentElement.remove();
+      const seen = new Set();
+      for (const u of urls){ if (!seen.has(u)){ seen.add(u); addLinkBubble(u); } }
+    }
+
+    let typingEl = null;
+    function showTyping(){
+      if (typingEl) return;
+      typingEl = document.createElement('div'); typingEl.className = 'typing';
+      typingEl.innerHTML = '<div class="avatar sm"><span>L</span></div><div class="bub"><i></i><i></i><i></i></div>';
+      listEl.appendChild(typingEl); scrollDown();
+    }
+    function clearTyping(){ if (typingEl){ typingEl.remove(); typingEl = null; } }
+
+    const TOOL_LABELS = {
+      noble_search:'Luna đang tra cứu thông tin…',
+      send_media:'Luna đang gửi hình ảnh & video…',
+      booking:'Luna đang kiểm tra lịch tham quan…',
+      escalate:'Luna đang kết nối chuyên viên…',
+      list_projects:'Luna đang xem danh mục dự án…',
+      get_project_overview:'Luna đang xem thông tin dự án…',
+      get_project_financial:'Luna đang xem giá & chính sách…',
+      search_units:'Luna đang tìm căn phù hợp…',
+      update_customer:'Luna đang ghi nhận thông tin…',
+    };
+    function showToolChip(tool){
+      clearTyping();
+      const c = document.createElement('div'); c.className = 'toolchip';
+      c.innerHTML = '<div class="sp"></div><span></span>';
+      c.querySelector('span').textContent = TOOL_LABELS[tool] || 'Luna đang xử lý…';
+      listEl.appendChild(c); scrollDown();
+      toolChip = c;
+    }
+    function clearToolChip(){ if (toolChip){ toolChip.remove(); toolChip = null; } }
+
+    // ── media card ──────────────────────────────────────────────────────────
+    const FALLBACK_GRADIENT = ['#33645a','#274a43'];
+    function tileBg(item, opts){
+      const src = (opts && opts.thumb && item.thumb) ? item.thumb
+                : (opts && opts.full) ? (item.medium || item.url)
+                : item.url;
+      if (src) return `background-image:url("${esc(src)}")`;
+      const c1 = item.c1 || FALLBACK_GRADIENT[0], c2 = item.c2 || FALLBACK_GRADIENT[1];
+      return `background:repeating-linear-gradient(125deg,${c1} 0 9px,${c2} 9px 18px)`;
+    }
+    function videoThumb(v){
+      if (v.thumb) return `background-image:url("${esc(v.thumb)}")`;
+      if (v.video_id) return `background-image:url("https://img.youtube.com/vi/${esc(v.video_id)}/hqdefault.jpg")`;
+      return 'background:#274a43';
+    }
+    function addMediaCard(payload){
+      clearToolChip(); clearTyping();
+      const items = Array.isArray(payload.items) ? payload.items : [];
+      const imgs = items.filter(x => x.kind === 'image');
+      const vids = items.filter(x => x.kind === 'video');
+
+      const row = document.createElement('div'); row.className = 'mediacard';
+      const av  = document.createElement('div'); av.className = 'avatar sm'; av.innerHTML = '<span>L</span>';
+      const box = document.createElement('div'); box.className = 'box';
+      if (payload.caption){
+        const cap = document.createElement('div'); cap.className = 'cap'; cap.textContent = payload.caption; box.appendChild(cap);
+      }
+      if (imgs.length){
+        const grid = document.createElement('div'); grid.className = 'mgrid';
+        imgs.forEach((im, i) => {
+          const t = document.createElement('div'); t.className = 'mtile'; t.setAttribute('style', tileBg(im, {thumb:true}));
+          const lb = document.createElement('div'); lb.className = 'lb'; lb.textContent = im.label || im.alt || '';
+          t.appendChild(lb);
+          t.onclick = () => openLightbox(imgs, i);
+          grid.appendChild(t);
+        });
+        box.appendChild(grid);
+      }
+      vids.forEach(vid => {
+        const v = document.createElement('div'); v.className = 'mvideo'; v.setAttribute('style', videoThumb(vid));
+        v.innerHTML = `<div class="shade"></div>
+          <div class="yt-badge"><div class="r"></div><span>YouTube</span></div>
+          ${vid.dur ? `<div class="dur">${esc(vid.dur)}</div>` : ''}
+          <div class="playbtn"><i></i></div>
+          ${vid.title ? `<div class="vt">${esc(vid.title)}</div>` : ''}`;
+        v.onclick = () => openVideo(vid, false);
+        box.appendChild(v);
+      });
+      const meta = document.createElement('div'); meta.className = 'mmeta';
+      meta.textContent = `${items.length} mục${payload.project_name ? ' · ' + payload.project_name : ''}`;
+      box.appendChild(meta);
+
+      row.appendChild(av); row.appendChild(box); listEl.appendChild(row); scrollDown();
+    }
+
+    function addEscalationCard(){
+      clearToolChip();
+      const card = document.createElement('div'); card.className = 'card esc';
+      card.innerHTML = `<div class="hd"><div class="ic">☎</div>
+          <div><div class="t1">Đang kết nối chuyên viên</div><div class="t2">CVTV · NobleX</div></div></div>
+        <div class="bd">Em đã chuyển thông tin cho chuyên viên tư vấn. Anh/chị vui lòng giữ máy hoặc để lại số điện thoại để tiện liên hệ ạ.</div>`;
+      listEl.appendChild(card); scrollDown();
+    }
+    function addBookingCard(d){
+      clearToolChip();
+      const card = document.createElement('div'); card.className = 'card bk';
+      const rows = [
+        ['Dự án', d.project_name || d.project_code || '—'],
+        ['Thời gian', [d.preferred_date, d.preferred_time].filter(Boolean).join(' · ') || '—'],
+      ];
+      card.innerHTML = `<div class="hd"><div class="ic">✓</div>
+          <div><div class="t1">Đã đặt lịch tham quan</div><div class="t2">${esc(d.project_name || 'Nhà mẫu')}</div></div></div>
+        <div class="kv">${rows.map(([k,v]) => `<div class="r"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join('')}</div>`;
+      listEl.appendChild(card); scrollDown();
+    }
+
+    // ── quick-reply chips ─────────────────────────────────────────────────────
+    function setChips(arr){
+      chipsEl.innerHTML = '';
+      if (!arr || !arr.length){ chipsEl.style.display = 'none'; return; }
+      arr.forEach(({label, text}) => {
+        const b = document.createElement('button'); b.textContent = label;
+        b.onclick = () => { sendText(text); };
+        chipsEl.appendChild(b);
+      });
+      chipsEl.style.display = 'flex';
+    }
+    function dropChips(){ chipsEl.innerHTML = ''; chipsEl.style.display = 'none'; }
+
+    const START_CHIPS = [
+      { label:'Cho xem hình dự án', text:'Cho mình xem vài hình ảnh dự án với em' },
+      { label:'Giá & chính sách',   text:'Giá và chính sách hiện tại thế nào em?' },
+      { label:'Đặt lịch tham quan',  text:'Mình muốn đặt lịch đi xem nhà mẫu' },
+    ];
+
+    // ── greeting (client-side welcome; real conversation starts on reply) ─────
+    let greeted = false;
+    function greet(){
+      if (greeted) return; greeted = true;
+      const row = document.createElement('div'); row.className = 'row-luna';
+      row.innerHTML = '<div class="avatar sm"><span>L</span></div>';
+      const b = document.createElement('div'); b.className = 'b-luna';
+      b.textContent = 'Dạ em chào mình ạ! Em là Luna, trợ lý tư vấn dự án của NobleX. '
+        + 'Em có thể tư vấn và gửi hình ảnh, video dự án ngay tại đây cho mình xem nha. Mình đang quan tâm dự án nào ạ?';
+      row.appendChild(b); listEl.appendChild(row); scrollDown();
+      setChips(START_CHIPS);
+    }
+
+    // ── websocket ─────────────────────────────────────────────────────────────
+    function buildIdentity(){
+      const g = (id) => document.getElementById('id-' + id).value.trim();
+      const identity = {};
+      if (g('full_name')) identity.full_name = g('full_name');
+      if (g('phone')) identity.phone = g('phone');
+      if (g('gender')) identity.gender = g('gender');
+      const nb = parseBool(g('is_noble_customer')); if (nb !== undefined) identity.is_noble_customer = nb;
+      if (g('email')) identity.email = g('email');
+      if (g('birthday')) identity.birthday = g('birthday');
+      if (g('noble_info')) identity.noble_info = g('noble_info');
+      return identity;
+    }
+
+    const CLOSE_REASONS = { 4001:'Sai credential / tenant', 4004:'Sai route', 4008:'Timeout handshake', 4403:'Sai gateway secret', 4029:'Quá tải' };
+
+    function connect(){
+      setStatus('connecting', 'Đang kết nối…');
+      gatewayMode = !!(gwUrl && gwKey);
+      let wsUrl;
+      if (gatewayMode){
+        const sep = gwUrl.includes('?') ? '&' : '?';
+        wsUrl = gwUrl + sep + 'key=' + encodeURIComponent(gwKey);   // browser WS can't set Authorization → token via ?key=
+      } else {
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        wsUrl = `${proto}://${location.host}/chat/ws?session=${encodeURIComponent(session)}`;
+      }
+      ws = new WebSocket(wsUrl);
+      ws.binaryType = 'arraybuffer';
+
+      ws.onopen  = () => {
+        // Gateway waits for a handshake frame (identity + call_id) FIRST, then relays /chat protocol.
+        if (gatewayMode) ws.send(JSON.stringify({ identity: buildIdentity(), call_id: session }));
+        setStatus('online', gatewayMode ? 'Đang hoạt động · tenant' : 'Đang hoạt động');
+        btnSend.disabled = false; greet();
+        dbgEl.textContent = gatewayMode ? ('gateway: ' + gwUrl) : 'direct worker';
+      };
+      ws.onclose = (e) => {
+        const extra = (e && e.code && CLOSE_REASONS[e.code]) ? ' · ' + CLOSE_REASONS[e.code]
+                    : (e && e.reason) ? ' · ' + e.reason : '';
+        setStatus('error', 'Mất kết nối' + extra); btnSend.disabled = true;
+      };
+      ws.onerror = () => { setStatus('error', 'Lỗi kết nối'); };
+
+      ws.onmessage = (e) => {
+        if (e.data instanceof ArrayBuffer){ enqueueAudio(e.data); return; }
+        let msg; try { msg = JSON.parse(e.data); } catch { return; }
+        switch (msg.type){
+          case 'session_id':
+            session = msg.session_id; dbgEl.textContent = 'session=' + session; break;
+          case 'user_text':
+            // server echo — user bubble already added optimistically on send.
+            break;
+          case 'metrics':
+            if (msg.stage === 'first_token') dbgEl.textContent = 'TTFT ' + msg.ttft_ms + ' ms · session=' + session;
+            break;
+          case 'token':
+            setStatus('replying', 'Luna đang trả lời…');
+            appendAgent(msg.text); break;
+          case 'tool_start':
+            finalizeAgentBubble(); lastTool = { tool: msg.tool, args: msg.args || {} };
+            showToolChip(msg.tool); break;
+          case 'tool_done':
+            handleToolDone(msg); break;
+          case 'media':                       // future: standalone media push
+            addMediaCard(msg); break;
+          case 'agent_switch': break;
+          case 'error':
+            clearToolChip(); clearTyping();
+            appendAgent(''); setStatus('error', 'Có lỗi xảy ra'); break;
+          case 'done':
+            finalizeAgentBubble(); setStatus('online', 'Đang hoạt động'); break;
+          case 'suggestions':                 // follow-up quick-reply chips (after done)
+            setChips(msg.items || []); break;
+          case 'reset_ok':
+            listEl.innerHTML = '<div class="daysep">Hôm nay</div>';
+            agentBubble = null; toolChip = null; typingEl = null; greeted = false; greet(); break;
+          case 'customer_ok':
+            dbgEl.textContent = 'Hồ sơ đã áp dụng · ' + JSON.stringify(msg.customer || {}); break;
+          case 'tts_begin':
+            stopAudio(); ttsSampleRate = msg.sample_rate || 24000; acceptAudio = true; break;
+          case 'tts_end': break;
+        }
+      };
+    }
+
+    function handleToolDone(msg){
+      let result = null;
+      try { result = typeof msg.result === 'string' ? JSON.parse(msg.result) : msg.result; } catch {}
+      // media payload (send_media or any tool returning items[])
+      if (result && Array.isArray(result.items) && result.items.length){
+        addMediaCard(result); return;
+      }
+      if (msg.tool === 'escalate'){ addEscalationCard(); return; }
+      if (msg.tool === 'booking' && result && (result.action === 'schedule') && (result.ok || result.status === 'scheduled')){
+        addBookingCard(result); return;
+      }
+      clearToolChip();
+    }
+
+    // ── send ────────────────────────────────────────────────────────────────
+    function sendText(text){
+      text = (text || '').trim();
+      if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+      stopAudio(); acceptAudio = false;            // barge-in on TTS
+      addUser(text); showTyping(); agentBubble = null;
+      ws.send(JSON.stringify({ type:'user_text', text, tts: ttsOn }));
+    }
+    function send(){ sendText(input.value); input.value = ''; }
+
+    // ── TTS playback (PCM16 → Web Audio, gapless) ─────────────────────────────
+    let audioCtx = null, ttsSampleRate = 24000, ttsNextStart = 0, ttsSources = [], acceptAudio = true;
+    function stopAudio(){ for (const s of ttsSources){ try { s.onended = null; s.stop(); } catch {} } ttsSources = []; ttsNextStart = 0; }
+    function enqueueAudio(buf){
+      if (!ttsOn || !acceptAudio) return;
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const pcm = new Int16Array(buf); if (!pcm.length) return;
+      const f32 = new Float32Array(pcm.length);
+      for (let i = 0; i < pcm.length; i++) f32[i] = pcm[i] / 32768;
+      const ab = audioCtx.createBuffer(1, f32.length, ttsSampleRate);
+      ab.getChannelData(0).set(f32);
+      const src = audioCtx.createBufferSource(); src.buffer = ab; src.connect(audioCtx.destination);
+      const startAt = Math.max(audioCtx.currentTime, ttsNextStart);
+      src.start(startAt); ttsNextStart = startAt + ab.duration; ttsSources.push(src);
+      src.onended = () => { const i = ttsSources.indexOf(src); if (i >= 0) ttsSources.splice(i, 1); };
+    }
+
+    // ── lightbox ──────────────────────────────────────────────────────────────
+    const lbEl = document.getElementById('lb'), lbImg = document.getElementById('lb-img');
+    const lbCnt = document.getElementById('lb-cnt'), lbCap = document.getElementById('lb-cap');
+    const lbPrev = document.getElementById('lb-prev'), lbNext = document.getElementById('lb-next');
+    let lbImgs = [], lbIdx = 0, lbFullToken = 0;
+    function renderLb(){
+      const im = lbImgs[lbIdx]; if (!im) return;
+      // Mở tức thì bằng thumb (đã cache từ lưới), rồi nâng cấp lên ảnh gốc chạy nền
+      // — tránh chờ tải ảnh gốc (có thể hàng chục MB) mới hiện.
+      lbImg.setAttribute('style', tileBg(im, {thumb:true}));
+      lbImg.innerHTML = im.url ? '' : `<div style="font-family:ui-monospace,monospace;font-size:12px;letter-spacing:1px;color:rgba(255,255,255,.85)">${esc(im.label || im.alt || '')}</div>`;
+      lbCnt.textContent = `${lbIdx + 1} / ${lbImgs.length}`;
+      lbCap.textContent = im.alt || im.label || '';
+      lbPrev.style.display = lbIdx > 0 ? '' : 'none';
+      lbNext.style.display = lbIdx < lbImgs.length - 1 ? '' : 'none';
+      const hi = im.medium || im.url;   // medium (~2048px) tránh tải ảnh gốc nhiều MB
+      if (hi && im.thumb && hi !== im.thumb){
+        const token = ++lbFullToken;
+        const full = new Image();
+        full.onload = () => { if (token === lbFullToken) lbImg.setAttribute('style', tileBg(im, {full:true})); };
+        full.src = hi;
+      }
+    }
+    function openLightbox(imgs, idx){ lbImgs = imgs; lbIdx = idx; renderLb(); lbEl.classList.add('open'); }
+    document.getElementById('lb-close').onclick = () => lbEl.classList.remove('open');
+    lbPrev.onclick = () => { if (lbIdx > 0){ lbIdx--; renderLb(); } };
+    lbNext.onclick = () => { if (lbIdx < lbImgs.length - 1){ lbIdx++; renderLb(); } };
+
+    // ── video fullscreen (real YouTube embed) ─────────────────────────────────
+    const vfEl = document.getElementById('vf'), vfPlayer = document.getElementById('vf-player');
+    function openVideo(vid){
+      vfPlayer.innerHTML = vid.video_id
+        ? `<iframe src="https://www.youtube.com/embed/${esc(vid.video_id)}?autoplay=1&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`
+        : `<div style="color:#fff;text-align:center;padding:40px">Video chưa khả dụng</div>`;
+      vfEl.classList.add('open');
+    }
+    document.getElementById('vf-close').onclick = () => { vfEl.classList.remove('open'); vfPlayer.innerHTML = ''; };
+
+    // ── settings sheet + identity seed ────────────────────────────────────────
+    const sheet = document.getElementById('sheet'), sheetMask = document.getElementById('sheet-mask');
+    function openSheet(){ sheetMask.classList.add('open'); sheet.classList.add('open'); }
+    function closeSheet(){ sheetMask.classList.remove('open'); sheet.classList.remove('open'); }
+    document.getElementById('btn-settings').onclick = openSheet;
+    sheetMask.onclick = closeSheet;
+
+    function parseBool(v){
+      const s = (v || '').trim().toLowerCase();
+      if (['true','1','yes','có','co','y'].includes(s)) return true;
+      if (['false','0','no','không','khong','n'].includes(s)) return false;
+      return undefined;
+    }
+    document.getElementById('btn-apply').onclick = () => {
+      // Persist gateway (tenant) settings; reconnect if they changed.
+      const newUrl = gwUrlEl.value.trim(), newKey = gwKeyEl.value.trim();
+      const gwChanged = (newUrl !== gwUrl) || (newKey !== gwKey);
+      gwUrl = newUrl; gwKey = newKey;
+      localStorage.setItem(LS.url, gwUrl); localStorage.setItem(LS.key, gwKey);
+      if (gwChanged){
+        try { if (ws) ws.close(); } catch {}
+        listEl.innerHTML = '<div class="daysep">Hôm nay</div>';
+        agentBubble = null; toolChip = null; typingEl = null; greeted = false;
+        session = randomSession();
+        connect();                         // handshake re-seeds identity for the new tenant
+        closeSheet();
+        return;
+      }
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ type:'set_customer', identity: buildIdentity() }));
+      closeSheet();
+    };
+    document.getElementById('btn-reset').onclick = () => {
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type:'reset' }));
+      closeSheet();
+    };
+
+    // ── header / composer wiring ──────────────────────────────────────────────
+    btnSend.onclick = send;
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+    btnTts.onclick = () => {
+      ttsOn = !ttsOn;
+      btnTts.textContent = ttsOn ? '🔊' : '🔇';
+      if (ttsOn){
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+      } else stopAudio();
+    };
+
+    connect();
+  </script>
+</body>
+</html>

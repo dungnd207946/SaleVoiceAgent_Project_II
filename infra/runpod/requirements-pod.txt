@@ -1,0 +1,18 @@
+# Pod-only dependencies — installed into /opt/vllm-venv via:
+#   uv pip install --python /opt/vllm-venv/bin/python -r infra/runpod/requirements-pod.txt
+#
+# These are NOT in pyproject.toml because:
+#   - vLLM + flashinfer require CUDA → cannot install on Mac dev
+#   - hf-transfer is GPU-pod download accelerator (optional on Mac)
+#
+# Mac dev gets noble-agent project deps via: uv sync --extra stt-soniox --extra tts-elevenlabs
+# Pod gets BOTH: this file (vllm) + uv sync (agent).
+
+# vLLM version pin: <0.20.0 ships with CUDA 12.8 wheels (matches RunPod
+# `runpod/pytorch:cu128*` template). vllm 0.20+ requires CUDA 13 driver.
+# Override via VLLM_PIN env if pod has CUDA 13: VLLM_PIN=vllm>=0.20.0
+vllm>=0.17.0,<0.20.0
+transformers[serving]>=4.48.0
+hf-transfer
+huggingface-hub>=0.26.0
+flashinfer-python; platform_machine == "x86_64"

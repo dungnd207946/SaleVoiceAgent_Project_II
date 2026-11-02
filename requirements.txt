@@ -1,0 +1,43 @@
+# This project is packaged via `pyproject.toml` (recommended: `pip install -e ".[dev]"`).
+#
+# `requirements.txt` remains as a convenient "all-in-one" install for local runs
+# without extras. It includes optional deps for STT/TTS/RAG that are imported lazily.
+
+# ── Core runtime ────────────────────────────────────────────────────────────
+websockets>=13.0
+aiortc>=1.9.0
+openai>=1.30
+numpy>=1.24
+pydantic-settings>=2.0
+redis>=5.0
+motor>=3.4
+faiss-cpu>=1.7
+
+# ── LiveKit (transport migration — see LIVEKIT_MIGRATION.md) ───────────────
+# livekit-agents 1.5.4 pins livekit==1.1.5
+livekit==1.1.5
+livekit-api==1.1.0
+livekit-agents==1.5.4
+# audioop removed from stdlib in Python 3.13 — use community backport.
+audioop-lts==0.2.2; python_version>='3.13'
+
+# Dev hot-reload (optional; app.py falls back when missing)
+watchfiles>=0.20
+
+# Used by scripts/benchmark.py (optional)
+python-dotenv>=1.0
+
+# ── Voice / VAD ─────────────────────────────────────────────────────────────
+# torch/torchaudio installed as CPU-only in Dockerfile (saves ~8GB)
+
+# Smart Turn (optional)
+onnxruntime>=1.18.0
+
+# ── STT (optional; selected via STT_BACKEND) ────────────────────────────────
+sherpa-onnx>=1.10
+soniox>=1.0
+elevenlabs>=1.0
+
+# ── RAG / Embeddings ────────────────────────────────────────────────────────
+sentence-transformers>=2.2.0
+lightrag-hku

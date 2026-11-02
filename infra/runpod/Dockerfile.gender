@@ -1,0 +1,41 @@
+# syntax=docker/dockerfile:1
+# Wav2Vec2 gender detection service — CPU-only.
+# Wraps the same model loaded in-process by src/noble_agent/voice/gender_detector.py
+# so the agent can offload ~300MB model + ~50ms inference to a sidecar.
+#
+# Build:  docker build -f infra/runpod/Dockerfile.gender -t noble-gender:latest .
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    HF_HOME=/app/.cache/hf \
+    TRANSFORMERS_CACHE=/app/.cache/hf
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl ca-certificates libsndfile1 && \
+    rm -rf /var/lib/apt/lists/*
+
+# CPU-only torch + transformers (matches agent container's torch install)
+RUN pip install --upgrade pip && \
+    pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu && \
+    pip install \
+        "transformers>=4.40" \
+        "fastapi>=0.110" \
+        "uvicorn[standard]>=0.27" \
+        "numpy>=1.24" \
+        "pydantic>=2.0"
+
+COPY infra/runpod/gender_server.py /app/gender_server.py
+
+# GENDER_MODEL_DIR can point to either a local mounted volume or HF repo id
+# (will be downloaded on first request). Override via env at runtime.
+ENV GENDER_MODEL_DIR=""
+
+EXPOSE 8092
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:8092/health || exit 1
+
+CMD ["uvicorn", "gender_server:app", "--host", "0.0.0.0", "--port", "8092", "--workers", "1"]

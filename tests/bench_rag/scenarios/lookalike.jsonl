@@ -1,0 +1,10 @@
+{"id":"l1","query":"Đặt lịch xem căn 2 phòng ngủ NCLB vào thứ bảy tuần này lúc 10 giờ","project":"NCLB","expected_tool":"schedule_viewing","expected_keywords":null,"note":"booking — not search"}
+{"id":"l2","query":"Có căn 2 phòng ngủ NCLB hướng Đông Nam còn không","project":"NCLB","expected_tool":"search_units","expected_keywords":null,"note":"unit search — not noble_search"}
+{"id":"l3","query":"Giá bán căn 2 phòng ngủ diện tích 72m2 tại NCLB là bao nhiêu","project":"NCLB","expected_tool":"get_project_financial","expected_keywords":["tỷ"],"note":"price query — financial not search"}
+{"id":"l4","query":"Chương trình ưu đãi và chiết khấu hiện tại cho dự án NCLB","project":"NCLB","expected_tool":"get_project_financial","expected_keywords":["ưu đãi","chiết khấu"],"note":"promotion — financial not search"}
+{"id":"l5","query":"Tôi muốn xem danh sách tất cả các dự án Noble ở Hà Nội","project":"","expected_tool":"list_projects","expected_keywords":["long biên","tây hồ"],"note":"list projects — not search"}
+{"id":"l6","query":"Tôi muốn chuyển sang tư vấn viên chuyên về dự án NCLB","project":"NCLB","expected_tool":"switch_agent","expected_keywords":null,"note":"agent switch — not search"}
+{"id":"l7","query":"Tổng quan về dự án Noble Palace Long Biên gồm những thông tin gì","project":"NPLB","expected_tool":"get_project_overview","expected_keywords":["noble palace","long biên"],"note":"overview — not noble_search"}
+{"id":"l8","query":"Căn hộ NCLB phù hợp với ngân sách 4 tỷ anh nào đang có sẵn","project":"NCLB","expected_tool":"match_projects","expected_keywords":null,"note":"match — not search"}
+{"id":"l9","query":"Cho tôi xem các căn 3 phòng ngủ tầng cao view sông tại NCTH còn hàng","project":"NCTH","expected_tool":"search_units","expected_keywords":null,"note":"unit filter — not noble_search"}
+{"id":"l10","query":"Thông tin tổng quan nhanh về dự án Noble Crystal Tây Hồ cho khách mới","project":"NCTH","expected_tool":"get_project_overview","expected_keywords":["tây hồ","noble crystal"],"note":"overview vs search boundary"}

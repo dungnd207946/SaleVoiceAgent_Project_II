@@ -1,0 +1,28 @@
+# LiveKit SIP service config.
+# Ref: https://docs.livekit.io/sip/
+#
+# Note: LiveKit SIP v1.11+ does NOT read trunks / dispatch rules from
+# this YAML. They must be provisioned via the API (stored in Redis).
+# See:
+#   - scripts/load_test/provision_sip.py  (dev/load-test trunks + rules)
+#   - infra/runbook for prod provisioning via `lk sip inbound create`
+
+# api_key / api_secret are read from the LIVEKIT_API_KEY / LIVEKIT_API_SECRET
+# env vars (set in docker-compose.yml). The SIP service does NOT expand
+# `${...}` inside this YAML — leaving them in-file caused v1.11+ to send
+# the literal string `${LIVEKIT_API_KEY}` as the API key, producing 401s
+# when joining the room. Keep them out.
+ws_url: ws://livekit:7880
+
+# LiveKit SIP requires Redis (for cross-process call state + dispatch locks).
+# Points at the compose `redis` service.
+redis:
+  address: redis:6379
+
+# RTP range — MUST match the UDP ports published in docker-compose.yml.
+# livekit-sip picks a random port in this range for each call and
+# advertises it in SDP. If the port isn't host-published, the caller
+# can't route RTP to it and the call hangs with media-timeout.
+rtp:
+  min_port: 10000
+  max_port: 10200

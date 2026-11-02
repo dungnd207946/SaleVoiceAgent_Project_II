@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Luna — Gọi thoại · NobleX</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📞</text></svg>" />
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.7.0/dist/livekit-client.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --mint:#7fe0c4; --mint-d:#3fae91; --green:#2F5D54; --gold:#c9a35e; --gold-soft:#e6c98f; --red:#e5484d;
+      --ink:#eef4f1; --muted:#9db3aa; --faint:#6f8a80;
+      --border:rgba(255,255,255,.10); --panel:rgba(255,255,255,.06); --panel2:rgba(255,255,255,.09);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      font-family:'Be Vietnam Pro',system-ui,-apple-system,sans-serif;
+      background:
+        radial-gradient(80% 60% at 50% 0%, rgba(127,224,196,.10), transparent 60%),
+        linear-gradient(180deg,#0a1512,#060d0a);
+      display:flex;align-items:center;justify-content:center;color:var(--ink);
+    }
+    ::-webkit-scrollbar{width:0;height:0}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes wavebar{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+    @keyframes slideUp{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes glowP{0%,100%{box-shadow:0 0 0 0 rgba(127,224,196,0)}50%{box-shadow:0 0 54px 10px rgba(127,224,196,.42)}}
+    @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+    .app{
+      position:relative;width:100%;max-width:440px;height:100vh;height:100dvh;overflow:hidden;
+      display:flex;flex-direction:column;
+      background:
+        radial-gradient(90% 55% at 50% 6%, rgba(127,224,196,.14), transparent 60%),
+        radial-gradient(80% 45% at 50% 100%, rgba(201,163,94,.09), transparent 60%),
+        linear-gradient(180deg,#13271f 0%,#0c1714 55%,#070f0c 100%);
+    }
+    @media(min-width:480px){
+      .app{height:min(92vh,900px);border-radius:34px;box-shadow:0 44px 100px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.05)}
+    }
+
+    /* ── top chrome ───────────────────────────── */
+    .topbar{flex:none;display:flex;align-items:center;justify-content:space-between;padding:calc(14px + env(safe-area-inset-top)) 18px 4px}
+    .tb-btn{width:38px;height:38px;border-radius:50%;background:var(--panel);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;font-size:15px}
+    .tb-btn svg{fill:#cfe6de}
+    .timer{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.5px}
+
+    /* ── portrait ─────────────────────────────── */
+    .portrait-zone{flex:none;height:256px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center}
+    .portrait{position:relative;width:154px;height:198px}
+    .glow{position:absolute;inset:-14px;border-radius:38px;background:radial-gradient(circle at 50% 40%,rgba(127,224,196,.30),transparent 70%);opacity:0;transition:opacity .3s}
+    .glow.on{opacity:1;animation:glowP 2.4s ease-in-out infinite}
+    .frame{position:relative;width:154px;height:198px;border-radius:28px;overflow:hidden;
+      border:1px solid rgba(201,163,94,.28);background:#0e211b;
+      box-shadow:0 20px 55px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.05);
+      display:flex;align-items:flex-end;justify-content:center;animation:floatY 5s ease-in-out infinite}
+    .frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top}
+    .wave{margin-top:18px;display:flex;align-items:flex-end;gap:3px;height:16px;opacity:0;transition:opacity .2s}
+    .wave.on{opacity:1}
+    .wave b{width:3px;height:16px;background:var(--mint);border-radius:2px;transform-origin:bottom;animation:wavebar .7s ease-in-out infinite;display:block;box-shadow:0 0 8px rgba(127,224,196,.6)}
+    .wave b:nth-child(2){animation-delay:.15s}.wave b:nth-child(3){animation-delay:.3s}.wave b:nth-child(4){animation-delay:.45s}
+    .vstate{margin-top:11px;font-size:12px;color:var(--muted);letter-spacing:.3px}
+
+    /* ── stream surface ───────────────────────── */
+    .stream{flex:1;overflow:auto;padding:10px 18px;display:flex;flex-direction:column;gap:11px;border-top:1px solid var(--border);background:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,0))}
+    .connbox{margin:auto;display:flex;flex-direction:column;align-items:center;gap:12px;color:var(--muted)}
+    .connbox .sp{width:26px;height:26px;border:2.5px solid rgba(255,255,255,.16);border-top-color:var(--mint);border-radius:50%;animation:spin .8s linear infinite}
+    .reply{align-self:center;max-width:96%;text-align:center;color:var(--ink);padding:6px 8px;font-size:15.5px;line-height:1.6;font-weight:500}
+    .uline{align-self:center;max-width:90%;text-align:center;color:var(--muted);font-size:12.5px;line-height:1.4}
+    .uline.partial{color:var(--faint);font-style:italic}
+    .vtool{align-self:center;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:6px 13px}
+    .vtool .sp{width:12px;height:12px;border:2px solid rgba(201,163,94,.35);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+    .vtool span{font-size:12px;color:var(--muted);font-style:italic}
+    .verr{align-self:center;font-size:12px;color:#ffb4b4}
+
+    /* ── media carousel ───────────────────────── */
+    .carwrap{align-self:stretch;animation:slideUp .35s ease both}
+    .carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;border-radius:16px;-webkit-overflow-scrolling:touch}
+    .slide{flex:none;width:100%;scroll-snap-align:center;padding-right:0}
+    .simg{position:relative;height:188px;border-radius:16px;overflow:hidden;cursor:pointer;background-size:cover;background-position:center;border:1px solid var(--border)}
+    .simg .lb{position:absolute;left:10px;bottom:9px;font-family:ui-monospace,monospace;font-size:9px;letter-spacing:.6px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+    .svid{position:relative;height:188px;border-radius:16px;overflow:hidden;cursor:pointer;background:#0c1512;background-size:cover;background-position:center;border:1px solid var(--border)}
+    .svid .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.5))}
+    .yt-badge{position:absolute;top:9px;left:9px;display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.6);padding:3px 7px;border-radius:5px}
+    .yt-badge .r{width:13px;height:9px;background:#f00;border-radius:2px;position:relative}
+    .yt-badge .r::after{content:"";position:absolute;left:4.5px;top:2px;width:0;height:0;border-left:4px solid #fff;border-top:2.5px solid transparent;border-bottom:2.5px solid transparent}
+    .yt-badge span{font-size:9px;color:#fff;font-weight:600}
+    .svid .dur{position:absolute;top:9px;right:9px;font-size:10px;color:#fff;background:rgba(0,0,0,.6);padding:2px 6px;border-radius:4px}
+    .playbtn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.94);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+    .playbtn i{width:0;height:0;border-left:16px solid #0c1512;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-left:4px}
+    .svid .vt{position:absolute;left:11px;bottom:10px;right:11px;font-size:12px;color:#fff;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.7)}
+    .dots{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:11px}
+    .dots b{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.25);transition:width .2s,background .2s;display:block}
+    .dots b.on{width:18px;background:var(--mint)}
+    .carcap{text-align:center;margin-top:7px;font-size:10.5px;color:var(--faint)}
+
+    /* ── controls ─────────────────────────────── */
+    .controls{flex:none;padding:16px 30px calc(30px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between}
+    .ctrl{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer}
+    .ctrl .btn{width:60px;height:60px;border-radius:50%;background:var(--panel);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;transition:background .15s,box-shadow .15s;backdrop-filter:blur(6px)}
+    .ctrl .btn.active{background:linear-gradient(135deg,#7fe0c4,#3fae91);border-color:transparent;box-shadow:0 8px 22px rgba(63,174,145,.4)}
+    .ctrl .btn svg{fill:#eaf6f1;color:#eaf6f1}
+    .ctrl .btn.active svg{fill:#08150f;color:#08150f}
+    .ctrl .lbl{font-size:11px;color:var(--muted)}
+    .ctrl.end .btn{width:72px;height:72px;background:linear-gradient(135deg,#ff6f72,#e5484d);border-color:transparent;box-shadow:0 12px 30px rgba(229,72,77,.5)}
+    .ctrl.end .btn svg{transform:rotate(135deg);fill:#fff}
+
+    /* ── idle overlay ─────────────────────────── */
+    .idle{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:40px 30px;
+      background:
+        radial-gradient(90% 55% at 50% 12%, rgba(127,224,196,.16), transparent 60%),
+        linear-gradient(180deg,#13271f 0%,#0c1714 55%,#070f0c 100%);
+      animation:fadeIn .25s ease both}
+    .idle .who{text-align:center;display:flex;flex-direction:column;align-items:center}
+    .idle .who .nm{font-size:23px;font-weight:700;margin-top:18px;letter-spacing:.2px}
+    .idle .who .role{font-size:13px;color:var(--muted);margin-top:4px}
+    .idle .pitch{text-align:center;font-size:13.5px;line-height:1.6;color:var(--muted);max-width:300px}
+    .idle .call{width:100%;max-width:300px;height:56px;border:none;border-radius:18px;background:linear-gradient(135deg,#7fe0c4,#3fae91);color:#08150f;font-family:inherit;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;box-shadow:0 14px 34px rgba(63,174,145,.42)}
+    .idle .call svg{fill:#08150f}
+    .idle .chat-link{font-size:13px;color:var(--mint);cursor:pointer}
+    .idle .err{font-size:12.5px;color:#ffb4b4;min-height:16px;text-align:center}
+
+    /* ── ended toast ──────────────────────────── */
+    .toast{position:absolute;left:0;right:0;top:calc(64px + env(safe-area-inset-top));z-index:60;display:none;justify-content:center;animation:slideUp .3s ease both}
+    .toast.show{display:flex}
+    .toast div{background:rgba(10,20,16,.9);border:1px solid var(--border);color:#fff;padding:11px 20px;border-radius:24px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.4);backdrop-filter:blur(10px)}
+
+    /* ── ducking banner ───────────────────────── */
+    .duckban{position:absolute;top:calc(60px + env(safe-area-inset-top));left:64px;right:16px;z-index:86;display:none;align-items:center;gap:8px;background:rgba(201,163,94,.92);color:#1b140a;padding:8px 12px;border-radius:12px;font-size:11.5px;font-weight:600}
+    .duckban.show{display:flex}
+
+    /* ── lightbox / video overlays ────────────── */
+    .lb{position:absolute;inset:0;z-index:80;background:#0a0a0a;display:none;flex-direction:column;animation:fadeIn .2s ease both}
+    .lb.open{display:flex}
+    .lb .top{flex:none;display:flex;align-items:center;justify-content:space-between;padding:calc(10px + env(safe-area-inset-top)) 18px 8px}
+    .lb .x{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;cursor:pointer}
+    .lb .cnt{font-size:13px;color:rgba(255,255,255,.8)}
+    .lb .stage{flex:1;display:flex;align-items:center;justify-content:center;position:relative;padding:10px 16px}
+    .lb .img{position:relative;width:100%;height:100%;border-radius:12px;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center}
+    .lb .cap{flex:none;padding:12px 18px calc(30px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:rgba(255,255,255,.75)}
+    .lb .nav{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .lb .nav.prev{left:20px}.lb .nav.next{right:20px}
+    .lb .nav i{width:11px;height:11px;border-top:2px solid #fff;border-right:2px solid #fff;display:block}
+    .lb .nav.prev i{transform:rotate(-135deg);margin-left:4px}.lb .nav.next i{transform:rotate(45deg);margin-right:4px}
+
+    .vf{position:absolute;inset:0;z-index:85;background:#000;display:none;flex-direction:column;justify-content:center;animation:fadeIn .2s ease both}
+    .vf.open{display:flex}
+    .vf .x{position:absolute;top:calc(56px + env(safe-area-inset-top));left:16px;z-index:2;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;cursor:pointer}
+    .vf iframe{width:100%;aspect-ratio:16/9;border:0;background:#000}
+
+    /* ── debug drawer ─────────────────────────── */
+    .dbg{position:absolute;left:0;right:0;bottom:0;z-index:65;max-height:45%;overflow:auto;background:rgba(6,10,9,.96);border-top:1px solid rgba(255,255,255,.1);padding:10px 14px calc(14px + env(safe-area-inset-bottom));display:none;font-family:ui-monospace,monospace;font-size:11px;line-height:1.5;color:#9fb0aa}
+    .dbg.open{display:block}
+    .dbg .ok{color:#7fdcc0}.dbg .err{color:#ff9a9a}.dbg .warn{color:#f0c07a}.dbg .t{color:#5c7a72}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- top chrome -->
+    <div class="topbar">
+      <span class="timer" id="timer"></span>
+      <button class="tb-btn" id="btn-dbg" title="Log" aria-label="Debug" style="font-size:15px">‹/›</button>
+    </div>
+
+    <!-- portrait -->
+    <div class="portrait-zone">
+      <div class="portrait">
+        <div class="glow" id="glow"></div>
+        <div class="frame">
+          <img src="/assets/luna-portrait.jpg" alt="Luna" />
+        </div>
+      </div>
+      <div class="wave" id="wave"><b></b><b></b><b></b><b></b></div>
+      <div class="vstate" id="vstate"></div>
+    </div>
+
+    <!-- stream surface -->
+    <div class="stream" id="stream"></div>
+
+    <!-- controls -->
+    <div class="controls">
+      <div class="ctrl" id="ctrl-mute">
+        <div class="btn" id="mute-btn"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3z"/><path d="M18 11a1 1 0 012 0 8 8 0 01-7 7.9V21h-2v-2.1A8 8 0 014 11a1 1 0 012 0 6 6 0 0012 0z"/></svg></div>
+        <span class="lbl" id="mute-lbl">Mic</span>
+      </div>
+      <div class="ctrl end" id="ctrl-end">
+        <div class="btn"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.3 1l-2.2 2.2z"/></svg></div>
+        <span class="lbl">Kết thúc</span>
+      </div>
+      <div class="ctrl" id="ctrl-spk">
+        <div class="btn active" id="spk-btn"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M16 8.5a4 4 0 010 7M18.5 6a7 7 0 010 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg></div>
+        <span class="lbl" id="spk-lbl">Loa</span>
+      </div>
+    </div>
+
+    <!-- idle overlay -->
+    <div class="idle" id="idle">
+      <div class="who">
+        <div class="portrait" style="margin:0 auto">
+          <div class="frame" style="width:130px;height:168px;animation:floatY 5s ease-in-out infinite">
+            <img src="/assets/luna-portrait.jpg" alt="Luna" />
+          </div>
+        </div>
+        <div class="nm">Luna</div>
+        <div class="role">Trợ lý tư vấn dự án · NobleX</div>
+      </div>
+      <div class="pitch">Em có thể tư vấn dự án và gửi hình ảnh, video ngay trong cuộc gọi cho mình xem ạ.</div>
+      <button class="call" id="btn-call">
+        <svg width="20" height="20" viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.3 1l-2.2 2.2z"/></svg>
+        Gọi cho Luna
+      </button>
+      <div class="chat-link" id="idle-chat">hoặc nhắn tin với Luna →</div>
+      <div class="err" id="idle-err"></div>
+    </div>
+
+    <!-- ended toast -->
+    <div class="toast" id="toast"><div id="toast-txt"></div></div>
+
+    <!-- ducking banner -->
+    <div class="duckban" id="duckban"><span>🔇</span> Đã tạm dừng âm thanh cuộc gọi khi xem video</div>
+
+    <!-- lightbox -->
+    <div class="lb" id="lb">
+      <div class="top"><div class="x" id="lb-close">×</div><span class="cnt" id="lb-cnt"></span><div style="width:38px"></div></div>
+      <div class="stage"><div class="img" id="lb-img"></div><div class="nav prev" id="lb-prev"><i></i></div><div class="nav next" id="lb-next"><i></i></div></div>
+      <div class="cap" id="lb-cap"></div>
+    </div>
+
+    <!-- video fullscreen -->
+    <div class="vf" id="vf"><div class="x" id="vf-close">×</div><div id="vf-player"></div></div>
+
+    <!-- debug drawer -->
+    <div class="dbg" id="dbg"></div>
+  </div>
+
+  <script>
+    const { Room, RoomEvent, Track, createLocalAudioTrack, ConnectionState } = LivekitClient;
+
+    // elements
+    const idleEl   = document.getElementById('idle');
+    const idleErr  = document.getElementById('idle-err');
+    const streamEl = document.getElementById('stream');
+    const glowEl   = document.getElementById('glow');
+    const waveEl   = document.getElementById('wave');
+    const vstateEl = document.getElementById('vstate');
+    const timerEl  = document.getElementById('timer');
+    const toastEl  = document.getElementById('toast');
+    const dbgEl    = document.getElementById('dbg');
+    const duckBan  = document.getElementById('duckban');
+
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+    const now = () => new Date().toLocaleTimeString('vi-VN', { hour12:false });
+    function dbg(msg, cls='t'){ const d = document.createElement('div'); d.innerHTML = `<span class="t">${now()}</span> <span class="${cls}">${esc(msg)}</span>`; dbgEl.appendChild(d); dbgEl.scrollTop = dbgEl.scrollHeight; }
+
+    let room = null, localTrack = null;
+    let micOn = true, speakerOn = true;
+    let callSec = 0, callTimer = null;
+    let audioEls = [];                 // attached agent <audio> elements
+    let speaking = false;
+    let curAgentLine = null;           // accumulating agent reply block this turn
+    let partialLine = null;            // live user partial
+
+    // ── stream helpers ────────────────────────────────────────────────────────
+    function streamDown(){ streamEl.scrollTop = streamEl.scrollHeight; }
+    function clearStream(){ streamEl.innerHTML = ''; curAgentLine = null; partialLine = null; }
+    function setConnecting(text){
+      clearStream();
+      const box = document.createElement('div'); box.className = 'connbox';
+      box.innerHTML = `<div class="sp"></div><span>${esc(text)}</span>`;
+      streamEl.appendChild(box);
+    }
+    function dropConnbox(){ const b = streamEl.querySelector('.connbox'); if (b) b.remove(); }
+
+    function setSpeaking(on){
+      speaking = on;
+      glowEl.classList.toggle('on', on);
+      waveEl.classList.toggle('on', on);
+      vstateEl.textContent = on ? 'Đang nói…' : (room ? 'Đang nghe…' : '');
+    }
+    function agentSay(text){
+      dropConnbox();
+      if (!curAgentLine){
+        curAgentLine = document.createElement('div'); curAgentLine.className = 'reply';
+        streamEl.appendChild(curAgentLine);
+      }
+      curAgentLine.textContent = (curAgentLine.textContent ? curAgentLine.textContent + ' ' : '') + text;
+      streamDown();
+    }
+    function userSay(text, isPartial){
+      dropConnbox();
+      if (isPartial){
+        if (!partialLine){ partialLine = document.createElement('div'); partialLine.className = 'uline partial'; streamEl.appendChild(partialLine); }
+        partialLine.textContent = text; streamDown(); return;
+      }
+      if (partialLine){ partialLine.remove(); partialLine = null; }
+      curAgentLine = null;               // user turn → next agent text starts fresh
+      const l = document.createElement('div'); l.className = 'uline'; l.textContent = text;
+      streamEl.appendChild(l); streamDown();
+    }
+    const VTOOL_LABELS = {
+      noble_search:'Luna đang tra cứu…', send_media:'Luna đang gửi hình ảnh & video…',
+      booking:'Luna đang kiểm tra lịch…', escalate:'Luna đang kết nối chuyên viên…',
+      get_project_financial:'Luna đang xem giá…', search_units:'Luna đang tìm căn phù hợp…',
+    };
+    let vtoolEl = null;
+    function showVTool(tool){ if (vtoolEl) vtoolEl.remove(); vtoolEl = document.createElement('div'); vtoolEl.className = 'vtool'; vtoolEl.innerHTML = `<div class="sp"></div><span>${esc(VTOOL_LABELS[tool] || 'Luna đang xử lý…')}</span>`; streamEl.appendChild(vtoolEl); streamDown(); }
+    function clearVTool(){ if (vtoolEl){ vtoolEl.remove(); vtoolEl = null; } }
+
+    // ── media carousel ────────────────────────────────────────────────────────
+    function tileBg(item, opts){
+      const src = (opts && opts.thumb && item.thumb) ? item.thumb
+                : (opts && opts.full) ? (item.medium || item.url)
+                : item.url;
+      if (src) return `background-image:url("${esc(src)}")`;
+      const c1 = item.c1 || '#33645a', c2 = item.c2 || '#274a43';
+      return `background:repeating-linear-gradient(125deg,${c1} 0 12px,${c2} 12px 24px)`;
+    }
+    function videoThumb(v){
+      if (v.thumb) return `background-image:url("${esc(v.thumb)}")`;
+      if (v.video_id) return `background-image:url("https://img.youtube.com/vi/${esc(v.video_id)}/hqdefault.jpg")`;
+      return 'background:#274a43';
+    }
+    function addCarousel(payload){
+      clearVTool();
+      const items = Array.isArray(payload.items) ? payload.items : [];
+      if (!items.length) return;
+      const imgs = items.filter(x => x.kind === 'image');
+      const wrap = document.createElement('div'); wrap.className = 'carwrap';
+      const car = document.createElement('div'); car.className = 'carousel';
+      items.forEach((it) => {
+        const slide = document.createElement('div'); slide.className = 'slide';
+        if (it.kind === 'video'){
+          const v = document.createElement('div'); v.className = 'svid'; v.setAttribute('style', videoThumb(it));
+          v.innerHTML = `<div class="shade"></div><div class="yt-badge"><div class="r"></div><span>YouTube</span></div>
+            ${it.dur ? `<div class="dur">${esc(it.dur)}</div>` : ''}<div class="playbtn"><i></i></div>
+            ${it.title ? `<div class="vt">${esc(it.title)}</div>` : ''}`;
+          v.onclick = () => openVideo(it, true);
+          slide.appendChild(v);
+        } else {
+          const im = document.createElement('div'); im.className = 'simg'; im.setAttribute('style', tileBg(it, {thumb:true}));
+          im.innerHTML = `<div class="lb">${esc(it.label || it.alt || '')}</div>`;
+          const idx = imgs.indexOf(it);
+          im.onclick = () => openLightbox(imgs, idx);
+          slide.appendChild(im);
+        }
+        car.appendChild(slide);
+      });
+      const dots = document.createElement('div'); dots.className = 'dots';
+      items.forEach((_, i) => { const b = document.createElement('b'); if (i === 0) b.className = 'on'; dots.appendChild(b); });
+      const cap = document.createElement('div'); cap.className = 'carcap';
+      const setCap = (i) => { cap.textContent = `Quẹt để xem · ${i + 1}/${items.length}`; };
+      setCap(0);
+      car.addEventListener('scroll', () => {
+        const i = Math.round(car.scrollLeft / car.clientWidth);
+        [...dots.children].forEach((d, k) => d.className = k === i ? 'on' : '');
+        setCap(i);
+      });
+      wrap.appendChild(car); wrap.appendChild(dots); wrap.appendChild(cap);
+      streamEl.appendChild(wrap); streamDown();
+    }
+
+    // ── data channel events ─────────────────────────────────────────────────
+    function renderEvent(msg){
+      switch (msg.type){
+        case 'partial_transcript': if (msg.text) userSay(msg.text, true); break;
+        case 'transcript': userSay(msg.text, false); dbg('👤 ' + msg.text, 'ok'); break;
+        case 'agent_speaking':
+          setSpeaking(true); agentSay(msg.text || '');
+          if (msg.ttfb_ms != null) dbg('🔊 TTFB ' + msg.ttfb_ms + 'ms'); break;
+        case 'agent_done': setSpeaking(false); curAgentLine = null; dbg('🏁 turn done'); break;
+        case 'agent_interrupted': setSpeaking(false); curAgentLine = null; dbg('✋ barge-in', 'warn'); break;
+        case 'tool_start': showVTool(msg.tool); dbg('🔧 ' + msg.tool + '(' + JSON.stringify(msg.args || {}) + ')', 'warn'); break;
+        case 'tool_done': handleToolDone(msg); break;
+        case 'media': addCarousel(msg); break;
+        case 'error': { const e = document.createElement('div'); e.className = 'verr'; e.textContent = msg.message || 'Có lỗi xảy ra'; streamEl.appendChild(e); dbg('❌ ' + msg.message, 'err'); break; }
+        case 'session_ended': dbg('📴 ' + (msg.reason || ''), 'warn'); endCall('Cuộc gọi đã kết thúc'); break;
+        default: dbg('data: ' + JSON.stringify(msg).slice(0, 140));
+      }
+    }
+    function handleToolDone(msg){
+      let result = null;
+      try { result = typeof msg.result === 'string' ? JSON.parse(msg.result) : msg.result; } catch {}
+      if (result && Array.isArray(result.items) && result.items.length){ addCarousel(result); return; }
+      clearVTool();
+    }
+
+    // ── lightbox ──────────────────────────────────────────────────────────────
+    const lbEl = document.getElementById('lb'), lbImg = document.getElementById('lb-img');
+    const lbCnt = document.getElementById('lb-cnt'), lbCap = document.getElementById('lb-cap');
+    const lbPrev = document.getElementById('lb-prev'), lbNext = document.getElementById('lb-next');
+    let lbImgs = [], lbIdx = 0, lbFullToken = 0;
+    function renderLb(){
+      const im = lbImgs[lbIdx]; if (!im) return;
+      // Mở tức thì bằng thumb (đã cache từ lưới), rồi nâng cấp lên ảnh gốc chạy nền
+      // — tránh chờ tải ảnh gốc (có thể hàng chục MB) mới hiện.
+      lbImg.setAttribute('style', tileBg(im, {thumb:true}));
+      lbImg.innerHTML = im.url ? '' : `<div style="font-family:ui-monospace,monospace;font-size:12px;letter-spacing:1px;color:rgba(255,255,255,.85)">${esc(im.label || im.alt || '')}</div>`;
+      lbCnt.textContent = `${lbIdx + 1} / ${lbImgs.length}`;
+      lbCap.textContent = im.alt || im.label || '';
+      lbPrev.style.display = lbIdx > 0 ? '' : 'none';
+      lbNext.style.display = lbIdx < lbImgs.length - 1 ? '' : 'none';
+      const hi = im.medium || im.url;   // medium (~2048px) tránh tải ảnh gốc nhiều MB
+      if (hi && im.thumb && hi !== im.thumb){
+        const token = ++lbFullToken;
+        const full = new Image();
+        full.onload = () => { if (token === lbFullToken) lbImg.setAttribute('style', tileBg(im, {full:true})); };
+        full.src = hi;
+      }
+    }
+    function openLightbox(imgs, idx){ lbImgs = imgs; lbIdx = idx; renderLb(); lbEl.classList.add('open'); }
+    document.getElementById('lb-close').onclick = () => lbEl.classList.remove('open');
+    lbPrev.onclick = () => { if (lbIdx > 0){ lbIdx--; renderLb(); } };
+    lbNext.onclick = () => { if (lbIdx < lbImgs.length - 1){ lbIdx++; renderLb(); } };
+
+    // ── video fullscreen + audio ducking ──────────────────────────────────────
+    const vfEl = document.getElementById('vf'), vfPlayer = document.getElementById('vf-player');
+    function applyOutputMute(){ const m = !speakerOn || vfEl.classList.contains('open'); audioEls.forEach(el => { el.muted = m; }); }
+    function openVideo(vid, duck){
+      vfPlayer.innerHTML = vid.video_id
+        ? `<iframe src="https://www.youtube.com/embed/${esc(vid.video_id)}?autoplay=1&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`
+        : `<div style="color:#fff;text-align:center;padding:40px">Video chưa khả dụng</div>`;
+      vfEl.classList.add('open');
+      if (duck){ duckBan.classList.add('show'); applyOutputMute(); }
+    }
+    document.getElementById('vf-close').onclick = () => {
+      vfEl.classList.remove('open'); vfPlayer.innerHTML = '';
+      duckBan.classList.remove('show'); applyOutputMute();
+    };
+
+    // ── LiveKit ────────────────────────────────────────────────────────────────
+    async function fetchToken(roomName, identity){
+      const qs = new URLSearchParams({ room: roomName, identity });
+      const res = await fetch(`/livekit/token?${qs}`);
+      if (!res.ok) throw new Error(`token ${res.status}`);
+      return res.json();
+    }
+    const randomRoom     = () => `hotline-${Math.random().toString(36).slice(2, 8)}`;
+    const randomIdentity = () => `user-${Math.random().toString(36).slice(2, 8)}`;
+
+    async function connect(){
+      idleErr.textContent = '';
+      const roomName = randomRoom(), identity = randomIdentity();
+      dbg(`→ token room=${roomName}`);
+      let tokenData;
+      try { tokenData = await fetchToken(roomName, identity); dbg('← token ok', 'ok'); }
+      catch (e){ idleErr.textContent = 'Không lấy được token: ' + e.message; dbg('token err ' + e.message, 'err'); return false; }
+
+      // enter call UI
+      idleEl.style.display = 'none';
+      setConnecting('Đang kết nối với Luna…');
+      vstateEl.textContent = '';
+
+      room = new Room({ adaptiveStream: true, dynacast: true });
+
+      room.on(RoomEvent.ConnectionStateChanged, (state) => {
+        dbg('state: ' + state);
+        if (state === ConnectionState.Connected){ startTimer(); dropConnbox(); vstateEl.textContent = 'Đang nghe…'; }
+      });
+      room.on(RoomEvent.TrackSubscribed, (track) => {
+        if (track.kind === Track.Kind.Audio){
+          const el = track.attach(); el.autoplay = true; el.playsInline = true; el.muted = !speakerOn;
+          document.body.appendChild(el); audioEls.push(el);
+          dbg('subscribed audio', 'ok');
+        }
+      });
+      room.on(RoomEvent.TrackUnsubscribed, (track) => { track.detach().forEach(el => { el.remove(); audioEls = audioEls.filter(a => a !== el); }); });
+      room.on(RoomEvent.DataReceived, (payload) => {
+        try { const msg = JSON.parse(new TextDecoder().decode(payload)); if (msg && msg.type) renderEvent(msg); }
+        catch { dbg('data (binary)'); }
+      });
+      room.on(RoomEvent.Disconnected, (reason) => { dbg('disconnected: ' + (reason ?? ''), 'warn'); });
+
+      try {
+        await room.connect(tokenData.url, tokenData.token);
+        dbg('connected ' + tokenData.url, 'ok');
+        localTrack = await createLocalAudioTrack({ echoCancellation: true, noiseSuppression: true });
+        await room.localParticipant.publishTrack(localTrack);
+        micOn = true; updateMuteUI();
+        dbg('mic published', 'ok');
+        return true;
+      } catch (e){
+        dbg('connect err ' + e.message, 'err');
+        idleEl.style.display = ''; idleErr.textContent = 'Lỗi kết nối: ' + e.message;
+        if (room){ room.disconnect().catch(() => {}); room = null; }
+        return false;
+      }
+    }
+
+    async function endCall(toastMsg){
+      stopTimer();
+      const secs = callSec;
+      if (localTrack){ try { localTrack.stop(); } catch {} localTrack = null; }
+      if (room){ try { await room.disconnect(); } catch {} room = null; }
+      audioEls.forEach(el => el.remove()); audioEls = [];
+      setSpeaking(false); vstateEl.textContent = '';
+      // ended toast
+      const mm = String(Math.floor(secs / 60)).padStart(2, '0'), ss = String(secs % 60).padStart(2, '0');
+      document.getElementById('toast-txt').textContent = (toastMsg || 'Đã kết thúc cuộc gọi') + ' · ' + mm + ':' + ss;
+      toastEl.classList.add('show');
+      setTimeout(() => toastEl.classList.remove('show'), 2600);
+      // reset to idle
+      clearStream(); callSec = 0; timerEl.textContent = '';
+      idleEl.style.display = '';
+    }
+
+    function startTimer(){ stopTimer(); callSec = 0; callTimer = setInterval(() => { callSec++; const mm = String(Math.floor(callSec / 60)).padStart(2, '0'), ss = String(callSec % 60).padStart(2, '0'); timerEl.textContent = mm + ':' + ss; }, 1000); }
+    function stopTimer(){ if (callTimer){ clearInterval(callTimer); callTimer = null; } }
+
+    // ── controls ────────────────────────────────────────────────────────────
+    function updateMuteUI(){
+      document.getElementById('mute-btn').classList.toggle('active', !micOn);
+      document.getElementById('mute-lbl').textContent = micOn ? 'Mic' : 'Đã tắt';
+    }
+    document.getElementById('ctrl-mute').onclick = async () => {
+      if (!localTrack) return;
+      micOn = !micOn;
+      try { if (micOn) await localTrack.unmute(); else await localTrack.mute(); } catch (e){ dbg('mic toggle ' + e.message, 'err'); }
+      updateMuteUI();
+    };
+    document.getElementById('ctrl-spk').onclick = () => {
+      speakerOn = !speakerOn;
+      document.getElementById('spk-btn').classList.toggle('active', speakerOn);
+      document.getElementById('spk-lbl').textContent = speakerOn ? 'Loa' : 'Tắt loa';
+      applyOutputMute();
+    };
+    document.getElementById('ctrl-end').onclick = () => { if (room) endCall('Đã kết thúc cuộc gọi'); };
+
+    // ── entry ────────────────────────────────────────────────────────────────
+    document.getElementById('btn-call').onclick = () => connect();
+    document.getElementById('idle-chat').onclick = () => { location.href = '/chat'; };
+    document.getElementById('btn-dbg').onclick = () => dbgEl.classList.toggle('open');
+  </script>
+</body>
+</html>

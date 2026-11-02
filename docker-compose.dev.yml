@@ -1,0 +1,86 @@
+# File DEPLOY (dev-server + prod) — clone của docker-compose.deploy.yml, khác ba
+# chỗ: image kéo từ ECR (không build tại chỗ), network dùng chung `odyssey-network`
+# external, và tag đến từ `IMAGE_TAG`. Máy dev vẫn dùng docker-compose.local.yml.
+#
+# Ba service, MỘT image, một process share phục vụ N tenant:
+#   agent      transport aiortc: /chat UI, browser RTC, telephony   (8766)
+#   agent-lk   LiveKit worker: đăng ký OUTBOUND tới LiveKit, không publish port
+#   gateway    ingress provider-facing: resolve tenant qua Host subdomain, verify
+#              Bearer, route /v1/voice (voice→LiveKit) + /v1/chat (→agent)  (9200)
+#              — điểm DUY NHẤT cần public domain
+#
+#   docker network create odyssey-network      # một lần mỗi máy, tạo tay
+#   IMAGE_TAG=<sha> docker compose -f docker-compose.dev.yml pull
+#   IMAGE_TAG=<sha> docker compose -f docker-compose.dev.yml up -d
+#
+# Phụ thuộc NGOÀI compose này (khai trong `.env` ở $DEPLOY_PATH, không đóng gói):
+# MongoDB · Redis · Qdrant · LiveKit server (LIVEKIT_URL) · MinIO tenant store ·
+# STT/TTS remote. Store nào chạy native trên host thì trỏ `host.docker.internal`
+# (đã map extra_hosts), KHÔNG `localhost` — localhost trong container ≠ host.
+#
+# TLS/public: reverse proxy (nginx/Caddy) terminate wss trên 443, forward NGUYÊN
+# Host header → gateway:9200. DNS wildcard *.agents.noblex.vn → máy này.
+name: odyssey-agent
+
+x-agent-image: &agent-image 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-agent:${IMAGE_TAG:-dev-latest}
+
+x-common: &common
+  image: *agent-image
+  env_file: .env
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  restart: unless-stopped
+
+services:
+  # Pin aiortc để TRANSPORT_BACKEND dùng chung không đổi route service này. Cũng là
+  # đích reverse-proxy chat của gateway (ws://agent:8766/chat).
+  agent:
+    <<: *common
+    environment:
+      - TRANSPORT_BACKEND=aiortc
+    ports:
+      - "8766:8766" # bỏ nếu chỉ vào qua gateway
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./models:/app/models # sherpa STT model, không nằm trong image
+
+  agent-lk:
+    <<: *common
+    environment:
+      - TRANSPORT_BACKEND=livekit
+    command: ["noble-agent", "--transport", "livekit", "start"]
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./models:/app/models
+    depends_on:
+      - agent
+    # Bật nếu TTS/STT chạy LOCAL trên GPU trong container (không remote):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
+
+  gateway:
+    <<: *common
+    command: ["noble-gateway"]
+    environment:
+      - TENANT_STORE_ENABLED=true
+      - WORKER_CHAT_INTERNAL_URL_TEMPLATE=ws://agent:8766/chat
+      # Auth: một domain chung cho mọi tenant, tenant resolve từ Bearer API key qua
+      # GATEWAY_CREDENTIALS_API_URL (đặt trong `.env`). Rỗng ⇒ mọi WS bị đóng 4001
+      # auth_api_unavailable.
+    ports:
+      - "9200:9200" # reverse-proxy TLS 443 forward vào đây
+    depends_on:
+      - agent
+      - agent-lk
+
+# Bridge (không `network_mode: host`) để gateway phân giải được service `agent`
+# theo WORKER_CHAT_INTERNAL_URL_TEMPLATE. `external: true` = compose KHÔNG tạo
+# network, tạo tay: `docker network create odyssey-network`.
+networks:
+  default:
+    name: odyssey-network
+    external: true

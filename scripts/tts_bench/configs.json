@@ -1,0 +1,57 @@
+[
+  {
+    "name": "soniox-v2-Nina",
+    "provider": "soniox",
+    "model": "tts-rt-v2",
+    "voice": "Nina",
+    "speed": 1.0
+  },
+  {
+    "name": "soniox-v2-Grace",
+    "provider": "soniox",
+    "model": "tts-rt-v2",
+    "voice": "Grace",
+    "speed": 1.0
+  },
+  {
+    "name": "soniox-v2-Nina-sp1.15",
+    "provider": "soniox",
+    "model": "tts-rt-v2",
+    "voice": "Nina",
+    "speed": 1.15
+  },
+  {
+    "name": "soniox-v1-Nina",
+    "provider": "soniox",
+    "model": "tts-rt-v1",
+    "voice": "Nina",
+    "speed": 1.0
+  },
+  {
+    "name": "el-flash-v2_5-AnhVien",
+    "provider": "elevenlabs",
+    "model": "eleven_flash_v2_5",
+    "voice": "iSFxP4Z6YNcx9OXl62Ic",
+    "language_code": "vi",
+    "stability": 1.0,
+    "similarity_boost": 0.75,
+    "speed": 1.13
+  },
+  {
+    "name": "el-v3-AnhVien",
+    "provider": "elevenlabs",
+    "model": "eleven_v3",
+    "voice": "iSFxP4Z6YNcx9OXl62Ic",
+    "stability": 1.0,
+    "similarity_boost": 0.75,
+    "speed": 1.0
+  },
+  {
+    "name": "soniox-v2-Nina-sp1.15-rs",
+    "provider": "soniox",
+    "model": "tts-rt-v2",
+    "voice": "Nina",
+    "speed": 1.15,
+    "reduce_silence": true
+  }
+]

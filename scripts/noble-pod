@@ -1,0 +1,367 @@
+#!/usr/bin/env bash
+# noble-pod — Ops/debug CLI for Noble Voice Agent on RunPod
+#
+# Run from anywhere; auto-finds repo at /workspace/santa-hotline-agent.
+# Subcommands:
+#   setup [args]      Run infra/runpod/setup.sh (full bootstrap, idempotent)
+#   data <op>         scripts/data_sync.sh — consolidate/push/hf-*/rebuild/check/mongo-check
+#   doctor            Full health check (env, services, model, log signals)
+#   start             Start redis + vllm + agent in tmux (idempotent)
+#   stop [--vllm]     Kill agent (and optionally vLLM)
+#   restart           Restart agent (keep vLLM running)
+#   logs [opt]        Tail/filter agent.log
+#       --tail N         Last N lines (default 50)
+#       --full           Print whole file (less)
+#       --ttft           Show LLM TTFT/E2E events (alert >1s in red)
+#       --fallback       Show cloud-fallback events (alert in yellow)
+#       --errors         ERROR + WARNING only
+#       --tools          Tool-call events
+#       --turns          Per-turn pretty summary
+#       --watch          Live tail with filter (default: all events)
+#   env <op>          show | edit | get K | set K=V | reload
+#   token [room]      Generate LiveKit JWT (default room: smoke)
+#   connect [room]    Print URL + ROOM + TOKEN (paste-into-Playground format)
+#   bench "<text>"    Quick query to local vLLM (TTFT measure)
+#   model [op]        info | test (tool-call test) | switch <repo>
+#   ports             List listening TCP ports of interest
+#   metrics           Aggregate TTFT/fallback/turns from agent.log
+#   help              Show this help
+set -uo pipefail
+
+REPO="${REPO:-/workspace/santa-hotline-agent}"
+LOG="${LOG:-/workspace/agent.log}"
+VLOG="${VLOG:-/workspace/vllm.log}"
+ENV_FILE="$REPO/.env"
+
+# Detect Mac local invocation (for dev)
+[[ ! -d "$REPO" ]] && REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" && LOG="$REPO/agent.log" && VLOG="$REPO/vllm.log" && ENV_FILE="$REPO/.env"
+
+G='\033[32m'; Y='\033[33m'; R='\033[31m'; B='\033[34m'; C='\033[36m'; M='\033[35m'; D='\033[2m'; X='\033[0m'
+ok()    { printf "${G}✓${X} %s\n" "$*"; }
+warn()  { printf "${Y}⚠${X} %s\n" "$*"; }
+fail()  { printf "${R}✗${X} %s\n" "$*"; }
+hdr()   { printf "\n${B}━━━ %s ━━━${X}\n" "$*"; }
+dim()   { printf "${D}%s${X}\n" "$*"; }
+
+usage() { sed -n '2,32p' "$0" | sed 's|^# \?||'; }
+
+# ───────────────────────────── setup ──────────────────────────────────────
+cmd_setup() { bash "$REPO/infra/runpod/setup.sh" "$@"; }
+
+# ───────────────────────────── data ───────────────────────────────────────
+cmd_data() { bash "$REPO/scripts/data_sync.sh" "$@"; }
+
+# ───────────────────────────── connect ────────────────────────────────────
+# Like `token` but Playground-formatted with copy-paste hints.
+cmd_connect() {
+    local room="${1:-smoke}"
+    cd "$REPO" || return 1
+    "$REPO/.venv/bin/python" - <<PYEOF
+import os, time
+from dotenv import load_dotenv
+load_dotenv("$REPO/.env")
+url    = os.getenv("LIVEKIT_URL", "")
+key    = os.getenv("LIVEKIT_API_KEY", "")
+secret = os.getenv("LIVEKIT_API_SECRET", "")
+if not (url and key and secret):
+    print("\n  ⚠ LIVEKIT_* keys missing in .env"); raise SystemExit(1)
+from livekit.api import AccessToken, VideoGrants
+identity = f"user-{int(time.time())}"
+tok = AccessToken(key, secret).with_identity(identity).with_grants(
+    VideoGrants(room_join=True, room="$room",
+                can_publish=True, can_subscribe=True, can_publish_data=True)
+).to_jwt()
+print()
+print("  \033[36mURL:\033[0m  ", url)
+print("  \033[36mROOM:\033[0m ", "$room")
+print("  \033[36mTOKEN:\033[0m", tok)
+print()
+print("  ▶ https://agents-playground.livekit.io/")
+print("    Settings → Manual → paste URL + Token → Connect")
+PYEOF
+}
+
+# ───────────────────────────── doctor ─────────────────────────────────────
+cmd_doctor() {
+    hdr "Noble Pod Health Check"
+
+    # Env file
+    if [[ -f "$ENV_FILE" ]]; then ok ".env exists ($(wc -l < "$ENV_FILE") lines)"
+    else fail ".env missing at $ENV_FILE"; return 1; fi
+
+    # Required keys
+    for k in LIVEKIT_URL LIVEKIT_API_KEY LIVEKIT_API_SECRET MONGODB_URI; do
+        if grep -q "^${k}=." "$ENV_FILE"; then ok "$k set"; else fail "$k missing"; fi
+    done
+
+    # Pod overrides
+    grep -q "^TELEPHONY_ENABLED=false" "$ENV_FILE" && ok "TELEPHONY_ENABLED=false (pod mode)" || warn "TELEPHONY_ENABLED not set to false"
+    grep -q "^LIVEKIT_WORKER_PORT=8082" "$ENV_FILE" && ok "LIVEKIT_WORKER_PORT=8082" || warn "LIVEKIT_WORKER_PORT not 8082 (RunPod nginx blocks 8081)"
+
+    # Redis
+    if redis-cli ping 2>/dev/null | grep -q PONG; then ok "Redis ping OK"
+    else fail "Redis not responding"; fi
+
+    # vLLM
+    if curl -sf http://localhost:8000/v1/models >/dev/null 2>&1; then
+        local model=$(curl -sf http://localhost:8000/v1/models | python3 -c 'import sys,json; print(json.load(sys.stdin)["data"][0]["id"])' 2>/dev/null)
+        ok "vLLM running ($model)"
+    else
+        warn "vLLM not on :8000 — using cloud LLM fallback"
+    fi
+
+    # Agent worker
+    if grep -q "registered worker" "$LOG" 2>/dev/null; then ok "Agent worker registered"
+    else fail "Agent worker NOT registered (check $LOG)"; fi
+
+    # Data files
+    [[ -d "$REPO/data/rag" && -n "$(ls -A "$REPO/data/rag" 2>/dev/null)" ]] && ok "data/rag present" || warn "data/rag missing — noble-pod data hf-download <repo>"
+    [[ -d "$REPO/data/flat_store" && -n "$(ls -A "$REPO/data/flat_store" 2>/dev/null)" ]] && ok "data/flat_store present" || warn "data/flat_store missing"
+    [[ -d "$REPO/data/faq_cache" && -n "$(ls -A "$REPO/data/faq_cache" 2>/dev/null)" ]] && ok "data/faq_cache present" || warn "data/faq_cache missing (will lazy-build)"
+    [[ -d "$REPO/data/faq/source" ]] && ok "data/faq/source/ symlinks present" || warn "data/faq/source/ missing (run setup.sh stage:paths)"
+
+    # MongoDB ping (best-effort, doesn't fail doctor)
+    if [[ -x "$REPO/.venv/bin/python" ]]; then
+        if "$REPO/.venv/bin/python" -c "
+import os, sys
+from dotenv import load_dotenv
+load_dotenv('$ENV_FILE')
+from pymongo import MongoClient
+c = MongoClient(os.getenv('MONGODB_URI',''), serverSelectionTimeoutMS=3000)
+c.admin.command('ping'); sys.exit(0)
+" 2>/dev/null; then
+            ok "MongoDB reachable"
+        else
+            warn "MongoDB unreachable (check MONGODB_URI in .env, or 'noble-pod data mongo-check')"
+        fi
+    fi
+
+    # Patches
+    grep -q "Strict-server sanitization" "$REPO/src/noble_agent/agent/llm/streaming.py" 2>/dev/null && ok "streaming.py patched (vLLM compat)" || warn "streaming.py NOT patched"
+    grep -q "OPENAI_EMBEDDING_API_KEY" "$REPO/src/noble_agent/agent/llm/tool_hint.py" 2>/dev/null && ok "tool_hint.py patched" || warn "tool_hint.py NOT patched"
+
+    # ONNX
+    find "$HOME/.cache/fastembed" -name "model.onnx" -size +100M 2>/dev/null | grep -q . && ok "e5-large ONNX cached" || warn "e5-large ONNX missing"
+
+    # Log signals (last 1000 lines)
+    if [[ -f "$LOG" ]]; then
+        local ttft_high=$(grep -c "E2E TTFA: [12][0-9][0-9][0-9]ms\|E2E TTFA: [3-9][0-9][0-9][0-9]ms" "$LOG" 2>/dev/null || echo 0)
+        local fb=$(grep -c "Falling back from openai" "$LOG" 2>/dev/null || echo 0)
+        [[ "$ttft_high" -gt 0 ]] && warn "TTFA >1s events: $ttft_high" || ok "No slow TTFA events"
+        [[ "$fb" -gt 0 ]] && warn "Cloud fallback events: $fb" || ok "No cloud fallback"
+    fi
+}
+
+# ───────────────────────────── start/stop/restart ─────────────────────────
+cmd_start() {
+    hdr "Start services"
+    redis-cli ping >/dev/null 2>&1 || { redis-server --daemonize yes --bind 127.0.0.1 --port 6379; ok "Redis started"; }
+
+    if [[ -d "/workspace/$(grep ^OPENAI_MODEL= "$ENV_FILE" | cut -d= -f2 | sed 's|.*/||')" ]] || [[ -d /workspace/Qwen3.6-35B-A3B ]]; then
+        if ! curl -sf http://localhost:8000/v1/models >/dev/null 2>&1; then
+            tmux kill-session -t vllm 2>/dev/null
+            tmux new -d -s vllm "cd $REPO && bash infra/runpod/start_vllm.sh 2>&1 | tee $VLOG"
+            ok "vLLM started in tmux:vllm (tail $VLOG)"
+        else
+            ok "vLLM already running"
+        fi
+    fi
+
+    tmux kill-session -t agent 2>/dev/null
+    pkill -9 -f noble-agent 2>/dev/null
+    pkill -9 -f livekit.agents 2>/dev/null
+    sleep 3
+    # noble-agent uses pydantic-settings which auto-loads .env — no manual export needed
+    tmux new -d -s agent "cd $REPO && source .venv/bin/activate && noble-agent --transport livekit start 2>&1 | tee $LOG"
+    ok "Agent started in tmux:agent"
+    echo
+    dim "Wait ~30s then run: noble-pod doctor"
+}
+
+cmd_stop() {
+    local kill_vllm=0
+    [[ "${1:-}" == "--vllm" ]] && kill_vllm=1
+    tmux kill-session -t agent 2>/dev/null && ok "Agent tmux killed"
+    pkill -9 -f noble-agent 2>/dev/null
+    pkill -9 -f livekit.agents 2>/dev/null
+    if [[ $kill_vllm -eq 1 ]]; then
+        tmux kill-session -t vllm 2>/dev/null && ok "vLLM tmux killed"
+        pkill -9 -f vllm 2>/dev/null
+    else
+        dim "vLLM kept running (use --vllm to kill)"
+    fi
+}
+
+cmd_restart() { cmd_stop; sleep 2; cmd_start; }
+
+# ───────────────────────────── logs ───────────────────────────────────────
+cmd_logs() {
+    [[ ! -f "$LOG" ]] && { fail "$LOG not found"; return 1; }
+    case "${1:-}" in
+        --full) less "$LOG";;
+        --tail) shift; tail -n "${1:-50}" "$LOG";;
+        --ttft)
+            grep -E "LLM TTFT|E2E TTFA" "$LOG" | awk '
+                /TTFT/ { match($0,/TTFT: ([0-9]+)ms/,m); t=m[1] }
+                /TTFA/ { match($0,/TTFA: ([0-9]+)ms/,m); a=m[1];
+                    if(a>1000) printf "\033[31m%s\033[0m  TTFT=%s ms  TTFA=%s ms ⚠ SLOW\n", strftime("%H:%M:%S"), t, a;
+                    else printf "\033[32m%s\033[0m  TTFT=%s ms  TTFA=%s ms\n", strftime("%H:%M:%S"), t, a }
+            ';;
+        --fallback)
+            grep -E "Falling back from openai|Connected via" "$LOG" | tail -50 | sed -E 's/.*Falling back from openai to (\w+)/\x1b[33m⚠ FALLBACK\x1b[0m → \1/; s/.*Connected via (\w+).*/\x1b[32m✓\x1b[0m connected via \1/';;
+        --errors) grep -E "ERROR|WARNING" "$LOG" | tail -50;;
+        --tools)  grep -E "TOOL.*Calling|TOOL.*Result|tool_calls" "$LOG" | tail -50;;
+        --turns)
+            grep -E "Final transcript|LLM TTFT|E2E TTFA|TOOL.*Calling|Falling back" "$LOG" | tail -100 | \
+                sed -E 's/.*Final transcript[^:]*: /'$'\033''[36m▸ user:'$'\033''[0m /; s/.*LLM TTFT: ([0-9]+).*/'$'\033''[2m  ttft=\1ms'$'\033''[0m/; s/.*E2E TTFA: ([0-9]+).*/'$'\033''[2m  ttfa=\1ms'$'\033''[0m/; s/.*TOOL.*Calling /'$'\033''[35m  ⚙ tool: '$'\033''[0m/; s/.*Falling back.*/'$'\033''[33m  ⚠ fallback'$'\033''[0m/';;
+        --watch)
+            tail -f "$LOG" | grep --line-buffered -E "Final transcript|LLM TTFT|E2E TTFA|TOOL.*Calling|Falling back|registered worker|ERROR";;
+        ""|--help)
+            echo "Usage: noble-pod logs [--tail N | --full | --ttft | --fallback | --errors | --tools | --turns | --watch]";;
+        *) fail "Unknown logs option: $1"; return 1;;
+    esac
+}
+
+# ───────────────────────────── env ────────────────────────────────────────
+cmd_env() {
+    case "${1:-show}" in
+        show)
+            grep -E "^(LIVEKIT_|OPENAI_|GEMINI_|TELEPHONY_|REDIS_|MONGODB_|NOBLE_RAG_|TRANSPORT_|STT_|TTS_)" "$ENV_FILE" | sed -E 's/(API_KEY|SECRET|PASSWORD)=.*/\1=***REDACTED***/';;
+        edit) ${EDITOR:-vi} "$ENV_FILE";;
+        get) grep "^${2}=" "$ENV_FILE";;
+        set)
+            local kv="$2" k=${2%%=*} v=${2#*=}
+            [[ -z "$k" || "$k" == "$kv" ]] && { fail "Use: env set KEY=VALUE"; return 1; }
+            if grep -q "^${k}=" "$ENV_FILE"; then sed -i.bak "s|^${k}=.*|${k}=${v}|" "$ENV_FILE"
+            else echo "${k}=${v}" >> "$ENV_FILE"; fi
+            ok "$k=$v"; warn "Restart agent for change to take effect: noble-pod restart";;
+        reload) cmd_restart;;
+        *) fail "Use: env [show|edit|get K|set K=V|reload]";;
+    esac
+}
+
+# ───────────────────────────── token ──────────────────────────────────────
+cmd_token() {
+    local room="${1:-smoke}"
+    cd "$REPO" && source .venv/bin/activate 2>/dev/null
+    python -c "
+from livekit.api import AccessToken, VideoGrants
+import time, os
+from dotenv import load_dotenv
+load_dotenv()
+at = AccessToken(os.getenv('LIVEKIT_API_KEY'), os.getenv('LIVEKIT_API_SECRET')) \
+    .with_identity(f'user-{int(time.time())}') \
+    .with_grants(VideoGrants(room_join=True, room='$room', can_publish=True, can_subscribe=True, can_publish_data=True))
+print()
+print('  URL:  ', os.getenv('LIVEKIT_URL'))
+print('  TOKEN:', at.to_jwt())
+print('  ROOM: ', '$room')
+print()
+print('  ▶ Paste vào: https://agents-playground.livekit.io/ → Settings → Manual')
+"
+}
+
+# ───────────────────────────── bench ──────────────────────────────────────
+cmd_bench() {
+    local prompt="${1:-Chào em, hôm nay thế nào?}"
+    if ! curl -sf http://localhost:8000/v1/models >/dev/null 2>&1; then fail "vLLM not running on :8000"; return 1; fi
+    local model=$(curl -sf http://localhost:8000/v1/models | python3 -c 'import sys,json; print(json.load(sys.stdin)["data"][0]["id"])')
+    echo "Model: $model"
+    echo "Prompt: $prompt"
+    local t0=$(date +%s%3N)
+    local resp=$(curl -sN http://localhost:8000/v1/chat/completions \
+        -H 'Content-Type: application/json' \
+        -d "{\"model\":\"$model\",\"messages\":[{\"role\":\"user\",\"content\":\"$prompt\"}],\"max_tokens\":150,\"stream\":true}" \
+        | head -c 200)
+    local t1=$(date +%s%3N)
+    local ms=$((t1 - t0))
+    echo "First chunk (TTFT proxy): ${ms}ms"
+    echo "$resp" | grep -oE '"content":"[^"]*"' | head -3 | sed 's/"content":"//; s/"$//'
+}
+
+# ───────────────────────────── model ──────────────────────────────────────
+cmd_model() {
+    case "${1:-info}" in
+        info)
+            curl -sf http://localhost:8000/v1/models 2>/dev/null | python3 -m json.tool 2>/dev/null || warn "vLLM not running";;
+        test)
+            local model=$(curl -sf http://localhost:8000/v1/models | python3 -c 'import sys,json; print(json.load(sys.stdin)["data"][0]["id"])')
+            echo "Testing tool-call on $model..."
+            curl -s http://localhost:8000/v1/chat/completions \
+                -H 'Content-Type: application/json' \
+                -d "{\"model\":\"$model\",\"messages\":[{\"role\":\"user\",\"content\":\"What is the weather in Hanoi?\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get weather\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"]}}}],\"tool_choice\":\"auto\",\"max_tokens\":100}" \
+                | python3 -m json.tool | grep -E "tool_calls|content|finish_reason"
+            ;;
+        switch)
+            shift; local repo="${1:-}"
+            [[ -z "$repo" ]] && { fail "Use: model switch <hf-repo>"; return 1; }
+            warn "Switching model requires re-downloading + restarting vLLM."
+            warn "Run: HF_MODEL_REPO=$repo MODEL_DIR=/workspace/$(basename $repo) bash infra/runpod/setup.sh --from model"
+            ;;
+        *) fail "Use: model [info|test|switch REPO]";;
+    esac
+}
+
+# ───────────────────────────── ports ──────────────────────────────────────
+cmd_ports() {
+    hdr "Listening ports"
+    if command -v ss &>/dev/null; then
+        ss -tlnp 2>/dev/null | awk 'NR==1 || /:(8000|8001|8082|8090|8766|8768|6379|27017|7880)/'
+    else
+        netstat -tlnp 2>/dev/null | awk 'NR<=2 || /:(8000|8001|8082|8090|8766|8768|6379|27017|7880)/'
+    fi
+}
+
+# ───────────────────────────── metrics ────────────────────────────────────
+cmd_metrics() {
+    [[ ! -f "$LOG" ]] && { fail "$LOG not found"; return 1; }
+    hdr "Aggregated metrics from $LOG"
+    python3 - <<PYEOF
+import re
+log = open("$LOG").read()
+# Use de-duped per-turn pattern: match log line "LLM TTFT: NNNms" (agent module)
+# which fires once per turn; the [LLM] prefix variant (provider module) doubles count.
+ttfts = [int(x) for x in re.findall(r'(?<!\] )TTFT: (\d+)ms', log)]
+ttfas = [int(x) for x in re.findall(r'E2E TTFA: (\d+)ms', log)]
+ttfbs = [int(x) for x in re.findall(r'TTFB: (\d+)ms', log)]
+fb = len(re.findall(r'Falling back from openai', log))
+calls = len(re.findall(r'\[TOOL\] Calling', log))
+sessions = len(re.findall(r'Session ended:', log))
+errors = len(re.findall(r'"level": "ERROR"', log))
+def stat(name, vals, threshold=None):
+    if not vals: print(f"  {name:12s} (no data)"); return
+    avg = sum(vals)//len(vals); mx = max(vals); mn = min(vals)
+    slow = sum(1 for v in vals if threshold and v > threshold)
+    flag = f"  ⚠ {slow} > {threshold}ms" if slow else ""
+    print(f"  {name:12s} n={len(vals):4d}  avg={avg:5d}ms  min={mn:5d}ms  max={mx:5d}ms{flag}")
+print()
+stat("LLM TTFT",  ttfts, 500)
+stat("E2E TTFA",  ttfas, 1000)
+stat("TTS TTFB",  ttfbs, 500)
+print()
+print(f"  Tool calls:        {calls}")
+print(f"  Cloud fallbacks:   {fb}" + (f"  ⚠" if fb else "  ✓"))
+print(f"  Sessions ended:    {sessions}")
+print(f"  ERROR log lines:   {errors}")
+PYEOF
+}
+
+# ───────────────────────────── dispatch ───────────────────────────────────
+case "${1:-help}" in
+    setup)    shift; cmd_setup "$@";;
+    data)     shift; cmd_data "$@";;
+    doctor)   shift; cmd_doctor "$@";;
+    start)    shift; cmd_start "$@";;
+    stop)     shift; cmd_stop "$@";;
+    restart)  shift; cmd_restart "$@";;
+    logs)     shift; cmd_logs "$@";;
+    env)      shift; cmd_env "$@";;
+    token)    shift; cmd_token "$@";;
+    connect)  shift; cmd_connect "$@";;
+    bench)    shift; cmd_bench "$@";;
+    model)    shift; cmd_model "$@";;
+    ports)    cmd_ports;;
+    metrics)  cmd_metrics;;
+    help|--help|-h) usage;;
+    *) fail "Unknown command: $1"; usage; exit 1;;
+esac

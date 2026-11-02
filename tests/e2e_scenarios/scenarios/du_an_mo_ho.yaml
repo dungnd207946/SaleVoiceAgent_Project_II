@@ -1,0 +1,32 @@
+name: du_an_mo_ho
+description: >-
+  Khách nói tên dự án mơ hồ/không rõ khu (nhiều dự án trùng chữ "Sunshine", "Noble
+  Crystal"). Kiểm tra Luna hỏi lại làm rõ thay vì tự đoán bừa một mã, rồi xác định
+  đúng khi khách bổ sung khu vực.
+
+turns:
+  - user: "Em ơi anh muốn hỏi dự án Sunshine ấy"
+    expect:
+      # "sunshine" trần là ambiguous (SSLC/SSC/SGR/SGI/SRP/SCHN/SBR...) → phải hỏi lại làm rõ.
+      reply_contains_any: ["khu", "dự án nào", "cụ thể", "Sunshine nào", "ở đâu", "cho em hỏi"]
+
+  - user: "Cái Sunshine ở Quận 7 trong Sài Gòn ấy"
+    expect:
+      # Đủ thông tin định vị → Sunshine Sky City (Quận 7).
+      reply_contains_any: ["Sky City", "Quận 7", "Hồ Chí Minh", "Sài Gòn"]
+
+  - user: "À nhầm, ý anh là Noble Crystal cơ"
+    expect:
+      # "Noble Crystal" ambiguous (Long Biên / Tây Hồ / Riverside). Lý tưởng: hỏi lại khu.
+      # Thực tế agent hay mặc định Long Biên (NCLB) — chấp nhận nếu hỏi lại HOẶC nêu đúng 1
+      # khu có thật; chỉ fail nếu bịa/gán sai khu. (Finding: disambiguation chưa ổn định.)
+      reply_contains_any: ["Noble Crystal", "Long Biên", "Tây Hồ", "khu nào", "ở đâu", "cụ thể"]
+
+  - user: "Bên Long Biên nhé em"
+    expect:
+      # Làm rõ → Noble Crystal Long Biên (NCLB).
+      reply_contains_any: ["Long Biên", "Noble Crystal"]
+
+  - user: "Dự án đó có gì hay em kể xem"
+    expect:
+      reply_contains_any: ["Long Biên", "vị trí", "tiện ích", "nổi bật", "thiết kế"]

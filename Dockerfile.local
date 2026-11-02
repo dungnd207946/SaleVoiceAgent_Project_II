@@ -1,0 +1,53 @@
+# Lean CPU image for the SELF-HOSTED (this-PC) deployment.
+#
+# On this box the agent process never touches the GPU:
+#   - LLM  → OpenAI API (no local vLLM)
+#   - TTS  → vieneu_http → the native tts-santa microservice on :8011
+#   - STT  → sherpa-onnx (CPU)
+#   - RAG  → native qdrant-santa on :6333
+# So we install CPU-only torch (Silero VAD + gender detector still import it) and
+# SKIP the ~6-8GB cu124 stack and the in-process `vieneu` package the EC2 image
+# carries. RAG artifacts + the STT model are provided at runtime via bind mounts
+# (./data, ./models in docker-compose.local.yml) — not baked, not HF-pulled — so
+# there is no pull-rag-data.sh entrypoint here.
+#
+# NOTE: no BuildKit cache mounts → builds with the legacy builder (the docker.io
+# package ships without the buildx plugin). Functionally identical image; only
+# rebuild speed differs.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libsndfile1 \
+    ffmpeg \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# CPU-only torch (~200MB) — Silero VAD (voice/vad/silero.py) + gender_detector
+# import it; nothing on this box runs torch on CUDA.
+RUN pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+# Base deps.
+COPY requirements.txt pyproject.toml ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# App code (changes here don't re-download deps).
+COPY src/ src/
+COPY data/ data/
+COPY static/ static/
+COPY assets/ assets/
+
+# Install the package with the extras this box uses: sherpa STT (+ huggingface_hub
+# for the auto-pull fallback) and the qdrant RAG client. NOT tts-vieneu (HTTP TTS).
+RUN pip install --no-cache-dir -e ".[stt-sherpa,rag-qdrant, tracing, postgres]"
+
+RUN mkdir -p /app/logs /app/sessions /app/data
+
+EXPOSE 8766 8768 8090
+
+ENV PYTHONUNBUFFERED=1
+
+# No HF-pull entrypoint: ./data and ./models are bind-mounted at run time.
+CMD ["noble-agent", "--no-reload"]

@@ -1,0 +1,29 @@
+# LiveKit server config — self-hosted on EC2 g6 (single node).
+# Keys come from --keys CLI flag in docker-compose so secrets live in .env,
+# not in this file. Redis section is omitted: single-node deploy doesn't
+# need it (re-add only when enabling SIP or multi-node clustering).
+# Ref: https://docs.livekit.io/home/self-hosting/deployment/
+
+port: 7880
+bind_addresses:
+  - "0.0.0.0"
+
+rtc:
+  tcp_port: 7881
+  port_range_start: 52000
+  port_range_end: 52049
+  # EC2: advertise public IP in ICE candidates so external browsers can
+  # reach RTC media (private 172.x is unreachable from the open internet).
+  use_external_ip: true
+
+logging:
+  level: info
+  json: false
+
+room:
+  auto_create: true
+  empty_timeout: 300          # seconds before empty room is closed
+  max_participants: 10        # per-room cap; hotline uses 2 (caller + agent)
+
+turn:
+  enabled: false              # client-side ICE + RTC port range is enough

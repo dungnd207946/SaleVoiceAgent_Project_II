@@ -1,0 +1,208 @@
+stages: [build, deploy]
+
+# KHÔNG có stage lint/test, có chủ đích: `pytest tests/unit` ở repo này hiện đỏ sẵn
+# ~9-11 test (baseline ghi trong CLAUDE.md: test_qdrant_adapter, test_prompt_builder,
+# test_send_media, test_snapshot_short_term…). Gắn nó vào pipeline nghĩa là mọi lần
+# deploy bị chặn bởi lỗi có sẵn, và cổng nào luôn đỏ thì sẽ bị bỏ qua bằng tay.
+# Sửa xong baseline thì thêm lại (mẫu ở .gitlab-ci.yml của hai repo odyssey-portal-*).
+#
+# Chỉ hai môi trường: dev (`develop`) và prod (`prod`).
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+    - if: $CI_COMMIT_BRANCH == "prod"
+
+variables:
+  APP_NAME: aidc/odyssey-agent
+  AWS_DEFAULT_REGION: ap-southeast-1
+  ECR_URL: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com
+  IMAGE_TAG: ${CI_COMMIT_SHORT_SHA}
+
+# TÊN JOB KHÔNG ĐƯỢC LÀ `image` — đó là từ khoá toàn cục, cả file thành invalid.
+#
+# Image này NẶNG (torch CUDA ~6-8GB). Nên build phải chạy trên shell runner có
+# docker daemon cục bộ và cache layer, không phải dind sạch mỗi lần.
+.ecr-build:
+  stage: build
+  before_script:
+    - aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${ECR_URL}
+  script:
+    # `Dockerfile` (GPU/CUDA), không phải `Dockerfile.local` (CPU + TTS trên host).
+    # Không `--build-arg` nào: Dockerfile không khai ARG.
+    # Không `--pull`: base image python:3.11-slim đổi hiếm, và kéo lại mỗi lần build
+    # image cỡ này là phí băng thông. Thêm `--pull` khi cần vá base image.
+    - docker build -f Dockerfile
+        -t ${ECR_URL}/${APP_NAME}:${IMAGE_TAG}
+        -t ${ECR_URL}/${APP_NAME}:${LATEST_TAG} .
+    - docker push ${ECR_URL}/${APP_NAME}:${IMAGE_TAG}
+    - docker push ${ECR_URL}/${APP_NAME}:${LATEST_TAG}
+  after_script:
+    - echo "Image ${ECR_URL}/${APP_NAME}:${IMAGE_TAG}"
+
+# Đăng nhập ECR bằng access key tĩnh (GitLab CI/CD Variables).
+build:image:dev:
+  extends: .ecr-build
+  tags:
+    - odyssey-dev-runner
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+      variables:
+        ENV: dev
+        LATEST_TAG: dev-latest
+  before_script:
+    - |
+      if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+        echo "AWS credentials not set — đặt trong GitLab CI/CD Variables"
+        exit 1
+      fi
+    - aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${ECR_URL}
+
+# Runner prod lấy quyền ECR từ IAM role của EC2 — key tĩnh ở đây sẽ đè quyền role.
+build:image:prod:
+  extends: .ecr-build
+  tags:
+    - odyssey-prod-runner
+  rules:
+    - if: $CI_COMMIT_BRANCH == "prod"
+      variables:
+        ENV: prod
+        LATEST_TAG: prod-latest
+
+# ------------------------
+# BƯỚC PHẢI LÀM TAY, pipeline cố ý không làm:
+#
+# 1. `docker network create odyssey-network` — một lần mỗi máy deploy.
+# 2. CŨ: secret `noblex-<dev|prod>-odyssey-secrets-agent-env` trên AWS Secrets Manager.
+#    MỚI (2026-08-19): biến `ODYSSEY_SECRET_AGENT_ENV` trong GitLab CI/CD Variables
+#    (Settings → CI/CD → Variables), Environment scope `dev`/`prod`, bật Protected.
+#    Nội dung nhận JSON phẳng một tầng (copy y nguyên giá trị secret cũ sang) HOẶC
+#    dotenv KEY=VALUE mỗi dòng. Không mask được vì nhiều dòng — đừng echo nó ra log.
+#    Pipeline render nó thành `.env` mỗi lần deploy (bước
+#    `fetch_secrets.sh` dưới đây) — ĐỪNG sửa `.env` tay, lần sau ghi đè.
+#    ⚠️ Ở repo này bước đó KHÔNG được phép mềm: compose khai `env_file: .env` nên
+#    thiếu file là `docker compose` gãy ngay ở `pull` (`env file … not found`) —
+#    khác frontend, nơi mọi biến đều có default nên fetch lỗi vẫn deploy được.
+#    Ba service đọc CHUNG file này. Bắt buộc có: REDIS_URL, QDRANT_URL,
+#    LIVEKIT_URL + key, GATEWAY_CREDENTIALS_API_URL (URL runtime-credentials API của
+#    Portal; rỗng là gateway fail-closed 4001 auth_api_unavailable), POSTGRES_DSN
+#    (+ POSTGRES_SERVER_DSN nếu muốn pool per-tenant cho chat).
+#    ⚠️ MONGODB_URI ĐÃ RỜI danh sách bắt buộc (chốt 2026-08-20): Mongo không dùng
+#    nữa, để rỗng. Rỗng chỉ sinh một dòng warning rồi agent chạy tiếp — xem khối
+#    ⚠️ MongoDB trong docker-compose.onprem.yml để biết cái gì thôi được lưu.
+#    ⚠️ On-prem thêm: MINIO_ENDPOINT (trước để rỗng vì S3+IAM role) + MINIO_ROOT_*,
+#    STT_SERVICE_URL / TTS_SERVICE_URL / EMBED_SERVICE_URL / SPEAKER_REMOTE_URL trỏ
+#    sang odyssey-models, và SANTA_MODELS_TOKEN đúng bằng ODYSSEY_MODELS_TOKEN.
+# 3. `mkdir -p logs models` ở $DEPLOY_PATH, do user chạy runner — TRƯỚC lần deploy
+#    đầu. Hai thư mục này không có trong git (chỉ `data/` có) và compose bind-mount
+#    chúng, nên nếu thiếu thì DOCKER tự tạo với owner `root`: container chạy được,
+#    nhưng từ đó `git clean`/`git reset --hard` của job sau gãy vì permission và
+#    không ai đọc được log. Thư mục đã tạo sẵn đúng owner thì không bao giờ gặp.
+# 4. `models/` phải có model sherpa STT (không nằm trong image). Thiếu thì container
+#    lên bình thường nhưng STT chết lúc nhận cuộc gọi đầu tiên.
+# 5. Reverse proxy terminate TLS 443 → forward vào gateway:9200. MỘT domain dùng
+#    chung cho mọi tenant (không còn wildcard/subdomain-per-tenant): tenant được
+#    resolve từ Bearer API key qua runtime-credentials API, không từ Host header.
+# ------------------------
+.deploy:
+  stage: deploy
+  variables:
+    GIT_STRATEGY: none # tự pull vào $DEPLOY_PATH ở dưới
+    # ── CŨ (AWS): giữ lại, vẫn đúng nếu quay về môi trường cũ.
+    # COMPOSE_FILE: docker-compose.dev.yml
+    # ── MỚI (on-prem): cấu hình service giống hệt bản AWS — khác biệt nằm trong
+    #    `.env`. postgres/redis/qdrant/minio lấy từ odyssey-portal-backend,
+    #    stt/tts/embed/speaker từ odyssey-models, cùng network `odyssey-network`.
+    #    MongoDB KHÔNG dùng nữa (chốt 2026-08-20) — MONGODB_URI để rỗng.
+    COMPOSE_FILE: docker-compose.onprem.yml
+  before_script:
+    - aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${ECR_URL}
+    - git config --global url."https://cicd:${CI_TOKEN}@gitlab.noble.vn/".insteadOf "https://gitlab.noble.vn/"
+    - |
+      REPO_URL="https://gitlab.noble.vn/fintech-and-ai-development-center/ai-projects/odyssey-project/odyssey-agent.git"
+
+      if [ ! -d "$DEPLOY_PATH" ]; then
+        git clone "$REPO_URL" "$DEPLOY_PATH"
+        cd "$DEPLOY_PATH"
+      else
+        cd "$DEPLOY_PATH"
+        git reset --hard
+      fi
+    - git checkout ${CI_COMMIT_BRANCH}
+    - git pull
+    # ── CŨ: `.env` lấy từ AWS Secrets Manager. Phải unset key tĩnh TRƯỚC khi gọi vì
+    #    GitLab CI/CD Variables có AWS_ACCESS_KEY_ID cho job build và env đó ĐÈ instance
+    #    role của EC2 — IAM user kia chỉ có quyền ECR nên GetSecretValue trả
+    #    AccessDeniedException. Login ECR ở trên đã xong nên bỏ key đi không ảnh hưởng
+    #    `compose pull`.
+    # - unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+    #
+    # ── MỚI (2026-08-19): `.env` cho compose (env_file dùng chung cho agent + agent-lk +
+    #    gateway) lấy từ GitLab CI/CD Variables ($ODYSSEY_SECRET_AGENT_ENV). Không gọi
+    #    AWS nữa nên KHÔNG cần unset key tĩnh, máy deploy không cần `aws` cli và instance
+    #    role không cần GetSecretValue. Vị trí vẫn phải là ở ĐÂY: sau `git pull` (script
+    #    nằm trong repo, phải là bản mới nhất).
+    - ODYSSEY_ENV=${ENV} bash ./fetch_secrets.sh
+  script:
+    - docker compose -f ${COMPOSE_FILE} pull
+    # `--no-build`: image vắng mặt thì PHẢI gãy, không build tại chỗ từ $DEPLOY_PATH.
+    # KHÔNG `--wait`: cả ba service đều không khai HEALTHCHECK, nên `--wait` chỉ đợi
+    # "đã chạy" rồi trả về — một lời hứa rỗng. Cổng sức khoẻ thật là bước dưới.
+    - docker compose -f ${COMPOSE_FILE} up -d --no-build --remove-orphans
+    # Cổng sức khoẻ: đợi agent nghe trên 8766. Không có bước này thì job xanh cả khi
+    # container khởi động rồi chết ngay (thiếu model, .env sai, LiveKit từ chối).
+    - |
+      ok=""
+      for i in $(seq 1 45); do
+        if curl -sf -o /dev/null http://localhost:8766/; then echo "agent up sau ${i}x2s"; ok=1; break; fi
+        sleep 2
+      done
+      if [ -z "$ok" ]; then
+        echo "LỖI: agent không lên"
+        docker compose -f ${COMPOSE_FILE} logs --tail=50 agent
+        exit 1
+      fi
+    - docker compose -f ${COMPOSE_FILE} ps
+  after_script:
+    # `after_script` chạy CẢ KHI job đỏ — khẳng định "Deployed" vô điều kiện làm
+    # người đọc log tin nhầm (đã xảy ra nhiều lần ở repo backend lúc bring-up).
+    - |
+      if [ "$CI_JOB_STATUS" = "success" ]; then
+        echo "Deployed ${ECR_URL}/${APP_NAME}:${IMAGE_TAG}"
+      else
+        echo "=== DEPLOY HỎNG (${IMAGE_TAG}) — trạng thái container ==="
+        docker compose -f ${COMPOSE_FILE} ps -a || true
+        echo "=== log 40 dòng cuối ==="
+        docker compose -f ${COMPOSE_FILE} logs --tail=40 || true
+      fi
+
+deploy:dev:
+  extends: .deploy
+  tags:
+    - odyssey-dev-runner
+  environment:
+    name: dev
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+      when: on_success
+      variables:
+        ENV: dev
+        # Home của user runner (shell executor chạy dưới `gitlab-runner`, KHÔNG phải
+        # `ubuntu`) — trỏ ra ngoài home đó thì `git clone` gãy ở mkdir: Permission denied.
+        DEPLOY_PATH: /home/gitlab-runner/odyssey/odyssey-agent
+  needs:
+    - build:image:dev
+
+deploy:prod:
+  extends: .deploy
+  tags:
+    - odyssey-prod-runner
+  environment:
+    name: prod
+  rules:
+    - if: $CI_COMMIT_BRANCH == "prod"
+      when: on_success
+      variables:
+        ENV: prod
+        DEPLOY_PATH: /home/gitlab-runner/odyssey/odyssey-agent
+  needs:
+    - build:image:prod

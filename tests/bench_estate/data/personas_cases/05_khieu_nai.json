@@ -1,0 +1,61 @@
+{
+  "case_id": "C-5",
+  "title": "Khiếu nại sau bán — chậm bàn giao",
+  "case_text": "KH đã ký HĐ mua căn 3.5 tỷ, hợp đồng ghi bàn giao tháng 9. Đến tháng 12 (217 ngày trễ) vẫn chưa nhận nhà. KH bức xúc gọi điện cho sale.",
+  "turns": [
+    {
+      "speaker": "KH",
+      "text": "Em ơi hợp đồng ghi bàn giao tháng 9 mà giờ tháng 12 rồi anh vẫn chưa nhận được nhà! Anh bức xúc lắm, bên em giải thích thế nào đây? Anh đã mất bao nhiêu chi phí thuê nhà trong thời gian chờ đợi này rồi!"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: LAST step L — lắng nghe 2-3 phút không ngắt lời; LAST step A — xin lỗi chân thành; thừa nhận sự chậm trễ là có thật và KH có quyền bức xúc"
+    },
+    {
+      "speaker": "KH",
+      "text": "Vậy theo hợp đồng thì quyền lợi của anh là gì? Anh có được bồi thường không và bao nhiêu?"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: LAST step S — giải thích pháp lý: phạt 0.03%/ngày × 217 ngày × 3.5 tỷ = 227.85 triệu; nếu trên 6 tháng có quyền chấm dứt HĐ + hoàn tiền + lãi; trích Phụ lục I NĐ 96/2024"
+    },
+    {
+      "speaker": "KH",
+      "text": "Bên em sẽ làm gì cụ thể trong 48 giờ tới để giải quyết vụ này cho anh? Anh cần câu trả lời rõ ràng."
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: LAST step T — cam kết 5 hành động trong 48h: họp 3 bên trong 24h, văn bản chính thức từ CĐT, tham quan công trình, soạn yêu cầu bồi thường, update 2 lần/tuần; cảm ơn KH đã phản ánh"
+    }
+  ],
+  "rubric_checkpoints": [
+    [
+      "lắng nghe không ngắt lời (Listen)",
+      "xin lỗi chân thành dù không phải lỗi cá nhân sale (Apologize)",
+      "thừa nhận sự chậm trễ là có thật",
+      "tone đồng cảm, không biện hộ cho CĐT ngay lập tức"
+    ],
+    [
+      "trích Phụ lục I NĐ 96/2024 hoặc điều khoản HĐ về phạt chậm giao",
+      "tính đúng mức phạt: 0.03%/ngày × 217 ngày × 3.5 tỷ = 227.85 triệu",
+      "nêu quyền chấm dứt HĐ + hoàn tiền + lãi nếu vi phạm trên 6 tháng",
+      "giải thích rõ ràng, dễ hiểu cho KH"
+    ],
+    [
+      "cam kết họp 3 bên trong 24 giờ",
+      "cung cấp văn bản chính thức từ chủ đầu tư",
+      "tổ chức tham quan công trình thực tế",
+      "soạn thảo yêu cầu bồi thường chính thức",
+      "cam kết cập nhật tiến độ 2 lần/tuần",
+      "cảm ơn KH đã phản ánh (Thank)"
+    ]
+  ],
+  "key_answers": {
+    "LAST": "Listen 2-3 phút, Apologize chân thành, Solve cụ thể, Thank cam kết theo sát",
+    "phap_ly": "HĐ mẫu Phụ lục I NĐ 96/2024: phạt 0.03%/ngày × 217 ngày × 3.5 tỷ = 227.85 triệu. Có quyền chấm dứt HĐ + hoàn tiền + lãi nếu vi phạm trên 6 tháng",
+    "hanh_dong_48h": "(1) Họp 3 bên trong 24h, (2) Văn bản chính thức từ CĐT, (3) Tham quan công trình, (4) Soạn yêu cầu bồi thường, (5) Update khách 2 lần/tuần"
+  },
+  "judge_extras": "Case LAST + pháp lý — chấm chặt T3 (phép tính 227.85 triệu phải đúng), T2 (Phụ lục I NĐ 96/2024), T4 (5 hành động 48h đủ và cụ thể). T5 quan trọng: tone đồng cảm xuyên suốt, không bao giờ bào chữa cho CĐT trước khi xác nhận quyền lợi KH.",
+  "points": 20.0,
+  "delivery_mode": "scripted_multiturn"
+}

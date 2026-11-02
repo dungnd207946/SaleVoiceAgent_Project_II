@@ -1,0 +1,109 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "noble-voice-agent"
+version = "0.2.0"
+description = "Real-time voice agent for Noble Real Estate"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "websockets>=13.0",
+    "aiortc>=1.9.0",
+    "openai>=1.30",
+    "anthropic>=0.40.0",
+    "numpy",
+    "pydantic-settings>=2.0",
+    "faiss-cpu>=1.7",
+    "redis>=5.0",
+    "torch>=2.11.0",
+    "torchaudio>=2.11.0",
+    # FlatStore RAG stack (rev 3 migration step 3): e5-large + BM25 + pyvi tokenizer.
+    # In-process retrieval for noble_search; faiss-cpu backs the SemanticCache.
+    "fastembed>=0.3,<1.0",
+    "bm25s>=0.2",
+    "pyvi>=0.1",
+    "sentence-transformers>=5.4.0",
+    "watchfiles>=0.20",
+    "httpx>=0.27",
+    "cryptography>=42",
+    "livekit==1.1.5",
+    "livekit-api==1.1.0",
+    "livekit-agents==1.5.4",
+    "audioop-lts==0.2.2; python_version>='3.13'",
+    "tenacity>=9.0",
+    "boto3>=1.40",
+    "metaphone>=0.6,<1",
+    "rapidfuzz>=3.0,<4",
+    "silero-vad==6.2.1",
+]
+
+[project.optional-dependencies]
+stt-soniox = ["soniox>=1.0"]
+stt-sherpa = ["sherpa-onnx>=1.10", "huggingface_hub>=0.23"]
+tts-elevenlabs = ["elevenlabs>=1.0"]
+tts-vieneu = ["vieneu>=2.4", "llama-cpp-python>=0.3", "neucodec>=0.0.5", "librosa>=0.10", "datasets>=4.0", "pyarrow>=17,<23"]
+rag-qdrant = ["qdrant-client>=1.10"]
+# SP-E Postgres data plane (Odyssey). asyncpg is import-lazy in storage/postgres_client.py
+# so unit collection stays offline; only needed when POSTGRES_ENABLED=true.
+postgres = ["asyncpg>=0.29"]
+# Self-hosted Arize Phoenix OTEL LLM tracing (observability/phoenix_tracing.py).
+# Heavy imports are function-local + endpoint-gated, so this is only needed when
+# PHOENIX_COLLECTOR_ENDPOINT is set. Prod deploy installs `.[tracing]`.
+tracing = [
+    "arize-phoenix-otel>=0.6",
+    "openinference-instrumentation-anthropic>=0.1",
+    "openinference-instrumentation-openai>=0.1",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+    "pre-commit>=3.7",
+    "fakeredis>=2.20.0",
+    "lupa>=2.0",  # fakeredis Lua scripting (EVAL) support, needed by snapshot_lock CAS release tests
+]
+
+[project.scripts]
+noble-agent = "noble_agent.__main__:main"
+noble-stt-service = "noble_agent.voice.service.stt_server:main"
+noble-tts-service = "noble_agent.voice.service.tts_server:main"
+noble-speaker-service = "noble_agent.voice.service.speaker_server:main"
+noble-rag-sync = "noble_agent.agent.rag.sparse_reconcile:main"
+noble-tenant = "noble_agent.tenant.cli:main"
+noble-gateway = "noble_agent.gateway.server:run_gateway"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# tests/interactive/ holds manual run-as-script tools (no pytest test fns).
+# tests/bench_rag/version_patches/ holds bench-only monkey-patches loaded by tests/bench_llm.py.
+norecursedirs = ["interactive", "version_patches"]
+asyncio_mode = "auto"
+# Session-scoped event loop so the bench suite can share loop-bound singletons
+# (e.g. the asyncpg pool binds to the loop where it was first created;
+# function-scoped loops would no-op every test after the first).
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+addopts = "-v --tb=short"
+markers = [
+    "requires_docker: integration tests that need a live Docker service (e.g. LiveKit server)",
+    "bench: latency benchmark suite — opt-in via -m bench (see tests/bench/README.md)",
+    "needs_redis: bench/test requires REDIS_URL",
+    "needs_qdrant: integration test requires a reachable Qdrant (QDRANT_URL)",
+    "needs_postgres: integration test requires a reachable Postgres admin DSN (SPE_PG_ADMIN_DSN)",
+]
+
+[tool.coverage.run]
+source = ["src/noble_agent"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/noble_agent"]

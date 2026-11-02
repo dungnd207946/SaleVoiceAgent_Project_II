@@ -1,0 +1,41 @@
+# LiveKit server production config — copy to livekit.yaml and fill secrets.
+# livekit.yaml is gitignored (contains credentials). This template is tracked.
+#
+# Generate fresh key + secret:
+#   KEY="noble_$(openssl rand -hex 8)"
+#   SECRET="$(openssl rand -hex 32)"
+
+port: 7880
+
+rtc:
+  tcp_port: 7881
+  port_range_start: 52000
+  port_range_end: 52049
+  # EC2 deploy: use public IP auto-discovery so ICE candidates include the
+  # external address. Browsers on the open internet can only reach us via
+  # that IP, not the private 172.x docker network.
+  use_external_ip: true
+
+keys:
+  # Fill with generated values. Both must match what the agent worker
+  # uses (LIVEKIT_API_KEY / LIVEKIT_API_SECRET in the hotline-agent .env).
+  REPLACE_ME_API_KEY: REPLACE_ME_API_SECRET_64_HEX_CHARS
+
+# Share redis with the app stack. Prefix keys are handled by LiveKit internally.
+redis:
+  address: 127.0.0.1:6379
+  db: 0
+
+logging:
+  level: info
+  json: false
+
+room:
+  auto_create: true
+  empty_timeout: 300      # seconds of emptiness before the room closes
+  max_participants: 10    # hotline needs 2 (caller + agent); cap is a safety net
+
+# TURN handled by coturn on the same host (different ports) and/or client-side
+# ICE fallback. Disable the built-in LiveKit TURN to avoid port collisions.
+turn:
+  enabled: false

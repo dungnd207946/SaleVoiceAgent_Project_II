@@ -1,0 +1,56 @@
+{
+  "case_id": "S-1",
+  "title": "Cold call lần đầu",
+  "setup": "Anh Đức, khoảng 35 tuổi, đang sinh sống tại Quận 2 TP.HCM, có thu nhập tốt và quan tâm đến BĐS đầu tư khu Đông. Chưa có quan hệ trước với Sale — đây là cuộc gọi cold call hoàn toàn đầu tiên. DISC type: D (quyết đoán, ít thời gian, muốn nghe thẳng vào lợi ích).",
+  "turns": [
+    {
+      "speaker": "KH",
+      "text": "Alo?"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: chào, tự giới thiệu tên + đơn vị, xin phép 60 giây để giới thiệu dự án phù hợp với nhà đầu tư khu Đông TP.HCM; reciprocity frame tạo cảm giác đặc quyền"
+    },
+    {
+      "speaker": "KH",
+      "text": "Em nói nhanh giúp anh."
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: anchoring số 52 triệu/m² = 60% giá Quận 7; social proof 1.200 căn đặt cọc 2 tuần đầu; scarcity 5 căn 2PN view sông; CTA gửi tài liệu qua Zalo"
+    },
+    {
+      "speaker": "KH",
+      "text": "Ờ gửi đi."
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: xác nhận số Zalo là số đang gọi; cam kết gọi lại trong 30 phút; đưa hai lựa chọn giờ gọi lại (4h chiều hay 8h tối) để chốt cam kết nhỏ"
+    }
+  ],
+  "rubric_checkpoints": [
+    [
+      "M1 mở đầu chuyên nghiệp: tự giới thiệu tên + đơn vị rõ ràng trong ≤2 câu",
+      "xin phép thời gian trước (60 giây) — không áp đặt",
+      "tạo lý do liên quan đến KH (khu Đông, đầu tư) thay vì nói chung chung",
+      "reciprocity frame: tạo cảm giác đặc quyền/được chọn lọc"
+    ],
+    [
+      "M3 anchoring số cụ thể: 52 triệu/m², 60% giá Quận 7 — dữ liệu neo giá ngay",
+      "social proof: 1.200 căn đặt cọc trong 2 tuần — bằng chứng xã hội",
+      "scarcity: 5 căn 2PN view sông còn lại — tạo cấp bách",
+      "CTA rõ ràng: gửi tài liệu Zalo — không cố chốt ngay cuộc gọi đầu",
+      "không nói toàn về dự án — câu cuối phải mở đường khám phá nhu cầu"
+    ],
+    [
+      "M5 chốt cam kết nhỏ: xác nhận kênh liên lạc (Zalo = số đang gọi)",
+      "đặt lịch gọi lại cụ thể trong 30 phút",
+      "dùng choice close (4h chiều hay 8h tối) thay vì hỏi mở 'khi nào rảnh'",
+      "không dừng lại ở 'em gửi tài liệu nhé' — phải chốt bước hành động tiếp theo"
+    ]
+  ],
+  "judge_extras": "Sales rubric P1 — tập trung M1 (mở đầu 4 mục tiêu 90 giây) + M5 (chốt cam kết nhỏ bằng choice close). Phạt nặng nếu cố chốt bán ngay cuộc gọi đầu hoặc không đặt lịch follow-up.",
+  "max_extra_turns": 0,
+  "points": 20.0,
+  "delivery_mode": "scripted_multiturn"
+}

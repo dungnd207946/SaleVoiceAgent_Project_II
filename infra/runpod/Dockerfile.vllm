@@ -1,0 +1,46 @@
+# syntax=docker/dockerfile:1
+# vLLM OpenAI-compatible server for Qwen3.6-35B-A3B (or any OpenAI-compat model).
+#
+# Target: RunPod Pod A, 1× RTX PRO 6000 Blackwell 97GB (or H100 80GB).
+# Ported from: voiceagentrag/tests/benchllm/start_vllm.sh
+#
+# Build:  docker build -f infra/runpod/Dockerfile.vllm -t noble-vllm:latest .
+# Or push to RunPod via ECR/Docker Hub.
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 python3.11-venv python3-pip git git-lfs curl ca-certificates \
+    && git lfs install \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+
+# vLLM + transformers[serving] required for Qwen3.6 tool-parser and qwen3 reasoning-parser.
+# Pin versions compatible with the start_vllm.sh flags.
+RUN pip install --upgrade pip && \
+    pip install "vllm>=0.19.0" "transformers[serving]>=4.57.0" \
+                "flashinfer-python" hf-transfer && \
+    pip install huggingface-hub[cli]
+
+# Copy launch script
+COPY infra/runpod/start_vllm.sh /workspace/start_vllm.sh
+RUN chmod +x /workspace/start_vllm.sh
+
+# Model is NOT baked into the image — mount via RunPod volume or pre-clone at
+# /workspace/Qwen3.6-35B-A3B on first boot. See README.md §3 for commands.
+
+EXPOSE 8000
+
+# Environment overrides (set via RunPod env vars):
+#   MODEL=/workspace/Qwen3.6-35B-A3B       (local path — recommended)
+#   SERVED_NAME=Qwen/Qwen3.6-35B-A3B       (what client queries by)
+#   GPU_MEM_UTIL=0.90
+#   MAX_MODEL_LEN=32768
+#   ATTN_BACKEND=FLASHINFER                 (Blackwell sm_120 fallback)
+
+CMD ["/workspace/start_vllm.sh"]

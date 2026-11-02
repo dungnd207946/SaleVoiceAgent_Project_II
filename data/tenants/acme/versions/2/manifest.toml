@@ -1,0 +1,26 @@
+# Acme demo tenant — created for gateway multi-tenant chat simulation.
+tenant_id = "acme"
+data_source = "pg_kb"
+persona_dir = "persona"
+
+[tools]
+enabled = [
+    "find_project",
+    "update_customer",
+    "kb_search",
+    "discover_projects",
+    "get_project_overview",
+    "search_units",
+    "recommend_units",
+    "booking",
+    "escalate",
+    "send_media",
+    "check_inventory",
+    "get_document",
+]
+rankers = ["feng_shui"]
+media_channel = "noblex_app"
+
+[brand]
+company = "Acme"
+app_name = "Acme App"

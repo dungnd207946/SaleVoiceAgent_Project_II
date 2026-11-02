@@ -1,0 +1,67 @@
+{
+  "backend": "remote",
+  "voice_id": "",
+  "sample_rate": 24000,
+  "assets": [
+    {
+      "file": "01_de_em_kiem_tra_ngay.pcm",
+      "text": "Để em kiểm tra ngay.",
+      "bytes": 68160,
+      "duration_s": 1.42
+    },
+    {
+      "file": "02_anh_chi_cho_em_mot_chut_nhe.pcm",
+      "text": "Anh chị chờ em một chút nhé.",
+      "bytes": 98880,
+      "duration_s": 2.06
+    },
+    {
+      "file": "03_em_xem_trong_he_thong_ngay_day.pcm",
+      "text": "Em xem trong hệ thống ngay đây.",
+      "bytes": 83520,
+      "duration_s": 1.74
+    },
+    {
+      "file": "04_doi_em_mot_lat_nhe.pcm",
+      "text": "Đợi em một lát nhé.",
+      "bytes": 68160,
+      "duration_s": 1.42
+    },
+    {
+      "file": "05_em_tra_nhanh_roi_bao_lai_ngay.pcm",
+      "text": "Em tra nhanh rồi báo lại ngay.",
+      "bytes": 91200,
+      "duration_s": 1.9
+    },
+    {
+      "file": "06_de_em_xem_lai_thong_tin_da.pcm",
+      "text": "Để em xem lại thông tin đã.",
+      "bytes": 111360,
+      "duration_s": 2.32
+    },
+    {
+      "file": "07_em_kiem_tra_mot_chut_anh_chi_cho_em_nhe.pcm",
+      "text": "Em kiểm tra một chút, anh chị chờ em nhé.",
+      "bytes": 128640,
+      "duration_s": 2.68
+    },
+    {
+      "file": "08_anh_chi_giu_may_giup_em_mot_chut.pcm",
+      "text": "Anh chị giữ máy giúp em một chút.",
+      "bytes": 99840,
+      "duration_s": 2.08
+    },
+    {
+      "file": "09_em_tim_ngay_day_a.pcm",
+      "text": "Em tìm ngay đây ạ.",
+      "bytes": 96960,
+      "duration_s": 2.02
+    },
+    {
+      "file": "10_de_em_xem_ben_em_con_gi_phu_hop.pcm",
+      "text": "Để em xem bên em còn gì phù hợp.",
+      "bytes": 111360,
+      "duration_s": 2.32
+    }
+  ]
+}

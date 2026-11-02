@@ -1,0 +1,178 @@
+# ⚠️  DO NOT USE THIS FILE ON RUNPOD — RunPod pods cannot run Docker daemon.
+#
+# RunPod pods are themselves containers (no Docker-in-Docker support without
+# --privileged, which RunPod does not grant). For RunPod deployment, see
+# README.md §3: native Python + tmux approach via setup.sh.
+#
+# This compose file is kept as a reference for OTHER Docker-capable hosts:
+#   • Your own VPS (Hetzner, DigitalOcean, EC2)
+#   • Fly.io, Railway
+#   • Local docker-compose testing
+#
+# ─────────────────────────────────────────────────────────────────────────
+# Original description: runs INSIDE one Docker host with services sharing
+# the pod's network — agent-lk → embed (8091) → gender (8092) → mongo → redis.
+#
+# ARCHITECTURE
+# ┌────────────────┐  ┌────────────┐  ┌─────────────┐  ┌────────┐  ┌──────┐
+# │ agent-lk       │→│ embed 8091  │  │ gender 8092 │  │ mongo  │  │redis │
+# │ LK worker      │  │ (sidecar)   │  │ (sidecar)   │  │ 27017  │  │ 6379 │
+# │ outbound-only  │  └─────────────┘  └─────────────┘  └────────┘  └──────┘
+# └────────────────┘         ▲ ▲              ▲              ▲          ▲
+#                            │ │              │              │          │
+#                            └─┴──────────────┴──────────────┴──────────┘
+#                                       agent depends_on healthy
+#
+# External (outbound TLS only — never inbound):
+#   • LiveKit Cloud (media plane)   LIVEKIT_URL
+#   • vLLM Pod A                    OPENAI_BASE_URL
+#   • ElevenLabs / Soniox / Gemini  cloud APIs
+#
+# Quick start (on the pod):
+#   cp env.runpod.example .env && nano .env     # fill secrets
+#   docker compose --env-file .env up -d --build
+#   docker compose --profile web --env-file .env up -d   # + browser test UI
+
+services:
+  # ── Self-hosted Redis (session state, LK dispatch locks) ───────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    # Port not published by default — agent reaches it via service name.
+    # Uncomment to expose for local debugging:
+    # ports: ["6379:6379"]
+
+  # ── Self-hosted MongoDB (conversation history, metrics) ───────────────
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    # Optional: enable auth. Agent currently connects without creds.
+    # environment:
+    #   MONGO_INITDB_ROOT_USERNAME: noble
+    #   MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    # ports: ["27017:27017"]  # enable if you need an external mongosh
+
+  # ── Embed service (FastEmbed e5-large, CPU) ───────────────────────────
+  embed:
+    build:
+      context: ../..
+      dockerfile: infra/runpod/Dockerfile.embed
+    restart: unless-stopped
+    volumes:
+      - fastembed_cache:/app/.cache/fastembed
+    environment:
+      FLAT_STORE_MODEL: intfloat/multilingual-e5-large
+      EMBED_THREADS: "4"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8091/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+    # ports: ["8091:8091"]   # enable to curl from host
+
+  # ── Gender service (Wav2Vec2, CPU) ────────────────────────────────────
+  gender:
+    build:
+      context: ../..
+      dockerfile: infra/runpod/Dockerfile.gender
+    restart: unless-stopped
+    volumes:
+      - hf_cache:/app/.cache/hf
+      # Mount a local model dir if you have one; otherwise leave unset and
+      # GENDER_MODEL_DIR can point to an HF repo id (downloads on first run).
+      # - ./models/gender:/models/gender:ro
+    environment:
+      GENDER_MODEL_DIR: ${GENDER_MODEL_DIR:-}
+      GENDER_MIN_CONFIDENCE: "0.6"
+    healthcheck:
+      # Service returns 200 even when model disabled — health is about liveness.
+      test: ["CMD", "curl", "-f", "http://localhost:8092/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    # ports: ["8092:8092"]
+
+  # ── Agent LiveKit worker (outbound-only, no inbound port needed) ──────
+  agent-lk:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    command: ["noble-agent", "--transport", "livekit", "start"]
+    env_file: .env
+    environment:
+      TRANSPORT_BACKEND: livekit
+      # Rewire to compose service DNS — overrides anything in .env
+      REDIS_URL: redis://redis:6379/0
+      MONGODB_URI: mongodb://mongodb:27017
+      EMBED_REMOTE_URL: http://embed:8091
+      GENDER_REMOTE_URL: http://gender:8092
+      FASTEMBED_CACHE_PATH: /app/.cache/fastembed
+    volumes:
+      - ./logs:/app/logs
+      - ../../data:/app/data:ro
+      - fastembed_cache:/app/.cache/fastembed
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      embed:
+        condition: service_healthy
+      gender:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Optional: browser UI + /livekit/token JWT endpoint ─────────────────
+  # Enable with:  docker compose --profile web up -d
+  # Exposes port 8766 → RunPod HTTP proxy gives you a public HTTPS URL.
+  agent-web:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    command: ["noble-agent", "--no-reload"]
+    env_file: .env
+    environment:
+      TRANSPORT_BACKEND: aiortc    # serves static/ + JSON API only
+      WS_HOST: 0.0.0.0
+      WS_PORT: "8766"
+      REDIS_URL: redis://redis:6379/0
+      MONGODB_URI: mongodb://mongodb:27017
+      EMBED_REMOTE_URL: http://embed:8091
+      GENDER_REMOTE_URL: http://gender:8092
+    ports:
+      - "8766:8766"
+    volumes:
+      - ./logs:/app/logs
+      - ../../data:/app/data:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - web
+
+volumes:
+  redis_data:
+  mongo_data:
+  fastembed_cache:
+  hf_cache:

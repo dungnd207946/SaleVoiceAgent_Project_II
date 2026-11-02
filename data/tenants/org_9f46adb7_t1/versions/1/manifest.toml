@@ -1,0 +1,28 @@
+# Noble tenant manifest — the per-deploy config bundle (TENANT_ID=noble).
+tenant_id = "noble"
+# Provider selection is driven per-tenant by this manifest's data_source
+# (falling back to NOBLE_DATA_SOURCE). The Postgres KB is the sole provider.
+data_source = "pg_kb"
+persona_dir = "persona"
+
+[tools]
+enabled = [
+    "find_project",
+    "update_customer",
+    "kb_search",
+    "discover_projects",
+    "get_project_overview",
+    "search_units",
+    "recommend_units",
+    "booking",
+    "escalate",
+    "send_media",
+    "check_inventory",
+    "get_document",
+]
+rankers = ["feng_shui"]
+media_channel = "noblex_app"
+
+[brand]
+company = "Noble"
+app_name = "NobleX"

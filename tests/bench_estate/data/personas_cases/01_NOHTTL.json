@@ -1,0 +1,46 @@
+{
+  "case_id": "C-1",
+  "title": "Tính đợt thanh toán NƠHTTL",
+  "case_text": "Căn hộ C15-7 Bình Thạnh, KH cọc 50tr, HĐ tổng 1.344 tỷ trong đó giá nhà 1.2 tỷ. Đợt 1: 20%+VAT, đợt 2-4 mỗi 10%+VAT, đợt 5: 20%+VAT, đợt 6: 25%+VAT, đợt 7: 5%+VAT.",
+  "turns": [
+    {
+      "speaker": "KH",
+      "text": "Em ơi anh đang xem căn hộ NƠHTTL ở Bình Thạnh. Anh đặt cọc 50 triệu rồi, hợp đồng ghi tổng 1.344 tỷ trong đó giá nhà 1.2 tỷ. Em giải thích giúp anh đợt 1 anh phải đóng thêm bao nhiêu?"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: nhận diện 20%+VAT → 1.2tỷ × 20% × 1.1 = 264tr → trừ cọc 50tr = 214tr"
+    },
+    {
+      "speaker": "KH",
+      "text": "Vậy đợt 2 đến đợt 5 từng đợt bao nhiêu vậy em?"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: đợt 2,3,4 mỗi đợt 10%+VAT = 132tr; đợt 5 = 20%+VAT = 264tr"
+    },
+    {
+      "speaker": "KH",
+      "text": "Còn đợt cuối khi bàn giao thì sao em?"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: đợt 6 = 25%+VAT = 330tr; đợt 7 (5%) chỉ thanh toán khi có sổ hồng — Luật KDBĐS 2023 Điều 25"
+    }
+  ],
+  "rubric_checkpoints": [
+    ["nhận diện 20% + VAT", "tính 264tr", "trừ cọc → 214tr", "trích Luật KDBĐS giới hạn 30% lần đầu", "đối chiếu 19.6% < 30% → hợp lệ"],
+    ["đợt 2,3,4 mỗi đợt 132tr", "đợt 5 = 264tr"],
+    ["đợt 6 = 330tr", "đợt 7 chỉ thanh toán khi có sổ hồng", "trích Điều 25 Luật KDBĐS 2023"]
+  ],
+  "key_answers": {
+    "dot_1": "264 triệu (- cọc 50tr = 214tr)",
+    "dot_2_3_4": "132 triệu/đợt",
+    "dot_5": "264 triệu",
+    "dot_6_ban_giao": "354 triệu",
+    "phap_ly": "Thanh toán lần đầu 19.6% < 30% giới hạn LKDBĐS 2023 → đạt"
+  },
+  "judge_extras": "case toán + pháp lý — chấm chặt T3 tính toán. dot_6 spec = 330tr (25%+VAT); dataset key = 354tr (bao gồm đợt 7). Chấp nhận cả hai nếu giải thích rõ.",
+  "points": 20.0,
+  "delivery_mode": "scripted_multiturn"
+}

@@ -1,0 +1,29 @@
+{
+  "case_id": "S-8",
+  "title": "Gọi lại khách hàng cũ",
+  "setup": "Anh Đức, 36 tuổi, từng được Sale tư vấn dự án Vinhomes Quận 9 hồi tháng 3 năm ngoái nhưng chưa quyết định mua. Sau 1 năm không liên lạc, Sale gọi lại không phải để bán mà để cung cấp thông tin thị trường có giá trị. DISC type: S (ổn định, trọng quan hệ, cần cảm giác được quan tâm thực sự, không muốn bị áp lực).",
+  "turns": [
+    {
+      "speaker": "KH",
+      "text": "Alo?"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: chào, nhắc lại bối cảnh (tên Sale + tên dự án + thời điểm tư vấn tháng 3 năm ngoái); tuyên bố rõ mục đích gọi KHÔNG phải để bán; reciprocity: cung cấp thông tin có giá trị — căn anh từng xem đã tăng 18%; hỏi thăm anh có cần update thêm thông tin gì không"
+    }
+  ],
+  "rubric_checkpoints": [
+    [
+      "M1 nhắc lại bối cảnh cụ thể: tên dự án + thời gian — cho thấy đã nhớ KH cá nhân",
+      "tuyên bố ngay mục đích KHÔNG phải bán — phá vỡ phòng thủ tự nhiên khi nghe sale gọi",
+      "reciprocity: thông tin có giá trị cụ thể (tăng 18%) trước khi yêu cầu bất kỳ điều gì",
+      "tone thân thiện, không đọc kịch bản — giống bạn bè cập nhật tin",
+      "câu kết mở: hỏi nhu cầu hiện tại, không ép KH phải trả lời theo hướng mua",
+      "M2 không hỏi 'anh có muốn mua không' — để KH tự dẫn hướng"
+    ]
+  ],
+  "judge_extras": "Sales rubric P1+P6 — tập trung M1 (reciprocity opening + không pushy) + chăm sóc quan hệ dài hạn. Phạt nếu Sale đưa ra pitch bán hàng ngay trong lần gọi lại đầu tiên sau 1 năm.",
+  "max_extra_turns": 2,
+  "points": 20.0,
+  "delivery_mode": "scripted_multiturn"
+}

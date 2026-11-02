@@ -1,0 +1,18 @@
+name: coldcall_nclb
+description: >-
+  Khách hỏi thẳng dự án Noble Crystal Long Biên → agent nhận diện đúng dự án và
+  KHÔNG tự phun giá khi bị hỏi giá.
+
+turns:
+  - user: "Chào em, cho anh hỏi dự án Noble Crystal Long Biên có gì nổi bật không?"
+    expect:
+      # Chỉ assert tín hiệu ỔN ĐỊNH giữa các lần chạy: reply nhắc đúng tên dự án.
+      # KHÔNG assert tool cụ thể (agent dùng get_project_overview HOẶC noble_search tuỳ lượt),
+      # và KHÔNG assert `customer_field project_interest=NCLB` — khi verify, agent lúc ghi
+      # (update_customer) lúc bỏ qua interest cho cùng 1 câu hỏi (finding: state-tracking chưa ổn định).
+      reply_contains_any: ["Long Biên", "Noble Crystal"]
+
+  - user: "Thế một căn tầm bao nhiêu tiền em?"
+    expect:
+      # Giá cụ thể là private → agent không được tự bịa số, phải mời CVTV báo giá.
+      reply_not_matches: '\d+\s*(tỷ|triệu)'

@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bộ tool của Luna</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#EEF2F7; --surface:#FFFFFF; --surface-2:#F7F9FC; --surface-3:#EDF2F8;
+  --line:#D2DDEA; --line-soft:#E4EBF3;
+  --ink:#0E1B2B; --ink-2:#3C5069; --ink-3:#6D8098;
+  --accent:#0B6E8C; --accent-soft:#DFEFF5;
+  --ok:#1C7355; --ok-soft:#DFF1E9;
+  --warn:#9A5215; --warn-soft:#F8EADB;
+  --core:#4739A3; --core-soft:#E7E4F7;
+  --grid:rgba(11,110,140,.10);
+  --shadow:0 1px 2px rgba(14,27,43,.05), 0 8px 24px -16px rgba(14,27,43,.22);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#09111E; --surface:#101B2B; --surface-2:#152233; --surface-3:#1A283A;
+    --line:#24374C; --line-soft:#1B2A3B;
+    --ink:#DEE8F4; --ink-2:#9EB3C9; --ink-3:#6D8399;
+    --accent:#5CC9DE; --accent-soft:#0F2E3A;
+    --ok:#4FC79C; --ok-soft:#0E2C25;
+    --warn:#E2A45D; --warn-soft:#2F2110;
+    --core:#A294F2; --core-soft:#1D1938;
+    --grid:rgba(92,201,222,.10);
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#09111E; --surface:#101B2B; --surface-2:#152233; --surface-3:#1A283A;
+  --line:#24374C; --line-soft:#1B2A3B;
+  --ink:#DEE8F4; --ink-2:#9EB3C9; --ink-3:#6D8399;
+  --accent:#5CC9DE; --accent-soft:#0F2E3A;
+  --ok:#4FC79C; --ok-soft:#0E2C25;
+  --warn:#E2A45D; --warn-soft:#2F2110;
+  --core:#A294F2; --core-soft:#1D1938;
+  --grid:rgba(92,201,222,.10);
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.9);
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Be Vietnam Pro","Segoe UI",system-ui,-apple-system,sans-serif;
+  font-size:16px; line-height:1.65; letter-spacing:-.002em;
+}
+code,kbd,.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- header ---------- */
+.masthead{
+  border-bottom:1px solid var(--line);
+  background:
+    linear-gradient(var(--grid) 1px, transparent 1px) 0 0/28px 28px,
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0/28px 28px,
+    var(--surface);
+}
+.masthead .wrap{padding:56px 28px 40px}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace; font-size:11.5px; font-weight:500;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--accent); margin:0 0 18px;
+}
+h1{
+  font-family:"IBM Plex Mono",monospace; font-weight:600;
+  font-size:clamp(30px,5.2vw,46px); line-height:1.08; letter-spacing:-.03em;
+  margin:0 0 16px; text-wrap:balance;
+}
+.lede{max-width:62ch; color:var(--ink-2); font-size:17px; margin:0}
+.facts{
+  display:flex; flex-wrap:wrap; gap:10px 28px; margin:30px 0 0;
+  padding-top:22px; border-top:1px solid var(--line-soft);
+}
+.fact{display:flex; flex-direction:column; gap:2px}
+.fact b{font-family:"IBM Plex Mono",monospace; font-size:20px; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+.fact span{font-size:12px; color:var(--ink-3); letter-spacing:.04em; text-transform:uppercase}
+
+/* ---------- shell ---------- */
+.shell{max-width:1240px; margin:0 auto}
+.body{display:block; padding:0 28px 80px}
+@media (min-width:1060px){
+  .body{display:grid; grid-template-columns:240px minmax(0,1fr); gap:56px; align-items:start}
+}
+nav.toc{display:none}
+@media (min-width:1060px){
+  nav.toc{
+    display:block; position:sticky; top:24px; padding:32px 0 0;
+    max-height:calc(100vh - 48px); overflow-y:auto;
+  }
+}
+.toc h2{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3);
+  margin:0 0 10px; padding-bottom:8px; border-bottom:1px solid var(--line-soft);
+}
+.toc h2:not(:first-child){margin-top:26px}
+.toc ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px}
+.toc a{
+  display:block; padding:4px 8px; margin-left:-8px; border-radius:5px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-2);
+  text-decoration:none; border-left:2px solid transparent;
+}
+.toc a:hover{background:var(--surface-3); color:var(--ink); border-left-color:var(--accent)}
+
+main{min-width:0; padding-top:32px}
+section{scroll-margin-top:20px}
+section + section{margin-top:56px}
+.sec-head{margin:0 0 6px}
+.sec-head h2{
+  font-family:"IBM Plex Mono",monospace; font-size:13px; font-weight:600;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:0;
+}
+.sec-note{color:var(--ink-3); font-size:14px; margin:0 0 22px; max-width:66ch}
+
+/* ---------- pipeline ---------- */
+.pipe{
+  background:var(--surface); border:1px solid var(--line); border-radius:10px;
+  padding:22px 24px; box-shadow:var(--shadow); overflow-x:auto;
+}
+.pipe ol{list-style:none; counter-reset:step; margin:0; padding:0; display:flex; flex-direction:column; gap:0}
+.pipe li{
+  counter-increment:step; position:relative; padding:11px 0 11px 42px;
+  border-bottom:1px solid var(--line-soft); font-size:14.5px; color:var(--ink-2);
+}
+.pipe li:last-child{border-bottom:0}
+.pipe li::before{
+  content:counter(step,decimal-leading-zero); position:absolute; left:0; top:12px;
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600;
+  color:var(--accent); letter-spacing:.06em;
+}
+.pipe li b{color:var(--ink); font-weight:600}
+.pipe code{font-size:12.8px; background:var(--surface-3); padding:1px 5px; border-radius:4px; color:var(--ink)}
+
+/* ---------- tool cards ---------- */
+.tool{
+  background:var(--surface); border:1px solid var(--line); border-radius:10px;
+  box-shadow:var(--shadow); overflow:hidden; margin-bottom:18px;
+}
+.tool > header{
+  display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px;
+  padding:16px 22px; background:var(--surface-2); border-bottom:1px solid var(--line);
+}
+.tool h3{
+  font-family:"IBM Plex Mono",monospace; font-size:17px; font-weight:600;
+  letter-spacing:-.02em; margin:0; color:var(--ink);
+}
+.badges{display:flex; flex-wrap:wrap; gap:6px; margin-left:auto}
+.badge{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:500;
+  letter-spacing:.07em; text-transform:uppercase; padding:3px 8px; border-radius:20px;
+  border:1px solid transparent; white-space:nowrap;
+}
+.b-core{background:var(--core-soft); color:var(--core); border-color:var(--core)}
+.b-opt{background:var(--surface-3); color:var(--ink-3); border-color:var(--line)}
+.b-ro{background:var(--ok-soft); color:var(--ok); border-color:var(--ok)}
+.b-w{background:var(--warn-soft); color:var(--warn); border-color:var(--warn)}
+.b-dirty{background:var(--accent-soft); color:var(--accent); border-color:var(--accent)}
+
+.tool .inner{padding:18px 22px 20px}
+.blurb{margin:0 0 16px; color:var(--ink-2); font-size:14.5px; max-width:70ch}
+.blurb strong{color:var(--ink); font-weight:600}
+
+.meta{display:grid; gap:12px 26px; margin:0 0 16px}
+@media (min-width:640px){.meta{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.meta div{min-width:0}
+.meta dt{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:600;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); margin:0 0 3px;
+}
+.meta dd{margin:0; font-size:13.5px; color:var(--ink-2); overflow-wrap:anywhere}
+.meta dd code{font-size:12.5px; color:var(--ink)}
+
+.params{overflow-x:auto; border:1px solid var(--line-soft); border-radius:8px}
+table{border-collapse:collapse; width:100%; font-size:13.2px; min-width:520px}
+thead th{
+  text-align:left; font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3);
+  padding:9px 12px; background:var(--surface-2); border-bottom:1px solid var(--line-soft); white-space:nowrap;
+}
+tbody td{padding:9px 12px; border-bottom:1px solid var(--line-soft); color:var(--ink-2); vertical-align:top}
+tbody tr:last-child td{border-bottom:0}
+td.p-name{font-family:"IBM Plex Mono",monospace; color:var(--ink); font-weight:500; white-space:nowrap}
+td.p-type{font-family:"IBM Plex Mono",monospace; font-size:12.2px; color:var(--ink-3); white-space:nowrap}
+.req{color:var(--warn); font-weight:600; font-family:"IBM Plex Mono",monospace; font-size:11px}
+.opt{color:var(--ink-3); font-family:"IBM Plex Mono",monospace; font-size:11px}
+.enum{font-family:"IBM Plex Mono",monospace; font-size:11.8px; color:var(--accent); display:block; margin-top:3px}
+
+.note{
+  margin:16px 0 0; padding:11px 14px; border-left:2px solid var(--accent);
+  background:var(--surface-2); border-radius:0 6px 6px 0; font-size:13.5px; color:var(--ink-2);
+}
+.note b{color:var(--ink)}
+.note.warn{border-left-color:var(--warn)}
+
+.plain{
+  background:var(--surface); border:1px solid var(--line); border-radius:10px;
+  padding:20px 24px; box-shadow:var(--shadow);
+}
+.plain h3{
+  font-family:"IBM Plex Mono",monospace; font-size:14px; font-weight:600;
+  margin:22px 0 8px; letter-spacing:-.01em;
+}
+.plain h3:first-child{margin-top:0}
+.plain p{margin:0 0 10px; font-size:14.5px; color:var(--ink-2); max-width:72ch}
+.plain ol,.plain ul{margin:0 0 10px; padding-left:20px; font-size:14.5px; color:var(--ink-2)}
+.plain li{margin-bottom:6px}
+.plain code{font-size:12.8px; background:var(--surface-3); padding:1px 5px; border-radius:4px; color:var(--ink)}
+.plain strong{color:var(--ink)}
+
+footer{
+  border-top:1px solid var(--line); margin-top:8px; padding:26px 28px 60px;
+  font-size:12.5px; color:var(--ink-3);
+}
+footer .wrap{max-width:1240px; margin:0 auto; display:flex; flex-wrap:wrap; gap:8px 28px}
+footer code{font-family:"IBM Plex Mono",monospace; color:var(--ink-2)}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="shell"><div class="wrap">
+    <p class="eyebrow">noble-voice-agent · src/noble_agent/agent/tools/</p>
+    <h1>Bộ tool của Luna</h1>
+    <p class="lede">14 tool built-in mà agent hội thoại Luna được phép gọi trong một lượt — kèm tham số, nguồn dữ liệu, hình dạng kết quả và những hành vi mà dispatcher tự làm sau lưng model.</p>
+    <div class="facts">
+      <div class="fact"><b>14</b><span>tool built-in</span></div>
+      <div class="fact"><b>4</b><span>core, luôn bật</span></div>
+      <div class="fact"><b>9</b><span>optional per-tenant</span></div>
+      <div class="fact"><b>5</b><span>vòng tool tối đa / lượt</span></div>
+    </div>
+  </div></div>
+</header>
+
+<div class="shell"><div class="body">
+
+<nav class="toc">
+  <h2>Cơ chế</h2>
+  <ul>
+    <li><a href="#pipeline">Vòng đời một tool call</a></li>
+  </ul>
+  <h2>Core (4 + van xả)</h2>
+  <ul>
+    <li><a href="#update_customer">update_customer</a></li>
+    <li><a href="#kb_search">kb_search</a></li>
+    <li><a href="#find_project">find_project</a></li>
+    <li><a href="#escalate">escalate</a></li>
+    <li><a href="#no_lookup_needed">no_lookup_needed</a></li>
+  </ul>
+  <h2>Optional (9)</h2>
+  <ul>
+    <li><a href="#discover_projects">discover_projects</a></li>
+    <li><a href="#get_project_overview">get_project_overview</a></li>
+    <li><a href="#search_units">search_units</a></li>
+    <li><a href="#recommend_units">recommend_units</a></li>
+    <li><a href="#check_inventory">check_inventory</a></li>
+    <li><a href="#analyze_projects">analyze_projects</a></li>
+    <li><a href="#get_document">get_document</a></li>
+    <li><a href="#booking">booking</a></li>
+    <li><a href="#send_media">send_media</a></li>
+  </ul>
+  <h2>Hạ tầng</h2>
+  <ul>
+    <li><a href="#dispatcher">Dispatcher tự làm gì</a></li>
+    <li><a href="#schemas">Schema dựng lúc chạy</a></li>
+    <li><a href="#adding">Thêm tool mới</a></li>
+  </ul>
+</nav>
+
+<main>
+
+<!-- ============ PIPELINE ============ -->
+<section id="pipeline">
+  <div class="sec-head"><h2>Vòng đời một tool call</h2></div>
+  <p class="sec-note">Từ lúc LLM phát ra <code>tool_calls</code> tới lúc kết quả quay lại history. Vòng lặp tối đa <code>MAX_TOOL_ITERATIONS = 5</code> mỗi lượt.</p>
+  <div class="pipe">
+    <ol>
+      <li><b>Dựng schema</b> — <code>schemas.build_schemas(names)</code> deep-copy <code>SCHEMAS</code>, gỡ 4 tham số phong thuỷ nếu tenant không bật <code>feng_shui</code>, render <code>{{ brand.company }}</code> / <code>{{ brand.app_name }}</code>.</li>
+      <li><b>LLM chọn tool</b> — nếu <code>LLM_FORCE_TOOL_FIRST_ROUND=true</code>, vòng đầu bị ép <code>tool_choice=required</code>; lượt xã giao thoát ra bằng <code>no_lookup_needed</code>.</li>
+      <li><b>Parse args</b> — JSON hỏng vẫn bắn <code>on_tool_start</code>/<code>on_tool_done</code> rồi trả <code>{"ok":false,"error":"bad args"}</code>.</li>
+      <li><b>Resolve</b> — <code>registry.resolve(tenant, name)</code>: tool riêng của tenant che tool built-in cùng tên, chỉ cho tenant đó.</li>
+      <li><b>Thực thi</b> — executor nhận nguyên túi kwargs <code>args, state, customer, callbacks, session_id, provider, tenant, rag, dispatcher</code>. Crash được bọc thành JSON lỗi, không làm vỡ lượt.</li>
+      <li><b>Cờ dirty</b> — chỉ khi tool chạy THẬT: <code>spec.dirties_customer</code>, hoặc <code>booking(action="schedule")</code> → runner dựng lại system prompt.</li>
+      <li><b>Auto-escalate</b> — kết quả chứa <code>ESCALATE_SIGNAL</code> → dispatcher tự gọi <code>escalate</code> (trừ chính <code>escalate</code> và lượt sandbox của semcache).</li>
+      <li><b>Client nhận đủ</b> — <code>on_tool_done</code> gửi kết quả nguyên vẹn kèm <code>items[]</code>; bản vào history bị gỡ <code>items[]</code> cho 3 tool media.</li>
+      <li><b>Strip directive</b> — trước <code>save_all</code>, khoá <code>instruction</code> (chỉ đạo một-lượt: upsell pitch…) bị gỡ khỏi tool message của lượt (<code>orchestrator._strip_tool_directives</code>); dữ liệu <code>over_budget</code>/<code>highlights</code> giữ nguyên.</li>
+      <li><b>Trả nợ media</b> — cuối lượt <code>finish_turn()</code> gửi bù ảnh nếu model quên chốt <code>candidates</code> hoặc bỏ qua ý định xem ảnh.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============ CORE ============ -->
+<section id="core">
+  <div class="sec-head"><h2>Core — luôn bật</h2></div>
+  <p class="sec-note">Nằm trong <code>CORE_TOOLS</code> ở <code>agent/agent_config.py</code>. Không tenant nào tắt được, kể cả qua Portal — <code>escalate</code> là van an toàn duy nhất đưa cuộc gọi ra khỏi luồng tự động. Riêng <code>no_lookup_needed</code> (2026-09-03) đã rời <code>CORE_TOOLS</code>: chỉ được chào khi <code>LLM_FORCE_TOOL_FIRST_ROUND=true</code>.</p>
+
+  <article class="tool" id="update_customer">
+    <header>
+      <h3>update_customer</h3>
+      <div class="badges"><span class="badge b-core">core</span><span class="badge b-w">ghi</span><span class="badge b-dirty">dirties customer</span></div>
+    </header>
+    <div class="inner">
+      <p class="blurb">Ghi thông tin cá nhân khách vào hồ sơ ngay khi khách vừa nói ra: tên, giới tính, số điện thoại, dự án quan tâm, mục đích ở/đầu tư, ngân sách, khu vực, số phòng ngủ. <strong>Nhận nhiều field trong MỘT lần gọi</strong> (giữ nguyên hình dạng cũ để model đã SFT không phải học lại).</p>
+      <dl class="meta">
+        <div><dt>Thực thi</dt><dd><code>tools/update_customer.py</code> → mutate object <code>Customer</code>, runner persist Redis cuối lượt</dd></div>
+        <div><dt>Trả về</dt><dd><code>{"ok":true,"updated_fields":[...]}</code> hoặc <code>{"ok":false,"error":...}</code> khi không field nào hợp lệ</dd></div>
+      </dl>
+      <div class="params"><table>
+        <thead><tr><th>Tham số</th><th>Kiểu</th><th>Ý nghĩa</th></tr></thead>
+        <tbody>
+          <tr><td class="p-name">name</td><td class="p-type">string</td><td>Tên gọi (Mai Anh, Hùng).</td></tr>
+          <tr><td class="p-name">full_name</td><td class="p-type">string</td><td>Họ tên đầy đủ nếu khách cung cấp.</td></tr>
+          <tr><td class="p-name">gender</td><td class="p-type">enum</td><td>Giới tính.<span class="enum">M · F</span></td></tr>
+          <tr><td class="p-name">phone</td><td class="p-type">string</td><td>10 số. Bị <b>loại</b> nếu không khớp <code>^(0[35789])\d{8}$</code>.</td></tr>
+          <tr><td class="p-name">project_interest</td><td class="p-type">string</td><td>Mã dự án canonical. Đi qua <code>catalog.normalize()</code>; giá trị lạ/nhập nhằng bị bỏ im lặng.</td></tr>
+          <tr><td class="p-name">purpose</td><td class="p-type">string</td><td>Ở, đầu tư, hoặc cả hai.</td></tr>
+          <tr><td class="p-name">budget</td><td class="p-type">string</td><td>Ngân sách dự kiến (text tự do).</td></tr>
+          <tr><td class="p-name">preferred_area</td><td class="p-type">string</td><td>Khu vực, ghi đúng lời khách.</td></tr>
+          <tr><td class="p-name">bedroom_count</td><td class="p-type">string</td><td>2PN, 3PN…</td></tr>
+          <tr><td class="p-name">is_buyer</td><td class="p-type">boolean</td><td>Khách đang thật sự tìm mua/đầu tư.</td></tr>
+          <tr><td class="p-name">is_noble_customer</td><td class="p-type">boolean</td><td>Đã là khách hàng (đã mua / có hợp đồng).</td></tr>
+          <tr><td class="p-name">noble_info</td><td class="p-type">string</td><td>Ghi chú ngắn: mã căn, dự án đã mua…</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note"><b>Chỉ persist chéo phiên khi đã có phone</b> — bảng khách hàng key theo số điện thoại. Ghi bằng <code>fire_and_forget</code> nên vòng tool (sát TTFT) không chờ DB.</p>
+    </div>
+  </article>
+
+  <article class="tool" id="kb_search">
+    <header>
+      <h3>kb_search</h3>
+      <div class="badges"><span class="badge b-core">core</span><span class="badge b-ro">read-only</span></div>
+    </header>
+    <div class="inner">
+      <p class="blurb">Tra tài liệu dự án: giá, chính sách, tiện ích, vị trí, thiết kế, vật liệu, pháp lý, so sánh dự án. <strong>Gọi thẳng ngay lượt đầu, KHÔNG cần <code>find_project</code> trước</strong> — đưa nguyên tên dự án vào <code>query</code> là đủ khoanh vùng (tiết kiệm ~1,3s một vòng tool). Là tìm kiếm ngữ nghĩa chứ không phải hỏi–đáp: schema yêu cầu model <em>diễn giải lại</em> câu khách thành truy vấn giàu từ khoá, tự đủ nghĩa, bỏ đại từ mơ hồ.</p>
+      <dl class="meta">
+        <div><dt>Thực thi</dt><dd><code>tools/noble_search.py</code> → <code>agent/rag/noble_kb.query_noble_kb</code>, dispatch theo <code>NOBLE_RAG_BACKEND</code>: <code>flat_store</code> · <code>qdrant</code> · <code>hipporag</code> · <code>grep_faq</code> · <code>kb_service</code> · <code>empty</code></dd></div>
+        <div><dt>Trả về</dt><dd><b>Chuỗi trần</b> khi không có tệp kèm. Có tệp → <code>{"context":…, "items":[…]}</code></dd></div>
+      </dl>
+      <div class="params"><table>
+        <thead><tr><th>Tham số</th><th>Kiểu</th><th>Bắt buộc</th><th>Ý nghĩa</th></tr></thead>
+        <tbody>
+          <tr><td class="p-name">query</td><td class="p-type">string</td><td><span class="req">bắt buộc</span></td><td>Truy vấn tiếng Việt <b>đã diễn giải lại</b>, không phải câu nói thô. VD "thế còn cái kia, có chỗ cho trẻ con chơi không" → <code>tiện ích khu vui chơi trẻ em dự án Noble Crystal</code>.</td></tr>
+          <tr><td class="p-name">project_filter</td><td class="p-type">string</td><td><span class="opt">tuỳ chọn</span></td><td>Mã canonical để lọc. Bỏ trống = tìm toàn bộ — cố ý, để câu so sánh nhiều dự án không bị thu hẹp về dự án đang sticky.</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note"><b>Hai đường đặt sticky <code>project_interest</code>.</b> Có <code>project_filter</code> → đặt TRƯỚC khi tìm. Không có → đặt SAU khi tìm, lấy từ dự án của kết quả (nếu các hit đồng nhất). Vế thứ hai tồn tại vì khi <code>kb_search</code> được cho đi thẳng, <code>send_media</code> mất đường lấy <code>project_code</code> và đi hỏi khách thay vì gửi ảnh.</p>
+      <p class="note warn"><b>Mọi backend RAG degrade IM LẶNG về rỗng.</b> Pipeline hỏng trông y hệt pipeline không tìm thấy gì — xác minh bằng <code>make test-search</code>.</p>
+    </div>
+  </article>
+
+  <article class="tool" id="find_project">
+    <header>
+      <h3>find_project</h3>
+      <div class="badges"><span class="badge b-core">core</span><span class="badge b-w">ghi sticky</span></div>
+    </header>
+    <div class="inner">
+      <p class="blurb">Đổi tên dự án khách <em>nói</em> thành <strong>mã canonical</strong>, trước khi dùng các tool cần mã chính xác: <code>check_inventory</code>, <code>booking</code>, <code>get_project_overview</code>, <code>get_document</code>, <code>search_units</code>, <code>send_media</code>. Không cần cho <code>kb_search</code>. Khớp bằng <code>ProjectNameIndex</code> (fold ngữ âm tiếng Việt + trigram + token-set + kênh ngữ âm, fusion có trọng số, boost theo khu vực/thương hiệu, cổng độ tin cậy).</p>
+      <dl class="meta">
+        <div><dt>Thực thi</dt><dd><code>tools/find_project.py</code> → <code>data/project_matching/index.py</code>, index dựng lúc bootstrap, cache <b>theo tenant trong RAM process</b></dd></div>
+        <div><dt>Trả về</dt><dd><code>resolved</code> (1 mã, dùng luôn) · <code>ambiguous</code> (danh sách ứng viên, hỏi khách chọn) · <code>not_found</code> (kèm <code>best_guess</code> và/hoặc <code>recently_listed</code>)</dd></div>
+      </dl>
+      <div class="params"><table>
+        <thead><tr><th>Tham số</th><th>Kiểu</th><th>Bắt buộc</th><th>Ý nghĩa</th></tr></thead>
+        <tbody>
+          <tr><td class="p-name">query</td><td class="p-type">string</td><td><span class="req">bắt buộc</span></td><td>Tên dự án khách nói, nguyên văn, kể cả sai chính tả.</td></tr>
+          <tr><td class="p-name">region_hint</td><td class="p-type">string</td><td><span class="opt">tuỳ chọn</span></td><td>Khu vực/quận khách đã nhắc. Bỏ trống → tự lấy <code>customer.preferred_area</code>.</td></tr>
+          <tr><td class="p-name">investor_hint</td><td class="p-type">string</td><td><span class="opt">tuỳ chọn</span></td><td>Chủ đầu tư/thương hiệu khách đã nhắc.</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note"><b>Prior "dự án vừa giới thiệu".</b> <code>discover_projects</code> và <code>recommend_units</code> ghi mã vào <code>state.scratchpad["recent_projects"]</code> (cap 6). Khi kết quả <code>ambiguous</code> mà đúng 1 ứng viên nằm trong tập vừa đọc cho khách → tự chốt. Khi <code>not_found</code> → trả kèm <code>recently_listed</code> và bảo LLM hỏi xác nhận CÓ/KHÔNG, vì STT ghi méo tên tiếng Anh đọc kiểu Việt ("san sai" ≈ Sunshine) tới mức fuzzy không cứu nổi.</p>
+    </div>
+  </article>
+
+  <article class="tool" id="escalate">
+    <header>
+      <h3>escalate</h3>
+      <div class="badges"><span class="badge b-core">core · không tắt được</span><span class="badge b-w">ghi</span></div>
+    </header>
+    <div class="inner">
+      <p class="blurb">Chuyển cuộc sang <strong>chuyên viên người thật</strong> — off-ramp duy nhất của kiến trúc single-agent. Dùng khi: khách đã mua hỏi hợp đồng/thanh toán/sổ hồng/bảo hành/thủ tục (post-sale nằm ngoài phạm vi của Luna); khách hỏi giá nội bộ; khách đòi gặp người thật; hoặc một tool dữ liệu trả về đúng sentinel <code>ESCALATE_SIGNAL</code>.</p>
+      <dl class="meta">
+        <div><dt>Thực thi</dt><dd><code>tools/support_ops.py::escalate</code> → cờ transfer vào <code>state.scratchpad</code>, row vào Postgres qua <code>pg_data_plane.record_escalation</code>, tóm tắt bàn giao qua <code>spawn_escalation_summary</code></dd></div>
+        <div><dt>Ghi chú</dt><dd>Có kiểm tra giờ làm việc (<code>_is_working_hours</code>) để trả lời khách khác nhau trong / ngoài giờ</dd></div>
+      </dl>
+      <div class="params"><table>
+        <thead><tr><th>Tham số</th><th>Kiểu</th><th>Bắt buộc</th><th>Ý nghĩa</th></tr></thead>
+        <tbody>
+          <tr><td class="p-name">action</td><td class="p-type">enum</td><td><span class="req">bắt buộc</span></td><td>Kiểm tra trạng thái hay chuyển thật.<span class="enum">check_state · transfer</span></td></tr>
+          <tr><td class="p-name">reason</td><td class="p-type">string</td><td><span class="opt">tuỳ chọn</span></td><td>Lý do chuyển, đi kèm bản bàn giao cho chuyên viên.</td></tr>
+          <tr><td class="p-name">department</td><td class="p-type">enum</td><td><span class="opt">tuỳ chọn</span></td><td>Bộ phận nhận.<span class="enum">CVTV · CSKH · Kỹ thuật · Pháp lý · Quản lý KD · Kế toán · Bàn giao · Thủ tục</span></td></tr>
+          <tr><td class="p-name">priority</td><td class="p-type">enum</td><td><span class="opt">tuỳ chọn</span></td><td><span class="enum">normal · high · urgent</span></td></tr>
+        </tbody>
+      </table></div>
+      <p class="note warn"><b>Tool khác trả <code>ESCALATE_SIGNAL</code> thì dispatcher TỰ gọi escalate</b> (department <code>CVTV</code>, reason ghi rõ tool nào thiếu dữ liệu). Prompt không được bảo LLM gọi lại lần nữa.</p>
+    </div>
+  </article>
+
+  <article class="tool" id="no_lookup_needed">
+    <header>
+      <h3>no_lookup_needed</h3>
+      <div class="badges"><span class="badge b-opt">gated theo cờ</span><span class="badge b-ro">read-only</span><span class="badge b-opt">no-op</span></div>
+    </header>
+    <div class="inner">
+      <p class="blurb">Van xả cho <code>LLM_FORCE_TOOL_FIRST_ROUND</code>. Khi cấu hình ép vòng LLM đầu tiên của mỗi lượt phải gọi tool (<code>tool_choice=required</code>), câu xã giao — chào hỏi, cảm ơn, xác nhận ngắn, small talk — gọi tool này rồi trả lời tự nhiên. <strong>Không có tham số, không chạm dữ liệu</strong>, chỉ trả một câu cố định. Từ 2026-09-03 chỉ được chào cho LLM khi <code>LLM_FORCE_TOOL_FIRST_ROUND=true</code> (facade tự thêm ở cả path db lẫn legacy) — cờ tắt thì tool này không xuất hiện.</p>
+      <dl class="meta">
+        <div><dt>Thực thi</dt><dd>Inline trong <code>tools/builtins.py::_no_lookup_needed</code></dd></div>
+        <div><dt>Trả về</dt><dd><code>"OK — không cần tra cứu, trả lời khách tự nhiên."</code></dd></div>
+      </dl>
+      <p class="note">Schema nói rõ: <b>không dùng</b> khi khách hỏi về dự án / căn hộ / giá / lịch — những câu đó phải gọi tool dữ liệu tương ứng.</p>
+    </div>
+  </article>
+</section>
+
+<!-- ============ OPTIONAL ============ -->
+<section id="optional">
+  <div class="sec-head"><h2>Optional — tenant tick từng cái</h2></div>
+  <p class="sec-note">Nằm trong <code>OPTIONAL_TOOLS</code>. Đường <code>db</code>: Portal thêm vào <code>config.tools.enabled</code> của tenant. Đường <code>legacy</code>: thêm tên vào <code>tenants/&lt;id&gt;/manifest.toml [tools].enabled</code>.</p>
+
+  <article class="tool" id="discover_projects">
+    <header>
+      <h3>discover_projects</h3>
+      <div class="badges"><span class="badge b-opt">optional</span><span class="badge b-ro">read-only</span></div>
+    </header>
+    <div class="inner">
+      <p class="blurb">Khách đang <strong>khám phá</strong>, chưa biết chọn dự án nào: "bên em có dự án gì", "dự án ở khu X", "dự án của chủ đầu tư Y". Trả một <em>trang</em> dự án nổi bật + tổng số khớp + gợi ý tiêu chí thu hẹp. Cố ý <strong>không liệt kê hết</strong> — tối đa 3 dự án/lượt rồi thu hẹp dần. Khác <code>recommend_units</code> (gợi ý CĂN cụ thể).</p>
+      <dl class="meta">
+        <div><dt>Thực thi</dt><dd><code>tools/projects_info.py::discover_projects</code> → provider <code>pg_kb</code> (<code>tenant_data.projects</code>)</dd></div>
+        <div><dt>Hiệu ứng phụ</dt><dd>Ghi mã dự án vừa đọc vào <code>state.scratchpad["recent_projects"]</code> cho <code>find_project</code> dùng làm prior</dd></div>
+      </dl>
+      <div class="params"><table>
+        <thead><tr><th>Tham số</th><th>Kiểu</th><th>Ý nghĩa</th></tr></thead>
+        <tbody>
+          <tr><td class="p-name">region</td><td class="p-type">string</td><td>Lấy đúng lời khách — khớp cả cấp thành phố/quận/phường/tên đường, trên cả khu vực lẫn địa chỉ. <code>""</code> = không lọc.</td></tr>
+          <tr><td class="p-name">budget_max</td><td class="p-type">number</td><td>VNĐ <b>thực</b>: "20 tỷ" → <code>20000000000</code>. Code vẫn có lưới đỡ <code>_to_vnd()</code> quy đổi số tắt, và nới thêm headroom <b>max(500tr, 12%)</b> — mục vượt ngân sách trong khoảng nới vẫn trả, gắn <code>over_budget</code>/<code>price_delta_pct</code>/<code>highlights</code> + directive pitch (một lần/dự án/phiên, guard <code>upsell_pitched</code>).</td></tr>
+          <tr><td class="p-name">product_type</td><td class="p-type">enum</td><td><span class="enum">chung_cu · biet_thu · lien_ke · shophouse · dat_nen · van_phong</span></td></tr>
+          <tr><td class="p-name">purpose</td><td class="p-type">enum</td><td>Chỉ để tư vấn, <b>không lọc</b>.<span class="enum">live · invest</span></td></tr>
+          <tr><td class="p-name">investor</td><td class="p-type">string</td><td>Tên chủ đầu tư khách hỏi.</td></tr>
+          <tr><td class="p-name">sale_phase</td><td class="p-type">enum</td><td><span class="enum">sap_mo_ban · dang_ban · ban_giao · dong_gio_hang</span></td></tr>
+          <tr><td class="p-name">index</td><td class="p-type">integer</td><td>Offset phân trang, mặc định 0. "Xem thêm" → truyền <code>next_index</code> của lần trước; khách cho tiêu chí mới → <code>index=0</code>.</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </article>
+
+  <article class="tool" id="get_project_overview">
+    <header>
+      <h3>get_project_overview</h3>
+      <div class="badges"><span class="badge b-opt">optional</span><span class="badge b-ro">read-only</span></div>
+    </header>
+    <div class="inner">
+      <p class="blurb">Tổng quan MỘT dự án: vị trí, loại hình, quy mô, điểm nổi bật. Dùng khi khách xin giới thiệu chung — "dự án Noble Crystal thế nào", "giới thiệu cho em dự án đó".</p>
+      <dl class="meta">
+        <div><dt>Thực thi</dt><dd><code>tools/projects_info.py::get_project_overview</code> → provider <code>pg_kb</code></dd></div>
+        <div><dt>Không có dữ liệu</dt><dd>Provider trả <code>None</code> → <code>ESCALATE_SIGNAL</code> → dispatcher tự chuyển chuyên viên</dd></div>
+      </dl>
+      <div class="params"><table>
+        <thead><tr><th>Tham số</th><th>Kiểu</th><th>Ý nghĩa</th></tr></thead>
+        <tbody>
+          <tr><td class="p-name">project_code</td><td class="p-type">string</td><td>Mã canonical từ <code>find_project</code>. Bỏ trống → dispatcher tự điền dự án khách đang quan tâm (<code>default_project_code</code>).</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </article>
+
+  <article class="tool" id="search_units">
+    <header>
+      <h3>search_units</h3>
+      <div class="badges"><span class="badge b-opt">optional</span><span class="badge b-ro">read-only</span></div>
+    </header>
+    <div class="inner">
+      <p class="blurb">Liệt kê <strong>từng căn cụ thể</strong> còn trong MỘT dự án theo tiêu chí. "Còn căn 3 phòng ngủ dưới 5 tỷ không", "có căn nào hướng Đông Nam". Khác <code>check_inventory</code> (chỉ tổng hợp số lượng) và <code>recommend_units</code> (gợi ý xuyên dự án, có phong thuỷ).</p>
+      <dl class="meta">
+        <div><dt>Thực thi</dt><dd><code>tools/projects_info.py::search_units</code> → provider <code>pg_kb</code> (<code>tenant_data.units</code>)</dd></div>
+        <div><dt>Căn chưa có giá</dt><dd>Kết quả gắn chỉ dẫn báo khách "giá đang cập nhật" — <b>tuyệt đối không tự bịa giá</b></dd></div>
+      </dl>
+      <div class="params"><table>
+        <thead><tr><th>Tham số</th><th>Kiểu</th><th>Bắt buộc</th><th>Ý nghĩa</th></tr></thead>
+        <tbody>
+          <tr><td class="p-name">project_code</td><td class="p-type">string</td><td><span class="req">bắt buộc</span></td><td>Mã canonical; bỏ trống thì dispatcher điền từ dự án đang quan tâm.</td></tr>
+          <tr><td class="p-name">product_type</td><td class="p-type">enum</td><td><span class="opt">tuỳ chọn</span></td><td><span class="enum">chung_cu · studio · duplex · penthouse · officetel · condotel · biet_thu · lien_ke · shophouse · nha_pho · dat_nen · van_phong</span></td></tr>
+          <tr><td class="p-name">max_price</td><td class="p-type">number</td><td><span class="opt">tuỳ chọn</span></td><td>VNĐ thực: "5 tỷ" → <code>5000000000</code>.</td></tr>
+          <tr><td class="p-name">min_area</td><td class="p-type">number</td><td><span class="opt">tuỳ chọn</span></td><td>Diện tích thông thuỷ tối thiểu (m²).</td></tr>
+          <tr><td class="p-name">direction</td><td class="p-type">enum</td><td><span class="opt">tuỳ chọn</span></td><td>Hướng căn/ban công.<span class="enum">dong · tay · nam · bac · dong_bac · dong_nam · tay_bac · tay_nam</span></td></tr>
+          <tr><td class="p-name">floor</td><td class="p-type">integer</td><td><span class="opt">tuỳ chọn</span></td><td>Tầng mong muốn.</td></tr>
+          <tr><td class="p-name">block</td><td class="p-type">string</td><td><span class="opt">tuỳ chọn</span></td><td>Toà/block (A, T1…).</td></tr>
+          <tr><td class="p-name">unit_code</td><td class="p-type">string</td><td><span class="opt">tuỳ chọn</span></td><td>Mã căn cụ thể (A-1203).</td></tr>
+          <tr><td class="p-name">sale_status</td><td class="p-type">enum</td><td><span class="opt">tuỳ chọn</span></td><td>Mặc định <code>available</code>.<span class="enum">available · booked · sold</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </article>
+
+  <article class="tool" id="recommend_units">
+    <header>
+      <h3>recommend_units</h3>
+      <div class="badges"><span class="badge b-opt">optional</span><span class="badge b-ro">read-only</span><span class="badge b-dirty">bật cờ feng_shui</span></div>
+    </header>
+    <div class="inner">
+      <p class="blurb">Gợi ý <strong>căn cụ thể xuyên nhiều dự án</strong> khi khách chưa biết chọn gì: lọc theo ngân sách, khu vực, số phòng ngủ, và ưu tiên căn <strong>hợp phong thuỷ</strong> nếu khách cho năm sinh / mệnh / tuổi. "Tầm 4 tỷ ở Tây Hồ nên xem căn nào", "anh sinh năm 1990 hợp căn hướng nào".</p>
+      <dl class="meta">
+        <div><dt>Thực thi</dt><dd><code>tools/projects_info.py::recommend_units</code> + <code>agent/feng_shui.py</code> (cung phi bát trạch)</dd></div>
+        <div><dt>Hiệu ứng phụ</dt><dd>Ghi mã dự án gợi ý vào <code>recent_projects</code></dd></div>
+      </dl>
+      <div class="params"><table>
+        <thead><tr><th>Tham số</th><th>Kiểu</th><th>Ý nghĩa</th></tr></thead>
+        <tbody>
+          <tr><td class="p-name">project_code</td><td class="p-type">string</td><td>Chỉ gợi ý trong dự án đó. Bỏ trống = xuyên tất cả.</td></tr>
+          <tr><td class="p-name">budget_max</td><td class="p-type">number</td><td>VNĐ thực. <b>Lọc cứng</b> (có headroom +500tr như trên).</td></tr>
+          <tr><td class="p-name">region</td><td class="p-type">string</td><td>Đúng lời khách; khớp cả khu vực lẫn địa chỉ dự án.</td></tr>
+          <tr><td class="p-name">bedrooms</td><td class="p-type">integer</td><td>Số phòng ngủ mong muốn.</td></tr>
+          <tr><td class="p-name">purpose</td><td class="p-type">string</td><td>Ở/đầu tư — chỉ để tư vấn, không lọc.</td></tr>
+          <tr><td class="p-name">birth_year</td><td class="p-type">integer</td><td>Năm sinh <b>dương lịch</b> (1990). Chỉ truyền khi khách quan tâm phong thuỷ.</td></tr>
+          <tr><td class="p-name">gender</td><td class="p-type">enum</td><td>Để tính cung phi. Bỏ trống → lấy từ hồ sơ.<span class="enum">M · F</span></td></tr>
+          <tr><td class="p-name">menh</td><td class="p-type">enum</td><td>Khi khách khai thẳng ("anh mệnh Mộc").<span class="enum">kim · moc · thuy · hoa · tho</span></td></tr>
+          <tr><td class="p-name">zodiac</td><td class="p-type">enum</td><td>Khi khách chỉ nói tuổi. Ưu tiên hỏi năm sinh cho chính xác.<span class="enum">ty · suu · dan · mao · thin · ti · ngo · mui · than · dau · tuat · hoi</span></td></tr>
+        </tbody>
+      </table></div>
+      <p class="note warn"><b>4 tham số phong thuỷ chỉ tồn tại khi tenant bật <code>recommend_units</code>.</b> <code>build_schemas()</code> gỡ <code>birth_year</code>/<code>gender</code>/<code>menh</code>/<code>zodiac</code> khỏi schema nếu <code>feng_shui</code> không nằm trong rankers. Bật riêng <code>feng_shui</code> mà không bật <code>recommend_units</code> là no-op.</p>
+    </div>
+  </article>
+
+  <article class="tool" id="check_inventory">
+    <header>
+      <h3>check_inventory</h3>
+      <div class="badges"><span class="badge b-opt">optional</span><span class="badge b-w">không read-only</span></div>
+    </header>
+    <div class="inner">
+      <p class="blurb">Tóm tắt <strong>tồn kho</strong> một dự án: còn bao nhiêu căn, theo từng loại và từng hướng. Trả số liệu gộp nên hợp với kênh <em>voice</em> — "dự án còn nhiều căn không", "còn loại nào", "hướng nào còn". Khác <code>search_units</code> (liệt kê từng căn) và khác <code>booking(check_availability)</code> (lịch đi xem, không phải tồn kho).</p>
+      <dl class="meta">
+        <div><dt>Thực thi</dt><dd><code>tools/check_inventory.py</code> → <code>provider.get_inventory_summary()</code></dd></div>
+        <div><dt>Không có dữ liệu</dt><dd>Dự án lạ / hết hàng / nguồn chết đều → <code>ESCALATE_SIGNAL</code></dd></div>
+      </dl>
+      <div class="params"><table>
+        <thead><tr><th>Tham số</th><th>Kiểu</th><th>Bắt buộc</th><th>Ý nghĩa</th></tr></thead>
+        <tbody>
+          <tr><td class="p-name">project_code</td><td class="p-type">string</td><td><span class="req">bắt buộc</span></td><td>Mã canonical; bỏ trống thì dispatcher điền từ dự án đang quan tâm.</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </article>
+
+  <article class="tool" id="analyze_projects">
+    <header>
+      <h3>analyze_projects</h3>
+      <div class="badges"><span class="badge b-opt">optional</span><span class="badge b-ro">read-only</span><span class="badge b-dirty">LLM viết SQL</span></div>
+    </header>
+    <div class="inner">
+      <p class="blurb">Câu hỏi <strong>tổng quát / gộp dữ liệu nhiều dự án</strong> — thống kê, so sánh, xếp hạng, đếm, min-max-trung bình — bằng MỘT câu <code>SELECT</code> PostgreSQL do chính LLM viết. "Dự án nào nhiều loại hình nhất", "giá trung bình từng dự án", "khu nào còn nhiều căn 2 ngủ nhất". Tồn tại vì loại câu này nếu đi bằng tool point-lookup sẽ phải gọi inventory × 15 dự án, vượt <code>MAX_TOOL_ITERATIONS</code>.</p>
+      <dl class="meta">
+        <div><dt>Thực thi</dt><dd><code>tools/analytics.py</code> — <code>sanitize_sql()</code> rồi <code>run_readonly()</code></dd></div>
+        <div><dt>Provisioning</dt><dd><code>noble-tenant pg-ensure-sql-ro</code>, role <code>agent_sql_ro</code></dd></div>
+        <div><dt>View được phép</dt><dd><code>tenant_data.agent_projects_v</code> · <code>tenant_data.agent_units_v</code> — cả hai chỉ chứa bản ghi published</dd></div>
+        <div><dt>Trả về</dt><dd>Bảng text gọn (header + dòng, cap <code>ANALYZE_SQL_MAX_ROWS</code>, mỗi cell ≤200 ký tự)</dd></div>
+      </dl>
+      <div class="params"><table>
+        <thead><tr><th>Tham số</th><th>Kiểu</th><th>Bắt buộc</th><th>Ý nghĩa</th></tr></thead>
+        <tbody>
+          <tr><td class="p-name">sql</td><td class="p-type">string</td><td><span class="req">bắt buộc</span></td><td>MỘT câu <code>SELECT</code> (hoặc <code>WITH … SELECT</code>) trên 2 view trên. <code>LIMIT</code> tự chèn nếu thiếu.</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note"><b>An toàn nằm ở 3 khoá DB, không nằm ở validator.</b> <code>SET LOCAL ROLE agent_sql_ro</code> (chỉ SELECT trên 2 view — <code>contacts</code>/<code>conversations</code>/bảng gốc đều permission denied) · <code>SET TRANSACTION READ ONLY</code> (Postgres cấm nới lại sau query đầu của txn) · RLS theo GUC <code>app.current_tenant</code>. Validator Python chỉ để trả lỗi đẹp cho model tự sửa vòng sau.</p>
+      <p class="note warn"><b>Quy ước dữ liệu phải nhớ:</b> <code>price_vnd</code> = 0/NULL nghĩa là <em>chưa có giá</em> → mọi phép tính giá phải kèm <code>FILTER (WHERE price_vnd &gt; 0)</code>. <code>category</code> là <b>mảng text</b> → lọc bằng <code>'giá trị' = ANY(category)</code>. Kết quả rỗng <b>không</b> phải lỗi và <b>không</b> phải lý do escalate — nới điều kiện rồi thử lại.</p>
+    </div>
+  </article>
+
+  <article class="tool" id="get_document">
+    <header>
+      <h3>get_document</h3>
+      <div class="badges"><span class="badge b-opt">optional</span><span class="badge b-ro">read-only</span></div>
+    </header>
+    <div class="inner">
+      <p class="blurb">Lấy <strong>file tài liệu</strong> của dự án — CSBH, hồ sơ pháp lý — trả tiêu đề, trích nội dung và link file, để Luna đưa cho khách một tệp thật. Nội dung chi tiết vẫn trả lời qua <code>kb_search</code>.</p>
+      <dl class="meta">
+        <div><dt>Thực thi</dt><dd><code>tools/get_document.py</code> → <code>provider.get_document()</code> đọc <code>tenant_data.documents</code>, JOIN <code>projects</code> lọc <code>status='published'</code></dd></div>
+        <div><dt>Trả về</dt><dd><code>{"count":n,"documents":[{title, body (cắt 800 ký tự), file_url}]}</code>; rỗng → <code>ESCALATE_SIGNAL</code></dd></div>
+      </dl>
+      <div class="params"><table>
+        <thead><tr><th>Tham số</th><th>Kiểu</th><th>Ý nghĩa</th></tr></thead>
+        <tbody>
+          <tr><td class="p-name">project_code</td><td class="p-type">string</td><td>Mã canonical; bỏ trống → dự án đang quan tâm. Phạm vi đọc gồm cả sentinel toàn tenant <code>__ALL__</code>.</td></tr>
+          <tr><td class="p-name">query</td><td class="p-type">string</td><td>Từ khoá loại tài liệu ("CSBH", "pháp lý").</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </article>
+
+  <article class="tool" id="booking">
+    <header>
+      <h3>booking</h3>
+      <div class="badges"><span class="badge b-opt">optional</span><span class="badge b-w">ghi</span><span class="badge b-dirty">dirties customer khi schedule</span></div>
+    </header>
+    <div class="inner">
+      <p class="blurb">Đặt lịch khách tới tham quan dự án. Một tool, 4 <code>action</code> — router mỏng ở <code>tools/booking.py</code> gọi xuống <code>availability.py</code> (ngày+giờ trống) và <code>schedule_viewing.py</code> (chốt / liệt kê / đổi).</p>
+      <dl class="meta">
+        <div><dt>Lưu ở đâu</dt><dd>Postgres <code>tenant_data.appointments</code> (best-effort, cho Portal đọc) + <code>state.scratchpad["bookings"]</code> — Redis là nguồn sự thật <b>trong cuộc hội thoại</b>, DB chết không làm hỏng việc đặt lịch</dd></div>
+        <div><dt>Mã lịch</dt><dd><code>APTxxxxx</code> do agent tự sinh; <code>modify</code> upsert đúng row đó</dd></div>
+        <div><dt>check_availability</dt><dd>Hiện là stub: 10 ngày làm việc kế tiếp × 4 khung <code>09:00-10:00</code>, <code>10:00-11:00</code>, <code>14:00-15:00</code>, <code>15:00-16:00</code></dd></div>
+      </dl>
+      <div class="params"><table>
+        <thead><tr><th>Tham số</th><th>Kiểu</th><th>Bắt buộc</th><th>Ý nghĩa</th></tr></thead>
+        <tbody>
+          <tr><td class="p-name">action</td><td class="p-type">enum</td><td><span class="req">bắt buộc</span></td><td><span class="enum">check_availability · schedule · list · modify</span></td></tr>
+          <tr><td class="p-name">project_code</td><td class="p-type">string</td><td><span class="opt">tuỳ chọn</span></td><td>Mã canonical; bỏ trống → dự án đang quan tâm. <b><code>find_project</code> trả <code>not_found</code> → KHÔNG gọi booking</b>, tuyệt đối không thay bằng mã dự án khác.</td></tr>
+          <tr><td class="p-name">preferred_date</td><td class="p-type">string</td><td><span class="opt">tuỳ chọn</span></td><td><code>DD/MM/YYYY</code>. Bắt buộc với <code>schedule</code>.</td></tr>
+          <tr><td class="p-name">preferred_time</td><td class="p-type">string</td><td><span class="opt">tuỳ chọn</span></td><td>Khung giờ khách chọn, VD <code>09:00 - 10:00</code>.</td></tr>
+          <tr><td class="p-name">name</td><td class="p-type">string</td><td><span class="opt">tuỳ chọn</span></td><td>Tên người đặt khi khách <b>đọc</b> một tên (kể cả đặt hộ). Không dùng để cập nhật hồ sơ.</td></tr>
+          <tr><td class="p-name">use_profile_name</td><td class="p-type">boolean</td><td><span class="opt">tuỳ chọn</span></td><td>Khách xác nhận dùng tên có sẵn trong hồ sơ.</td></tr>
+          <tr><td class="p-name">phone</td><td class="p-type">string</td><td><span class="opt">tuỳ chọn</span></td><td>Số đặt lịch khi khách đọc số khác số đang gọi.</td></tr>
+          <tr><td class="p-name">use_calling_phone</td><td class="p-type">boolean</td><td><span class="opt">tuỳ chọn</span></td><td>Khách xác nhận dùng chính số đang gọi.</td></tr>
+          <tr><td class="p-name">confirmed</td><td class="p-type">boolean</td><td><span class="opt">tuỳ chọn</span></td><td><code>true</code> khi khách đã chốt cả ngày lẫn giờ.</td></tr>
+          <tr><td class="p-name">notes</td><td class="p-type">string</td><td><span class="opt">tuỳ chọn</span></td><td>Ghi chú thêm cho lịch.</td></tr>
+          <tr><td class="p-name">booking_id</td><td class="p-type">string</td><td><span class="opt">tuỳ chọn</span></td><td>Mã <code>APT…</code> cần đổi (<code>modify</code>).</td></tr>
+          <tr><td class="p-name">new_preferred_date / new_preferred_time</td><td class="p-type">string</td><td><span class="opt">tuỳ chọn</span></td><td>Ngày/giờ mới khi <code>modify</code>.</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note"><b>Tên và số điện thoại đều bắt buộc và đều phải HỎI khách xác nhận</b> — không tự lấy từ hồ sơ. Tool nhắc lại nếu còn thiếu; bộ đếm <code>booking_guard_attempts</code> giới hạn 2 vòng hỏi rồi thôi, reset khi đặt thành công.</p>
+    </div>
+  </article>
+
+  <article class="tool" id="send_media">
+    <header>
+      <h3>send_media</h3>
+      <div class="badges"><span class="badge b-opt">optional</span><span class="badge b-w">ghi/gửi</span><span class="badge b-dirty">items[] bị gỡ khỏi history</span></div>
+    </header>
+    <div class="inner">
+      <p class="blurb">Gửi <strong>hình ảnh / video / tour 360</strong> của dự án qua ứng dụng: mặt bằng, phối cảnh, tiện ích, vị trí — thứ khó diễn đạt bằng lời. Phải truyền <strong>ít nhất một</strong> trong <code>category</code> / <code>content_type</code>. Gọi <strong>âm thầm</strong>: schema cấm mọi câu filler kiểu "em gửi qua app nhé" — ảnh tự hiện, cứ tiếp tục tư vấn.</p>
+      <dl class="meta">
+        <div><dt>Thực thi</dt><dd><code>tools/support_ops.py::send_media</code> → <code>data/media_data.py</code> (Qdrant <code>&lt;tenant&gt;_media</code>, nhánh visual cần <code>EMBED_SERVICE_URL</code>)</dd></div>
+        <div><dt>Luồng hai bước</dt><dd>Không có ảnh đúng <code>category</code> → trả <code>candidates</code> kèm <code>ref</code>; model đọc caption, chọn, gọi lại với <code>ids</code></dd></div>
+        <div><dt>Không có media</dt><dd>Trả <code>note:"no_media"</code> + câu xuống thang — Luna mô tả bằng lời, <b>không</b> escalate</dd></div>
+      </dl>
+      <div class="params"><table>
+        <thead><tr><th>Tham số</th><th>Kiểu</th><th>Bắt buộc</th><th>Ý nghĩa</th></tr></thead>
+        <tbody>
+          <tr><td class="p-name">query</td><td class="p-type">string</td><td><span class="req">bắt buộc</span></td><td>Câu hỏi/yêu cầu nguyên văn của khách.</td></tr>
+          <tr><td class="p-name">project_code</td><td class="p-type">string</td><td><span class="opt">tuỳ chọn</span></td><td>Mã canonical; bỏ trống → dự án đang quan tâm.</td></tr>
+          <tr><td class="p-name">category</td><td class="p-type">enum</td><td><span class="opt">tuỳ chọn</span></td><td>Giới thiệu tổng quan chủ động → <code>tong_quan</code>. Khách xin video chung → <b>bỏ trống</b>.<span class="enum">tong_quan · ngoai_that · noi_that · tien_ich · mat_bang · vi_tri · tien_do</span></td></tr>
+          <tr><td class="p-name">content_type</td><td class="p-type">enum</td><td><span class="opt">tuỳ chọn</span></td><td>Bỏ trống = mọi loại.<span class="enum">image · video · tour_360</span></td></tr>
+          <tr><td class="p-name">ids</td><td class="p-type">array&lt;string&gt;</td><td><span class="opt">tuỳ chọn</span></td><td><b>Chỉ ở lượt gửi của luồng hai bước</b> — các <code>ref</code> lấy từ <code>candidates</code>. Lượt đầu không truyền.</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note"><b>Tour 360 đi đường này, không đi <code>kb_search</code>.</b> Khách xin tour / tham quan ảo / VR / "xem 360" → <code>content_type=tour_360</code>; tuyệt đối không chép link vào câu trả lời (link dài nhiều tham số, model sẽ chép sai).</p>
+      <p class="note warn"><b>Cache kết quả in-process 300s, không invalidate khi ingest</b> — media vừa upload chỉ xuất hiện sau tối đa TTL. Test <b>bắt buộc</b> gọi <code>media_data.reset_result_cache_for_tests()</code> giữa các case.</p>
+    </div>
+  </article>
+</section>
+
+<!-- ============ DISPATCHER ============ -->
+<section id="dispatcher">
+  <div class="sec-head"><h2>Dispatcher tự làm gì sau lưng model</h2></div>
+  <p class="sec-note">Bốn hành vi ở <code>tools/dispatcher.py</code> không tool nào khai báo, nhưng ảnh hưởng tới mọi lượt.</p>
+  <div class="plain">
+    <h3>1 · Auto-escalate theo sentinel</h3>
+    <p>Kết quả tool chứa <code>ESCALATE_SIGNAL</code> → dispatcher gọi thẳng <code>support_ops.escalate</code> với <code>department="CVTV"</code> và lý do ghi rõ tool nào thiếu dữ liệu. Prompt vẫn nhờ Luna tự gọi, nhưng repo đã ghi lại nhiều lần rằng model làm không đều — nên callback đã hứa với client <em>luôn</em> tồn tại. Không chạy cho chính <code>escalate</code>, và không chạy trong lượt <code>sandbox</code> của semcache (lượt ghost dùng chung <code>session_id</code> thật, escalate ở đó sẽ tạo ca chuyển sale ngoài đời).</p>
+
+    <h3>2 · Điền <code>project_code</code> mặc định</h3>
+    <p><code>default_project_code(args)</code> lấp <code>project_code</code> rỗng bằng <code>customer.project_interest</code> — mã sticky do <code>find_project</code> hoặc <code>kb_search</code> đặt trước đó. Áp cho <code>get_project_overview</code>, <code>get_document</code>, <code>search_units</code>, <code>check_inventory</code>, <code>send_media</code>, và <code>booking</code> ở hai action <code>check_availability</code>/<code>schedule</code>.</p>
+
+    <h3>3 · Gỡ <code>items[]</code> khỏi history</h3>
+    <p>Allowlist <b>tường minh</b> <code>{send_media, service_customer, kb_search}</code> — không phải quét mù mọi khoá tên <code>items</code>. Client nhận bản đầy đủ qua <code>on_tool_done</code> để render; bản đi vào <code>state.history</code> bị gỡ <code>items[]</code> (URL + caption rất nặng, và model không cần nó để trả lời). Mọi field khác — <code>ok</code>, <code>count</code>, <code>caption</code>, <code>message</code> — giữ nguyên nên model vẫn biết đã gửi gì. Nhờ vậy model <b>không bao giờ phải chép lại một URL dài</b>.</p>
+
+    <h3>4 · Trả nợ media cuối lượt — <code>finish_turn()</code></h3>
+    <p>Chạy sau khi lượt đã trả lời xong, <b>không</b> ghi vào history (một <code>tool</code> message không có <code>assistant(tool_calls)</code> đi kèm sẽ phá bất biến mà <code>run_turn</code> đang canh). Hai vế:</p>
+    <ul>
+      <li>Lượt trả <code>candidates</code> mà model không chốt → gửi cả rổ. Thiếu vế này thì mọi yêu cầu ảnh rơi vào fallback kết thúc bằng <b>màn hình trống</b>.</li>
+      <li>Câu hỏi có ý định xem ảnh mà model không gọi <code>send_media</code> → tự gửi. Ý định suy từ <code>kb_search.query</code>, cố ý chỉ nhận 2 danh mục không mơ hồ: <code>vi_tri</code> ("vị trí", "bản đồ", "ở đâu", "nằm ở") và <code>mat_bang</code> ("mặt bằng"). <code>tien_do</code> đứng ngoài vì "tiến độ thanh toán" sẽ kéo ảnh công trường vào một câu hỏi về tiền; cụm <code>mặt bằng giá</code>, <code>mặt bằng chung</code>, <code>vị trí thanh toán</code> bị loại tường minh.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ SCHEMAS ============ -->
+<section id="schemas">
+  <div class="sec-head"><h2>Schema dựng lúc chạy</h2></div>
+  <p class="sec-note"><code>tools/schemas.py::build_schemas()</code> — cái LLM thực sự nhìn thấy khác với hằng số <code>SCHEMAS</code> trong file.</p>
+  <div class="plain">
+    <ol>
+      <li><strong>Deep-copy</strong> mỗi schema, để <code>SCHEMAS</code> mức module không bao giờ bị mutate.</li>
+      <li><strong>Tool riêng của tenant</strong>: tên không có trong <code>SCHEMAS</code> được tra ngược từ <code>registry.resolve()</code> và lấy schema trên <code>ToolSpec</code> — nếu không, nó dispatch được nhưng chẳng bao giờ được <em>chào</em> cho LLM.</li>
+      <li><strong>Cổng phong thuỷ</strong>: <code>feng_shui</code> không nằm trong rankers → xoá 4 tham số <code>birth_year</code>/<code>gender</code>/<code>menh</code>/<code>zodiac</code> khỏi <code>recommend_units</code>.</li>
+      <li><strong>Render brand cuối cùng</strong>: <code>{{ brand.company }}</code>, <code>{{ brand.app_name }}</code>. Còn sót <code>{{</code> sau bước này → log <code>warning</code> (fail-loud) thay vì ship template thô cho LLM.</li>
+      <li><strong>Không có ENUM mã dự án</strong>: từ 2026-07-22, mọi tham số <code>project_code</code> là chuỗi tự do. Mã lấy tại thời điểm truy vấn qua <code>find_project</code>, không liệt kê sẵn vào schema hay system prompt nữa.</li>
+    </ol>
+    <p class="note"><b>Model nghe schema hơn nghe persona.</b> Khi cần đổi hành vi chọn tool (VD cho <code>kb_search</code> đi thẳng không qua <code>find_project</code>), sửa <code>description</code> trong <code>schemas.py</code> — đã thử sửa <code>RULES.md</code> trước và cả hai model đều phớt lờ.</p>
+  </div>
+</section>
+
+<!-- ============ ADDING ============ -->
+<section id="adding">
+  <div class="sec-head"><h2>Thêm tool mới</h2></div>
+  <div class="plain">
+    <h3>Tool chuẩn (dùng cho mọi tenant)</h3>
+    <ol>
+      <li>File mới <code>agent/tools/&lt;name&gt;.py</code> với một executor async.</li>
+      <li>Thêm schema vào <code>agent/tools/schemas.py</code>.</li>
+      <li>Đăng ký <code>ToolSpec</code> trong <code>agent/tools/builtins.py</code> — adapter mỏng nhận túi kwargs <code>args, state, customer, callbacks, session_id, provider, tenant, rag, dispatcher</code>. Đặt <code>dirties_customer=True</code> nếu nó mutate <code>Customer</code>, và <code>read_only</code> đúng theo phân loại semcache.</li>
+      <li>Chào tool ra: đường <code>db</code> → thêm vào <code>OPTIONAL_TOOLS</code> (hoặc <code>CORE_TOOLS</code> nếu luôn phải bật) rồi Portal tick cho tenant; đường <code>legacy</code> → thêm tên vào <code>tenants/noble/manifest.toml [tools].enabled</code>.</li>
+      <li>Ghi tài liệu: đường <code>db</code> phải sửa <b>CẢ HAI</b> <code>persona/chat/RULES.md</code> và <code>persona/voice/RULES.md</code> (chúng cố ý lệch nhau — voice ngắn gọn, chat đầy đủ), bọc vùng mới bằng marker <code>&lt;!-- TOOL:&lt;name&gt;:START/END --&gt;</code> để strip được cho tenant không bật.</li>
+    </ol>
+
+    <h3>Tool riêng của một tenant</h3>
+    <p>Thả một file vào <code>tenants/&lt;id&gt;/tools/&lt;name&gt;.py</code> với executor được trang trí bằng <code>@tool(name=…, schema=…, tenant="&lt;id&gt;", read_only=…, dirties_customer=…)</code>, rồi thêm tên vào <code>manifest.enabled</code> của tenant đó. Loader import thư mục lúc boot nên decorator tự đăng ký. Tool này <b>vô hình với tenant khác</b> và che tool built-in cùng tên <b>chỉ cho tenant đó</b>. Không phải sửa dòng nào ở core.</p>
+
+    <p class="note warn">Sau bất kỳ thay đổi nào chạm vòng lặp tool, prompt, hay biên transport: chạy checklist <code>src/noble_agent/SMOKE.md</code>.</p>
+  </div>
+</section>
+
+</main>
+</div></div>
+
+<footer>
+  <div class="wrap">
+    <span>Nguồn: <code>src/noble_agent/agent/tools/</code> · <code>agent/agent_config.py</code></span>
+    <span>Nhánh <code>sql-agent</code></span>
+    <span>Lập 2026-09-03</span>
+  </div>
+</footer>
+
+</body>
+</html>

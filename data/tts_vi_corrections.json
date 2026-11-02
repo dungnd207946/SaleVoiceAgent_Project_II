@@ -1,0 +1,5 @@
+{
+  "_description": "Vietnamese word-level respellings to work around TTS mispronunciations. Voice-specific — audit after each voice change. Applied in normalize_for_voice with word-boundary matching, case-insensitive.",
+  "_usage": "Add entries ONLY when a specific Vietnamese word is consistently mispronounced by the active ElevenLabs voice. Each entry = a known fix, not a hypothesis.",
+  "_example": "\"vay\": \"vay \"  (trailing space to break tone binding) — ADD ONLY IF TESTED"
+}

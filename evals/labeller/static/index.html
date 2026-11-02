@@ -1,0 +1,1622 @@
+<title>Labeller</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+/* ============================== Tokens ============================== */
+:root{
+  --bg:#eef1f2;
+  --bg-raised:#ffffff;
+  --bg-sunken:#e2e8ea;
+  --ink:#16232b;
+  --ink-soft:#4c5c64;
+  --ink-faint:#86959c;
+  --line:#d3dbde;
+  --line-strong:#b7c2c6;
+  --accent:#0e7c86;
+  --accent-ink:#054a52;
+  --accent-soft:#dcecee;
+  --customer:#2f5d8a;
+  --customer-bg:#eaf1f8;
+  --ok:#2e7d4f;
+  --ok-bg:#e4f3e9;
+  --pending:#6b7680;
+  --pending-bg:#e7eaec;
+  --danger:#b3352d;
+  --danger-bg:#fbeae9;
+  --warn:#a66a12;
+  --warn-bg:#fbf0de;
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  --radius: 6px;
+  --shadow: 0 1px 2px rgba(20,30,35,.06), 0 4px 14px rgba(20,30,35,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#10171b;
+    --bg-raised:#182226;
+    --bg-sunken:#0c1215;
+    --ink:#e7edef;
+    --ink-soft:#a7b6bc;
+    --ink-faint:#657178;
+    --line:#263136;
+    --line-strong:#37454b;
+    --accent:#28b3bf;
+    --accent-ink:#8fe3ea;
+    --accent-soft:#132b2e;
+    --customer:#7fa8d6;
+    --customer-bg:#182634;
+    --ok:#57c489;
+    --ok-bg:#123320;
+    --pending:#8b969c;
+    --pending-bg:#20282c;
+    --danger:#e5766e;
+    --danger-bg:#3a1a18;
+    --warn:#e0a83f;
+    --warn-bg:#332508;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+}
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-ui);
+  font-size:14px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+button, input, textarea, select{ font-family:inherit; font-size:inherit; color:inherit; }
+button{ cursor:pointer; }
+@media (prefers-reduced-motion: reduce){ *{ animation-duration:.001ms !important; transition-duration:.001ms !important; } }
+
+/* ---------- app shell ---------- */
+#app{ display:flex; flex-direction:column; height:100vh; min-height:0; }
+
+/* ---------- header ---------- */
+header{
+  display:flex; align-items:center; gap:16px; padding:0 16px; height:52px; flex:0 0 auto;
+  background:var(--bg-raised); border-bottom:1px solid var(--line); z-index:5;
+}
+.brand{ display:flex; align-items:center; gap:8px; font-weight:700; letter-spacing:.01em; white-space:nowrap; }
+.brand .wave{ display:flex; align-items:flex-end; gap:2px; height:16px; }
+.brand .wave i{ width:3px; background:var(--accent); border-radius:1px; display:block; }
+.brand .wave i:nth-child(1){ height:40%; }
+.brand .wave i:nth-child(2){ height:100%; }
+.brand .wave i:nth-child(3){ height:65%; }
+.brand .wave i:nth-child(4){ height:85%; }
+.brand .wave.busy i{ animation:pulse 900ms ease-in-out infinite; }
+.brand .wave.busy i:nth-child(2){ animation-delay:120ms; }
+.brand .wave.busy i:nth-child(3){ animation-delay:240ms; }
+.brand .wave.busy i:nth-child(4){ animation-delay:360ms; }
+@keyframes pulse{ 0%,100%{ transform:scaleY(.4); opacity:.6; } 50%{ transform:scaleY(1); opacity:1; } }
+
+.modes{ display:flex; background:var(--bg-sunken); border-radius:999px; padding:3px; gap:2px; }
+.modes button{
+  border:0; background:transparent; padding:6px 14px; border-radius:999px; font-weight:600;
+  color:var(--ink-soft); font-size:13px;
+}
+.modes button.active{ background:var(--accent); color:#fff; }
+
+.spacer{ flex:1; }
+.btn{
+  border:1px solid var(--line-strong); background:var(--bg-raised); color:var(--ink);
+  padding:7px 13px; border-radius:var(--radius); font-weight:600; font-size:13px;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.btn:hover{ border-color:var(--accent); color:var(--accent-ink); }
+.btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn.primary:hover{ background:var(--accent-ink); border-color:var(--accent-ink); color:#fff; }
+.btn.primary.dirty{ box-shadow:0 0 0 3px var(--accent-soft); }
+.btn kbd{ font-family:var(--font-mono); font-size:11px; opacity:.85; background:rgba(0,0,0,.08); padding:1px 4px; border-radius:3px; }
+.btn:disabled{ opacity:.45; cursor:not-allowed; }
+
+/* ---------- 3-col layout ---------- */
+#body{ flex:1; display:flex; min-height:0; }
+.col-sidebar{ width:280px; flex:0 0 auto; background:var(--bg-sunken); border-right:1px solid var(--line); overflow-y:auto; }
+.col-main{ flex:1; min-width:0; overflow-y:auto; background:var(--bg); }
+.col-meta{ width:300px; flex:0 0 auto; background:var(--bg-raised); border-left:1px solid var(--line); overflow-y:auto; }
+@media (max-width: 980px){
+  #body{ flex-direction:column; }
+  .col-sidebar, .col-meta{ width:auto; max-height:38vh; }
+}
+
+.eyebrow{ font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); padding:12px 14px 6px; }
+
+/* ---------- sidebar tree ---------- */
+.tenant-group{ margin-bottom:2px; }
+.tenant-title{
+  display:block; width:100%; text-align:left; border:0; background:transparent; cursor:pointer;
+  padding:6px 14px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft);
+}
+.tenant-title:hover{ color:var(--accent-ink); }
+.tenant-title.selected{ color:var(--accent-ink); }
+.tenant-title.selected::before{ content:"▸ "; }
+.file-row{ display:block; width:100%; text-align:left; border:0; background:transparent; padding:7px 14px; cursor:pointer; }
+.file-row:hover{ background:rgba(0,0,0,.04); }
+.file-row.active{ background:var(--accent-soft); }
+.file-row .fname{ display:flex; justify-content:space-between; gap:6px; font-size:13px; font-weight:600; }
+.file-row .fname small{ font-weight:600; font-family:var(--font-mono); color:var(--ink-soft); font-size:11px; }
+.bar{ height:4px; border-radius:2px; background:var(--pending-bg); margin-top:5px; overflow:hidden; }
+.bar > i{ display:block; height:100%; background:var(--ok); }
+
+.case-list-empty{ padding:10px 14px; color:var(--ink-faint); font-size:12.5px; }
+.case-row{ display:flex; align-items:center; gap:7px; padding:6px 14px; border:0; background:transparent; width:100%; text-align:left; }
+.case-row:hover{ background:rgba(0,0,0,.04); }
+.case-row.selected{ background:var(--accent-soft); }
+.case-row .id{ font-family:var(--font-mono); font-size:12px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chip{ display:inline-block; width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
+.chip.ok{ background:var(--ok); }
+.chip.pending{ background:var(--pending); }
+.chip.error{ background:var(--danger); box-shadow:0 0 0 2px var(--danger-bg); }
+.case-row .del{ opacity:0; border:0; background:transparent; color:var(--danger); font-size:13px; padding:2px 4px; }
+.case-row:hover .del{ opacity:1; }
+.newcase-btn{ margin:8px 14px 14px; }
+/* [hidden] của UA sheet KHÔNG thắng được `display:flex` của .case-row (author
+   stylesheet ưu tiên hơn UA) — thiếu dòng này thì lọc xong row vẫn hiện. */
+.case-row[hidden]{ display:none; }
+.case-search{ padding:0 14px 6px; position:relative; }
+.case-search input[type=text]{ padding:6px 26px 6px 9px; font-size:12.5px; }
+.case-search .clear{
+  position:absolute; right:18px; top:50%; transform:translateY(-50%);
+  border:0; background:transparent; color:var(--ink-faint); font-size:12px; line-height:1; padding:2px 4px;
+}
+.case-search .clear:hover{ color:var(--danger); }
+.eyebrow small{ float:right; font-family:var(--font-mono); font-weight:600; letter-spacing:0; text-transform:none; }
+
+/* ---------- main editor ---------- */
+.main-head{ position:sticky; top:0; background:var(--bg); padding:14px 20px 10px; border-bottom:1px solid var(--line); z-index:2; }
+.main-empty{ padding:60px 20px; text-align:center; color:var(--ink-faint); }
+.progress-line{ display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--ink-soft); }
+.progress-line .bar{ flex:1; height:6px; }
+.progress-line b{ color:var(--ink); }
+
+.banner{ margin:12px 20px 0; padding:10px 14px; border-radius:var(--radius); font-size:13px; display:flex; align-items:flex-start; gap:10px; }
+.banner.err{ background:var(--danger-bg); color:var(--danger); border:1px solid color-mix(in srgb, var(--danger) 35%, transparent); }
+.banner.info{ background:var(--warn-bg); color:var(--warn); border:1px solid color-mix(in srgb, var(--warn) 35%, transparent); }
+.banner pre{ white-space:pre-wrap; word-break:break-word; margin:0; font-family:var(--font-mono); font-size:12px; flex:1; }
+.banner .x{ border:0; background:transparent; color:inherit; font-weight:700; }
+.banner .actions{ display:flex; gap:8px; margin-left:auto; }
+.banner .actions button{ border:1px solid currentColor; background:transparent; color:inherit; border-radius:4px; padding:4px 9px; font-size:12px; font-weight:600; }
+
+.turn{ margin:18px 20px; }
+.turn-top{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.turn-label{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); }
+.turn-del{ margin-left:auto; border:0; background:transparent; color:var(--ink-faint); font-size:12px; }
+.turn-del:hover{ color:var(--danger); }
+
+.bubble-row{ display:flex; justify-content:flex-end; margin-bottom:10px; }
+.bubble{
+  width:100%; max-width:none; background:var(--customer-bg); color:var(--ink); border:1px solid color-mix(in srgb, var(--customer) 30%, transparent);
+  border-radius:14px 14px 3px 14px; padding:11px 15px;
+}
+.bubble textarea{
+  width:100%; border:0; background:transparent; resize:vertical; min-height:3.2em; color:var(--ink);
+  font-size:13.5px; line-height:1.55;
+}
+.bubble .who{ font-size:10.5px; font-weight:700; color:var(--customer); text-transform:uppercase; letter-spacing:.05em; margin-bottom:3px; display:flex; gap:5px; align-items:center; }
+.bubble .who .wave{ display:flex; align-items:flex-end; gap:1.5px; height:9px; }
+.bubble .who .wave i{ width:2px; background:var(--customer); border-radius:1px; }
+.bubble .who .wave i:nth-child(1){ height:35%; } .bubble .who .wave i:nth-child(2){ height:100%; }
+.bubble .who .wave i:nth-child(3){ height:60%; }
+
+.card{ background:var(--bg-raised); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:0 var(--radius) var(--radius) 0; padding:12px 14px; box-shadow:var(--shadow); }
+.card.no-golden{ border-left-color:var(--line-strong); }
+.field{ margin-bottom:10px; }
+.field:last-child{ margin-bottom:0; }
+.field label{ display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); margin-bottom:4px; }
+input[type=text], textarea, select{
+  width:100%; border:1px solid var(--line-strong); border-radius:5px; padding:7px 9px; background:var(--bg-raised); color:var(--ink);
+}
+textarea{ resize:vertical; min-height:2.4em; font-family:var(--font-ui); }
+textarea.mono, input.mono{ font-family:var(--font-mono); font-size:12.5px; }
+textarea.expect-json{ min-height:9em; }
+.expect-head{ display:flex; align-items:center; gap:8px; }
+.expect-head label{ margin-bottom:0; }
+.expect-head .mini{ margin-left:auto; }
+.expect-row{ border:1px solid var(--line); border-radius:5px; padding:8px; margin-bottom:8px; background:rgba(0,0,0,.015); }
+.expect-row.unknown{ border-color:var(--danger); background:var(--danger-bg); }
+.expect-row-head{ display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.expect-key{ flex:1; font-family:var(--font-mono); font-weight:600; font-size:12.5px; color:var(--accent-ink); }
+.expect-hint{ font-size:11.5px; color:var(--ink-faint); line-height:1.45; margin:0 0 6px; }
+.expect-needle{ display:flex; gap:6px; align-items:center; margin-bottom:4px; }
+.expect-needle input{ flex:1; min-width:0; }
+.expect-add{ display:flex; gap:6px; margin-top:6px; }
+.expect-add select{ flex:0 1 auto; max-width:100%; }
+.expect-bool{ width:auto; min-width:130px; }
+textarea.invalid, input.invalid{ border-color:var(--danger); background:var(--danger-bg); }
+.hint-err{ color:var(--danger); font-size:11.5px; margin-top:3px; }
+
+.mini{ border:0; background:transparent; color:var(--accent-ink); font-weight:600; font-size:12.5px; padding:3px 0; }
+.mini:hover{ text-decoration:underline; }
+
+table.tools-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+table.tools-table th{ text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-faint); padding:3px 6px; }
+table.tools-table td{ padding:3px 6px; vertical-align:top; }
+.tool-block{ border:1px solid var(--line); border-radius:5px; padding:8px; margin-bottom:8px; background:rgba(0,0,0,.015); }
+.tool-block-head{ display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+.tool-block-head input, .tool-block-head select{ flex:1; min-width:0; }
+select.tool-name-select{ font-family:var(--font-mono); font-weight:600; }
+select.invalid{ border-color:var(--danger); background:var(--danger-bg); }
+.tool-hint{ font-size:11.5px; color:var(--ink-faint); line-height:1.45; margin:0 0 6px; }
+.tool-add-arg{ display:flex; gap:6px; margin-top:6px; }
+.tool-add-arg select, .tool-add-arg input{ flex:0 1 auto; max-width:100%; }
+table.tools-table select{ width:100%; }
+.tag.invalid{ outline:1px solid var(--danger); }
+.row-del{ border:0; background:transparent; color:var(--ink-faint); font-size:13px; }
+.row-del:hover{ color:var(--danger); }
+
+.chips-input{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; border:1px solid var(--line-strong); border-radius:5px; padding:6px; }
+.chips-input input{ border:0; flex:1; min-width:80px; padding:2px 4px; }
+.tag{ display:inline-flex; align-items:center; gap:5px; background:var(--danger-bg); color:var(--danger); border-radius:999px; padding:2px 5px 2px 10px; font-size:12px; }
+.tag button{ border:0; background:transparent; color:inherit; font-weight:700; padding:0 4px; }
+
+.turn-add{ margin:6px 20px 24px; }
+
+/* ---------- golden mode ---------- */
+.golden-form{ margin:16px 20px; max-width:640px; }
+.chunk-block{ border:1px solid var(--line); border-radius:6px; padding:10px; margin-bottom:10px; background:var(--bg-raised); }
+.chunk-head{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.chunk-head .idx{ font-family:var(--font-mono); color:var(--ink-faint); font-size:11px; }
+.chunk-head .del{ margin-left:auto; }
+
+/* ---------- meta panel ---------- */
+.meta-block{ padding:14px; border-bottom:1px solid var(--line); }
+.checkbox-row{ display:flex; flex-wrap:wrap; gap:10px; }
+.checkbox-row label{ display:flex; align-items:center; gap:5px; font-size:12.5px; text-transform:none; font-weight:500; color:var(--ink); }
+.checkbox-row input{ width:auto; }
+.toggle-row{ display:flex; align-items:center; justify-content:space-between; }
+.switch{ position:relative; width:38px; height:21px; flex:0 0 auto; }
+.switch input{ opacity:0; width:0; height:0; }
+.switch .track{ position:absolute; inset:0; background:var(--pending); border-radius:999px; transition:background .15s; }
+.switch .track:before{ content:""; position:absolute; width:15px; height:15px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .15s; }
+.switch input:checked + .track{ background:var(--ok); }
+.switch input:checked + .track:before{ transform:translateX(17px); }
+.meta-empty{ padding:20px 14px; color:var(--ink-faint); font-size:13px; }
+
+/* ---------- toast ---------- */
+#toast{ position:fixed; right:18px; bottom:18px; z-index:50; display:flex; flex-direction:column; gap:8px; }
+.toast-item{ background:var(--ink); color:var(--bg); padding:10px 15px; border-radius:8px; font-size:13px; font-weight:600; box-shadow:var(--shadow); animation:toast-in .15s ease-out; }
+.toast-item.err{ background:var(--danger); color:#fff; }
+@keyframes toast-in{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+</style>
+
+<div id="app">
+  <header>
+    <div class="brand"><span class="wave" id="brand-wave"><i></i><i></i><i></i><i></i></span>Labeller</div>
+    <div class="modes">
+      <button data-kind="cases" id="mode-cases">Agent cases</button>
+      <button data-kind="golden" id="mode-golden">RAG golden</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="btn-newdir">＋ Folder mới</button>
+    <button class="btn" id="btn-new">＋ File mới</button>
+    <button class="btn primary" id="btn-save"><span id="save-label">Lưu</span> <kbd>Ctrl+S</kbd></button>
+  </header>
+  <div id="body">
+    <aside class="col-sidebar" id="sidebar"></aside>
+    <main class="col-main" id="main"></main>
+    <aside class="col-meta" id="meta"></aside>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+/* ============================== helpers ============================== */
+function el(tag, props, ...children){
+  const node = document.createElement(tag);
+  props = props || {};
+  for (const k in props){
+    const v = props[k];
+    if (v == null) continue;
+    if (k === "class") node.className = v;
+    else if (k === "html") node.innerHTML = v;
+    else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
+    else if (k === "checked" || k === "disabled" || k === "value") node[k] = v;
+    else node.setAttribute(k, v);
+  }
+  for (const c of children.flat(Infinity)){
+    if (c == null || c === false) continue;
+    node.appendChild(typeof c === "string" || typeof c === "number" ? document.createTextNode(c) : c);
+  }
+  return node;
+}
+function clear(node){ while (node.firstChild) node.removeChild(node.firstChild); }
+function mount(node, ...children){ clear(node); for (const c of children.flat(Infinity)) if (c) node.appendChild(c); return node; }
+function clone(v){ return v == null ? v : JSON.parse(JSON.stringify(v)); }
+function uid(prefix){ return prefix + "-" + Math.random().toString(36).slice(2, 8); }
+
+const TAGS = ["policy", "tool", "qa", "multiturn", "smoke"];
+const ORIGINS = ["structured", "kb", "document", "unanswerable", "handwritten"];
+const CHANNELS = ["chat", "voice"];
+const MATCHERS = ["contains", "equals"];
+
+/* ---------- vocabulary `expect` ----------
+   = EXPECT_KEYS trong evals/quality/cases.py (KNOWN_KEYS trừ tool_called). Phải
+   hardcode vì server không expose danh sách này; đổi bên Python mà quên bảng này
+   thì save trả 422 (không lưu bậy) nhưng UI sẽ thiếu/thừa lựa chọn. */
+const EXPECT_SPECS = {
+  reply_contains:     { kind: "needles",  label: "Trả lời PHẢI chứa — tất cả",
+    hint: "So substring, KHÔNG phân biệt hoa/thường. Nhiều dòng = AND, thiếu một dòng là fail." },
+  reply_contains_any: { kind: "needles",  label: "Trả lời phải chứa ÍT NHẤT MỘT",
+    hint: "OR — chỉ cần một dòng khớp là pass. Dùng khi agent có thể diễn đạt nhiều kiểu." },
+  reply_not_contains: { kind: "needles",  label: "Trả lời KHÔNG được chứa",
+    hint: "So substring, không phân biệt hoa/thường. Mọi dòng đều bị cấm." },
+  reply_matches:      { kind: "regex",    label: "Trả lời PHẢI khớp regex",
+    hint: "re.search trên reply gốc — PHÂN BIỆT hoa/thường, khác nhóm contains." },
+  reply_not_matches:  { kind: "regex",    label: "Trả lời KHÔNG được khớp regex",
+    hint: "Chặn lộ giá: \\d+\\s*(tỷ|triệu) · chặn số dài: \\d{9,}" },
+  customer_field:     { kind: "customer", label: "Field khách SAU lượt này",
+    hint: "equals so cả dạng chuỗi (5 khớp \"5\"); contains so substring đã thường hoá." },
+  escalated:          { kind: "bool",     label: "Có gọi tool escalate không",
+    hint: "false cũng là assertion thật: bắt buộc KHÔNG được escalate." },
+};
+const EXPECT_ORDER = Object.keys(EXPECT_SPECS);
+
+// Key đã bị đuổi khỏi `expect` ở schema v2 — hiện nguyên trạng kèm chỗ đi mới,
+// KHÔNG nuốt mất: builder mà im lặng bỏ key lạ thì save sẽ xoá dữ liệu của người khác.
+const EXPECT_MOVED = {
+  tool_called: "chuyển sang golden.tools",
+  tool_not_called: "chuyển sang golden.banned_tools",
+  tool_arg: "chuyển sang golden.tools[].args",
+};
+
+// UI-only state (turn nào đang mở ô JSON thô). Để NGOÀI data: mọi key gắn vào
+// object turn đều bị JSON.stringify ghi thẳng vào file JSONL rồi 422 lúc lưu.
+const rawExpectTurns = new WeakSet();
+
+/* ============================== api ============================== */
+// Catalog tool lấy từ /api/tools (dựng từ agent/tools/schemas.py). Rỗng = server
+// không import được agent → mọi ô tool/arg rơi về nhập tay như bản cũ.
+let TOOLS = {};
+// Field của Customer lấy từ /api/customer-fields (dựng từ storage/models.py).
+// Rỗng = server không import được agent → ô field rơi về nhập tay.
+let CUSTOMER_FIELDS = {};
+function customerFieldNames(){ return Object.keys(CUSTOMER_FIELDS); }
+function toolNames(){ return Object.keys(TOOLS); }
+function toolArgs(name){ return (TOOLS[name] && TOOLS[name].args) || {}; }
+function argSpec(toolName, arg){ return toolArgs(toolName)[arg] || null; }
+
+const api = {
+  async tree(){ return (await fetch("/api/tree")).json(); },
+  // r.ok BẮT BUỘC kiểm: 404 KHÔNG làm fetch throw, nên `.json()` của body lỗi
+  // ({"error": "not found"}) sẽ chui thẳng vào catalog và dropdown hiện đúng một
+  // lựa chọn "error". Đã sập thật khi server cũ còn chạy mà UI đã có endpoint mới.
+  async _catalog(path){ try { const r = await fetch(path); return r.ok ? await r.json() : {}; } catch (e) { return {}; } },
+  async tools(){ return this._catalog("/api/tools"); },
+  async customerFields(){ return this._catalog("/api/customer-fields"); },
+  async getFile(kind, path){
+    const r = await fetch(`/api/file?kind=${encodeURIComponent(kind)}&path=${encodeURIComponent(path)}`);
+    return { ok: r.ok, status: r.status, body: await r.json() };
+  },
+  async putFile(kind, path, lines){
+    const r = await fetch(`/api/file?kind=${encodeURIComponent(kind)}&path=${encodeURIComponent(path)}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lines }),
+    });
+    return { ok: r.ok, status: r.status, body: await r.json() };
+  },
+  async newFile(kind, path){
+    const r = await fetch(`/api/file?kind=${encodeURIComponent(kind)}&path=${encodeURIComponent(path)}`, { method: "POST" });
+    return { ok: r.ok, status: r.status, body: await r.json() };
+  },
+  async newDir(kind, path){
+    const r = await fetch(`/api/dir?kind=${encodeURIComponent(kind)}&path=${encodeURIComponent(path)}`, { method: "POST" });
+    return { ok: r.ok, status: r.status, body: await r.json() };
+  },
+};
+
+/* ============================== toast ============================== */
+function toast(msg, isErr){
+  const box = document.getElementById("toast");
+  const item = el("div", { class: "toast-item" + (isErr ? " err" : "") }, msg);
+  box.appendChild(item);
+  setTimeout(() => item.remove(), 2600);
+}
+
+/* ============================== state ============================== */
+const state = {
+  kind: "cases",
+  tree: { cases: [], golden: [], dirs: { cases: [], golden: [] } },
+  path: null,
+  folder: null,   // folder đang chọn ở sidebar — đích của "＋ File mới"
+  lines: [],       // [{n, data, error}] — data is the live-edited object
+  selected: 0,
+  caseQuery: "",   // bộ lọc danh sách case (UI-only, không bao giờ ghi ra file)
+  dirty: false,
+  saveErr: null,   // last 422 message, or null
+  draftBanner: null, // {draftData} pending restore/discard decision
+};
+
+function draftKey(kind, path){ return `labeller:${kind}:${path}`; }
+function currentTenant(){ return state.path ? state.path.split("/")[0] : ""; }
+
+let autosaveTimer = null;
+function scheduleAutosave(){
+  markBusy(true);
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    if (state.path) localStorage.setItem(draftKey(state.kind, state.path), JSON.stringify(state.lines.map(l => l.data)));
+    markBusy(false);
+  }, 350);
+}
+function markBusy(on){ document.getElementById("brand-wave").classList.toggle("busy", on); }
+function markDirty(){
+  state.dirty = true;
+  const btn = document.getElementById("btn-save");
+  btn.classList.add("dirty");
+  scheduleAutosave();
+}
+function clearDirty(){
+  state.dirty = false;
+  document.getElementById("btn-save").classList.remove("dirty");
+}
+function clearDraft(){ if (state.path) localStorage.removeItem(draftKey(state.kind, state.path)); }
+
+/* ============================== load ============================== */
+async function loadTree(){
+  state.tree = await api.tree();
+  renderSidebar();
+}
+
+async function openFile(kind, path){
+  const res = await api.getFile(kind, path);
+  if (!res.ok){ toast("Không mở được file: " + (res.body.error || res.status), true); return; }
+  state.kind = kind;
+  state.path = path;
+  state.folder = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : ".";
+  state.lines = res.body.lines.map(l => ({ n: l.n, data: clone(l.data), error: l.error }));
+  state.selected = 0;
+  state.caseQuery = "";
+  state.saveErr = null;
+  clearDirty();
+
+  const draftRaw = localStorage.getItem(draftKey(kind, path));
+  state.draftBanner = null;
+  if (draftRaw != null){
+    let draftData = null;
+    try { draftData = JSON.parse(draftRaw); } catch (e) { draftData = null; }
+    const serverData = state.lines.map(l => l.data);
+    if (draftData != null && JSON.stringify(draftData) !== JSON.stringify(serverData)){
+      state.draftBanner = { draftData };
+    } else {
+      localStorage.removeItem(draftKey(kind, path));
+    }
+  }
+  renderAll();
+}
+
+async function saveFile(){
+  if (!state.path){ toast("Chưa mở file nào", true); return; }
+  const brokenLines = state.lines.filter(l => l.data == null).map(l => l.n ?? "?");
+  if (brokenLines.length){
+    state.saveErr = `Không thể lưu: ${brokenLines.length} dòng hỏng JSON (dòng ${brokenLines.join(", ")}) — `
+      + "sửa trực tiếp trong file hoặc xoá dòng đó trước khi lưu.";
+    renderMainBanner();
+    toast("Lưu thất bại — có dòng hỏng JSON", true);
+    return;
+  }
+  const payload = state.lines.map(l => state.kind === "cases" ? cleanCaseForSave(l.data) : l.data);
+  const res = await api.putFile(state.kind, state.path, payload);
+  if (res.ok){
+    state.saveErr = null;
+    clearDirty();
+    clearDraft();
+    toast("Đã lưu");
+    await loadTree();
+    // resync line metadata (n/error) against the just-written file
+    const fresh = await api.getFile(state.kind, state.path);
+    if (fresh.ok){
+      state.lines = fresh.body.lines.map(l => ({ n: l.n, data: clone(l.data), error: l.error }));
+      if (state.selected >= state.lines.length) state.selected = Math.max(0, state.lines.length - 1);
+    }
+    renderAll();
+  } else {
+    state.saveErr = res.body.error || `HTTP ${res.status}`;
+    renderMainBanner();
+    toast("Lưu thất bại — xem chi tiết lỗi", true);
+  }
+}
+
+// Ô trống là assertion HỎNG chứ không phải assertion rỗng: "" nằm trong MỌI reply
+// (reply_contains pass vô nghĩa, reply_not_contains fail vĩnh viễn). Nên dọn lúc
+// lưu, trên bản clone — builder vẫn giữ dòng trống đang gõ dở, và saveFile resync
+// state từ file ngay sau đó nên màn hình không lệch nội dung đã ghi.
+function cleanExpectForSave(expect){
+  const out = {};
+  for (const key of Object.keys(expect || {})){
+    const value = expect[key];
+    const spec = EXPECT_SPECS[key];
+    if (!spec){ out[key] = value; continue; }   // key lạ giữ nguyên để server báo đúng chỗ
+    if (spec.kind === "needles"){
+      const arr = (Array.isArray(value) ? value : [value]).map(v => String(v ?? "").trim()).filter(Boolean);
+      if (arr.length) out[key] = arr;
+    } else if (spec.kind === "regex"){
+      const s = String(value ?? "").trim();
+      if (s) out[key] = s;
+    } else if (spec.kind === "customer"){
+      const rows = (Array.isArray(value) ? value : [value]).filter(r => r && r.field);
+      if (rows.length) out[key] = rows;
+    } else {
+      out[key] = !!value;
+    }
+  }
+  return out;
+}
+
+function cleanCaseForSave(data){
+  const copy = clone(data);
+  if (Array.isArray(copy.turns)){
+    for (const turn of copy.turns){
+      const expect = cleanExpectForSave(turn.expect);
+      if (Object.keys(expect).length) turn.expect = expect; else delete turn.expect;
+    }
+  }
+  return copy;
+}
+
+/* ============================== selection / mutation ============================== */
+function moveSelection(delta){
+  if (!state.lines.length) return;
+  // j/k chỉ đi trong tập ĐANG HIỆN. Duyệt qua case bị bộ lọc ẩn thì main panel
+  // nhảy sang một case không có trong danh sách bên trái — mất phương hướng.
+  const vis = visibleIndexes();
+  if (!vis.length) return;
+  const at = vis.indexOf(state.selected);
+  state.selected = at === -1 ? vis[0] : vis[Math.min(vis.length - 1, Math.max(0, at + delta))];
+  renderCaseList();
+  renderMain();
+  renderMeta();
+}
+function selectIndex(i){
+  state.selected = i;
+  renderCaseList();
+  renderMain();
+  renderMeta();
+}
+function toggleReviewedApproved(){
+  const line = state.lines[state.selected];
+  if (!line || line.data == null) return;
+  if (state.kind === "cases") line.data.reviewed = !line.data.reviewed;
+  else line.data.status = line.data.status === "approved" ? "draft" : "approved";
+  markDirty();
+  renderCaseList();
+  renderMeta();
+  renderProgress();
+}
+
+function newCaseTemplate(){
+  return { id: "", tenant: currentTenant(), origin: "handwritten", channel: "chat", reviewed: false, tags: [], turns: [{ user: "", expect: {} }] };
+}
+function newGoldenTemplate(){
+  return { id: "", tenant: currentTenant(), query: "", golden_chunks: [{ chunk_id: "", evidence: "" }], answer: "", project_code: "", status: "draft" };
+}
+function addCase(){
+  // Case mới id rỗng nên gần như chắc chắn không khớp bộ lọc đang bật → thêm xong
+  // lại không thấy đâu. Bỏ lọc để nó hiện ra ngay.
+  state.caseQuery = "";
+  state.lines.push({ n: null, data: state.kind === "cases" ? newCaseTemplate() : newGoldenTemplate(), error: "" });
+  state.selected = state.lines.length - 1;
+  markDirty();
+  renderAll();
+}
+function deleteCase(i){
+  if (!confirm("Xoá case này khỏi file?")) return;
+  state.lines.splice(i, 1);
+  if (state.selected >= state.lines.length) state.selected = Math.max(0, state.lines.length - 1);
+  markDirty();
+  renderAll();
+}
+
+/* ============================== lọc case ============================== */
+// Bỏ dấu tiếng Việt: gõ "du an" phải khớp "dự án". NFD tách dấu thành combining
+// mark rồi xoá; `đ` không phân rã được nên phải thay tay.
+function fold(v){
+  return String(v == null ? "" : v).normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
+}
+
+// Gộp MỌI text đáng tìm của một case, không chỉ id: với file 100 case synthetic
+// thì nhớ id là bất khả, còn nhớ câu khách hỏi thì dễ. KHÔNG cache: người dùng sửa
+// tại chỗ trong `data` mà object identity không đổi, cache sẽ mốc; 100 case × vài
+// trăm ký tự thì tính lại mỗi lần gõ là miễn phí.
+function caseHaystack(line){
+  const d = line.data;
+  const parts = [];
+  if (d == null){
+    parts.push("dòng hỏng", line.error);
+  } else if (state.kind === "cases"){
+    parts.push(d.id, d.origin, d.channel, ...(d.tags || []));
+    for (const t of d.turns || []){
+      parts.push(t.user);
+      const g = t.golden || {};
+      parts.push(g.answer);
+      for (const tc of g.tools || []) parts.push(tc.name, JSON.stringify(tc.args || {}));
+    }
+  } else {
+    parts.push(d.id, d.query, d.answer, d.project_code, d.status);
+    for (const c of d.golden_chunks || []) parts.push(c.chunk_id, c.evidence);
+  }
+  return fold(parts.filter(Boolean).join(" \n "));
+}
+
+// Nhiều từ = AND, không phân biệt thứ tự: "sunshine bep" khớp case nói về bếp của
+// Sunshine dù hai từ nằm cách nhau.
+function queryTokens(){ return fold(state.caseQuery).split(/\s+/).filter(Boolean); }
+function caseMatches(line, tokens){
+  if (!tokens.length) return true;
+  const hay = caseHaystack(line);
+  return tokens.every(t => hay.includes(t));
+}
+function visibleIndexes(){
+  const tokens = queryTokens();
+  const out = [];
+  state.lines.forEach((l, i) => { if (caseMatches(l, tokens)) out.push(i); });
+  return out;
+}
+
+/* ============================== render: sidebar ============================== */
+let sidebarKey = null;
+
+function renderSidebar(){
+  const box = document.getElementById("sidebar");
+  // Dựng lại cả sidebar (cây file + danh sách case) thì cũng reset scrollTop như
+  // renderCaseList. Xảy ra khi lưu file (Ctrl+S → loadTree + renderAll) giữa lúc
+  // đang duyệt. Giữ vị trí cuộn khi vẫn đang mở đúng file đó; đổi file thì để về đầu.
+  const key = state.kind + " " + state.path;
+  const keepScroll = key === sidebarKey ? box.scrollTop : 0;
+  sidebarKey = key;
+  // Đo focus TRƯỚC khi dựng `parts`: buildCaseSearch() appendChild ô lọc vào một div
+  // mới, mà appendChild = DI CHUYỂN node ra khỏi DOM ⇒ trình duyệt blur ngay lúc đó.
+  // Đo sau thì hadFocus luôn false (đã sập đúng như vậy một lần).
+  const hadFocus = searchInput && document.activeElement === searchInput;
+  const caret = hadFocus ? searchInput.selectionStart : null;
+  const rows = state.tree[state.kind] || [];
+  const byTenant = {};
+  for (const r of rows) (byTenant[r.tenant] = byTenant[r.tenant] || []).push(r);
+  // Folder rỗng (vừa tạo, chưa có file) vẫn phải hiện để chọn làm đích "+ File mới".
+  for (const d of (state.tree.dirs && state.tree.dirs[state.kind]) || []){
+    if (!byTenant[d]) byTenant[d] = [];
+  }
+
+  const groups = Object.keys(byTenant).sort().map(tenant => {
+    const files = byTenant[tenant].map(r => {
+      const pct = r.n ? Math.round((100 * r.n_ok) / r.n) : 0;
+      const active = state.path === r.path;
+      return el("button", { class: "file-row" + (active ? " active" : ""), onclick: () => openFile(state.kind, r.path) },
+        el("div", { class: "fname" }, r.file, el("small", null, `${r.n_ok}/${r.n}`)),
+        el("div", { class: "bar" }, el("i", { style: `width:${pct}%` })),
+      );
+    });
+    const title = el("button", {
+      class: "tenant-title" + (state.folder === tenant ? " selected" : ""),
+      title: "Chọn folder này làm đích cho ＋ File mới",
+      onclick: () => { state.folder = tenant; renderSidebar(); },
+    }, tenant === "." ? "(gốc)" : tenant);
+    if (!files.length) files.push(el("div", { class: "case-list-empty" }, "folder rỗng"));
+    return el("div", { class: "tenant-group" }, title, ...files);
+  });
+
+  const parts = [el("div", { class: "eyebrow" }, state.kind === "cases" ? "Agent case files" : "Golden set files"), ...groups];
+
+  if (state.path){
+    parts.push(el("div", { class: "eyebrow" }, `Cases · ${state.path.split("/").pop()}`,
+      el("small", { id: "case-count" })));
+    parts.push(buildCaseSearch());
+    const listBox = el("div", { id: "case-list-box" });
+    parts.push(listBox);
+    parts.push(el("div", { id: "case-nomatch", class: "case-list-empty", hidden: true }, "Không case nào khớp bộ lọc."));
+    parts.push(el("button", { class: "btn newcase-btn", onclick: addCase }, state.kind === "cases" ? "＋ Case mới" : "＋ Golden mới"));
+  }
+  // Dựng lại sidebar ⇒ blur ô đang gõ (xem hadFocus ở đầu hàm). renderSidebar chạy
+  // cả khi lưu file (Ctrl+S → loadTree), nên không khôi phục thì đang lọc dở là mất focus.
+  mount(box, ...parts);
+  if (hadFocus){ searchInput.focus(); if (caret != null) searchInput.setSelectionRange(caret, caret); }
+  if (state.path) renderCaseList();
+  if (keepScroll) box.scrollTop = keepScroll;
+}
+
+// Dùng LẠI đúng một node input qua mọi lần dựng lại sidebar (xem hadFocus ở trên).
+let searchInput = null;
+
+function buildCaseSearch(){
+  if (!searchInput){
+    searchInput = el("input", {
+      type: "text", id: "case-search-input", placeholder: "Lọc case…  (/ để nhảy vào)",
+      oninput: (e) => { state.caseQuery = e.target.value; renderCaseList(); },
+      onkeydown: (e) => {
+        if (e.key === "Escape"){ e.preventDefault(); clearCaseQuery(); }
+        else if (e.key === "Enter"){
+          e.preventDefault();
+          const vis = visibleIndexes();
+          if (vis.length) selectIndex(vis[0]);   // Enter = mở case khớp đầu tiên
+        }
+      },
+    });
+  }
+  searchInput.value = state.caseQuery;
+  return el("div", { class: "case-search" }, searchInput,
+    el("button", { id: "case-search-clear", class: "clear", hidden: true, title: "Xoá bộ lọc (Esc)",
+      onclick: () => { clearCaseQuery(); searchInput.focus(); } }, "✕"));
+}
+
+function clearCaseQuery(){
+  state.caseQuery = "";
+  if (searchInput) searchInput.value = "";
+  renderCaseList();
+}
+
+// Cache node của danh sách case. Dựng lại DOM mỗi lần chọn/duyệt một case sẽ làm
+// container cuộn (.col-sidebar) mất chiều cao trong chốc lát → trình duyệt reset
+// scrollTop về 0, tức là nhảy về đầu danh sách sau MỖI thao tác. Với file 100 case
+// thì đó là lỗi làm chậm việc duyệt nhất. Nên: chỉ dựng lại khi CẤU TRÚC đổi (đổi
+// file, thêm/xoá case), còn chọn/duyệt/sửa id thì cập nhật tại chỗ.
+let caseRows = { key: null, nodes: [] };
+
+function caseRowState(line){
+  const broken = line.data == null;
+  const ok = !broken && (state.kind === "cases" ? !!line.data.reviewed : line.data.status === "approved");
+  return {
+    chip: "chip " + (broken || line.error ? "error" : ok ? "ok" : "pending"),
+    title: line.error || (ok ? "ok" : "chưa duyệt"),
+    label: broken ? "(dòng hỏng)" : (line.data.id || "(chưa có id)"),
+  };
+}
+
+function buildCaseRow(line, i){
+  const s = caseRowState(line);
+  const chip = el("span", { class: s.chip, title: s.title });
+  const idSpan = el("span", { class: "id" }, s.label);
+  const row = el("button", { class: "case-row", onclick: () => selectIndex(i) },
+    chip, idSpan,
+    el("button", { class: "del", title: "Xoá case", onclick: (e) => { e.stopPropagation(); deleteCase(i); } }, "✕"),
+  );
+  row._chip = chip;
+  row._id = idSpan;
+  return row;
+}
+
+function renderCaseList(){
+  const box = document.getElementById("case-list-box");
+  if (!box) return;
+  if (!state.lines.length){
+    caseRows = { key: null, nodes: [] };
+    mount(box, el("div", { class: "case-list-empty" }, "Chưa có case nào — bấm “＋ Case mới”."));
+    applyCaseFilterChrome(0, []);
+    return;
+  }
+  // `onclick` của row đóng theo index, nên chỉ tái dùng được khi số dòng không đổi.
+  const key = state.kind + " " + state.path;
+  if (caseRows.key !== key || caseRows.nodes.length !== state.lines.length || box.firstChild !== caseRows.nodes[0]){
+    caseRows = { key, nodes: state.lines.map(buildCaseRow) };
+    mount(box, ...caseRows.nodes);
+  }
+  state.lines.forEach((line, i) => {
+    const row = caseRows.nodes[i];
+    const s = caseRowState(line);
+    row.classList.toggle("selected", i === state.selected);
+    if (row._chip.className !== s.chip) row._chip.className = s.chip;
+    if (row._chip.title !== s.title) row._chip.title = s.title;
+    if (row._id.textContent !== s.label) row._id.textContent = s.label;
+  });
+  // Lọc bằng `hidden` chứ KHÔNG dựng lại danh sách: onclick/deleteCase của row đóng
+  // theo index trong state.lines, nên mọi row phải GIỮ NGUYÊN index kể cả khi bị ẩn.
+  const tokens = queryTokens();
+  const vis = [];
+  state.lines.forEach((line, i) => {
+    const hit = caseMatches(line, tokens);
+    caseRows.nodes[i].hidden = !hit;
+    if (hit) vis.push(i);
+  });
+  applyCaseFilterChrome(state.lines.length, tokens.length ? vis : null);
+
+  // "nearest" = chỉ cuộn khi row nằm ngoài vùng nhìn thấy (điều hướng bằng j/k),
+  // bấm chuột vào row đang thấy thì đây là no-op. Row bị ẩn không có box → bỏ qua.
+  const sel = caseRows.nodes[state.selected];
+  if (sel && !sel.hidden) sel.scrollIntoView({ block: "nearest" });
+}
+
+// `vis` = null nghĩa là không lọc (ẩn hết chrome của bộ lọc đi).
+function applyCaseFilterChrome(total, vis){
+  const count = document.getElementById("case-count");
+  if (count) count.textContent = vis ? `${vis.length}/${total}` : "";
+  const clear = document.getElementById("case-search-clear");
+  if (clear) clear.hidden = !state.caseQuery;
+  const none = document.getElementById("case-nomatch");
+  if (none) none.hidden = !(vis && vis.length === 0);
+}
+
+/* ============================== render: main ============================== */
+function renderAll(){
+  renderSidebar();
+  renderMain();
+  renderMeta();
+}
+
+function renderMain(){
+  const box = document.getElementById("main");
+  if (!state.path){
+    mount(box, el("div", { class: "main-empty" }, "Chọn một file ở sidebar, hoặc tạo file mới."));
+    return;
+  }
+  const head = el("div", { class: "main-head" }, el("div", { id: "progress-line" }), el("div", { id: "main-banner" }));
+  const body = el("div", { id: "main-body" });
+  mount(box, head, body);
+  renderProgress();
+  renderMainBanner();
+  renderMainBody();
+}
+
+function renderProgress(){
+  const line = document.getElementById("progress-line");
+  if (!line) return;
+  const total = state.lines.length;
+  const ok = state.lines.filter(l => l.data != null && (state.kind === "cases" ? l.data.reviewed : l.data.status === "approved")).length;
+  const pct = total ? Math.round((100 * ok) / total) : 0;
+  mount(line, el("div", { class: "progress-line" },
+    el("b", null, state.path),
+    el("span", null, `· đã duyệt ${ok} / còn lại ${total - ok}`),
+    el("div", { class: "bar" }, el("i", { style: `width:${pct}%` })),
+  ));
+}
+
+function renderMainBanner(){
+  const box = document.getElementById("main-banner");
+  if (!box) return;
+  const parts = [];
+  if (state.draftBanner){
+    parts.push(el("div", { class: "banner info" },
+      el("span", null, "Tìm thấy bản nháp chưa lưu trong trình duyệt cho file này."),
+      el("div", { class: "actions" },
+        el("button", { onclick: restoreDraft }, "Khôi phục"),
+        el("button", { onclick: discardDraft }, "Bỏ"),
+      ),
+    ));
+  }
+  if (state.saveErr){
+    parts.push(el("div", { class: "banner err" },
+      el("pre", null, state.saveErr),
+      el("button", { class: "x", onclick: () => { state.saveErr = null; renderMainBanner(); } }, "✕"),
+    ));
+  }
+  mount(box, ...parts);
+}
+
+function restoreDraft(){
+  const draftData = state.draftBanner.draftData;
+  state.lines = draftData.map((d, i) => ({ n: i + 1, data: d, error: "" }));
+  state.selected = 0;
+  state.draftBanner = null;
+  markDirty();
+  renderAll();
+  toast("Đã khôi phục bản nháp");
+}
+function discardDraft(){
+  state.draftBanner = null;
+  clearDraft();
+  renderMainBanner();
+  toast("Đã bỏ bản nháp");
+}
+
+function renderMainBody(){
+  const box = document.getElementById("main-body");
+  if (!state.lines.length){
+    mount(box, el("div", { class: "main-empty" }, "File rỗng — bấm “＋ Case mới” ở sidebar để bắt đầu."));
+    return;
+  }
+  const line = state.lines[state.selected];
+  if (line && line.data == null){
+    mount(box, el("div", { class: "banner err", style: "margin:16px 20px;" },
+      el("pre", null, `Dòng ${line.n ?? "?"} hỏng — không phải JSON hợp lệ:\n${line.error || "(không rõ lỗi)"}\n\n`
+        + "Sửa trực tiếp trong file rồi mở lại, hoặc xoá dòng này."),
+      el("button", { class: "x", onclick: () => deleteCase(state.selected) }, "Xoá dòng này"),
+    ));
+    return;
+  }
+  if (state.kind === "cases") renderCaseEditor(box);
+  else renderGoldenEditor(box);
+}
+
+/* ---------- cases editor (chat view) ---------- */
+function renderCaseEditor(box){
+  const line = state.lines[state.selected];
+  const data = line.data;
+  if (!Array.isArray(data.turns)) data.turns = [];
+
+  const turnNodes = data.turns.map((turn, ti) => renderTurn(data, ti));
+  const addBtn = el("button", { class: "btn turn-add", onclick: () => {
+    data.turns.push({ user: "", expect: {} });
+    markDirty(); renderMainBody();
+  } }, "＋ Thêm lượt");
+
+  mount(box, ...turnNodes, addBtn);
+}
+
+function renderTurn(caseData, ti){
+  const turn = caseData.turns[ti];
+  if (turn.expect == null) turn.expect = {};
+
+  const userBubble = el("div", { class: "bubble-row" },
+    el("div", { class: "bubble" },
+      el("div", { class: "who" }, el("span", { class: "wave" }, el("i"), el("i"), el("i")), "Khách"),
+      el("textarea", { rows: 3, value: turn.user || "", oninput: (e) => { turn.user = e.target.value; markDirty(); } }),
+    ),
+  );
+
+  const golden = turn.golden;
+  const card = golden ? renderGoldenBlock(caseData, ti) : el("div", { class: "card no-golden" },
+    el("button", { class: "mini", onclick: () => { turn.golden = { answer: "", tools: [], banned_tools: [] }; markDirty(); renderMainBody(); } }, "＋ Thêm golden cho lượt này"),
+  );
+
+  const expectField = renderExpectField(turn);
+
+  const delBtn = el("button", { class: "turn-del", onclick: () => {
+    if (caseData.turns.length <= 1){ alert("Case cần ít nhất 1 lượt."); return; }
+    caseData.turns.splice(ti, 1); markDirty(); renderMainBody();
+  } }, "✕ Xoá lượt");
+
+  return el("div", { class: "turn" },
+    el("div", { class: "turn-top" }, el("span", { class: "turn-label" }, `Lượt ${ti + 1}`), delBtn),
+    userBubble,
+    card,
+    expectField,
+  );
+}
+
+/* ---------- expect builder ----------
+   Mỗi key của `expect` là MỘT dòng; key chỉ xuất hiện một lần nên dropdown "thêm
+   assertion" chỉ liệt kê key chưa dùng. Duyệt theo Object.keys (thứ tự trong file)
+   chứ không theo EXPECT_ORDER — render lại theo thứ tự khác sẽ đảo key lúc lưu và
+   đẻ ra diff giả trên mọi case đã duyệt. */
+function renderExpectField(turn){
+  const field = el("div", { class: "field" });
+  const raw = rawExpectTurns.has(turn);
+  const toggle = el("button", { class: "mini", title: "Dán/sửa nguyên khối JSON", onclick: () => {
+    if (raw) rawExpectTurns.delete(turn); else rawExpectTurns.add(turn);
+    renderMainBody();
+  } }, raw ? "▤ Dạng bảng" : "{ } JSON thô");
+  field.appendChild(el("div", { class: "expect-head" }, el("label", null, "expect"), toggle));
+
+  if (raw){
+    const ta = el("textarea", { class: "mono expect-json", rows: 6, value: JSON.stringify(turn.expect, null, 2) });
+    wireJsonField(ta, (v) => { turn.expect = v ?? {}; markDirty(); }, {});
+    field.appendChild(ta);
+    return field;
+  }
+
+  const keys = Object.keys(turn.expect);
+  if (!keys.length){
+    field.appendChild(el("div", { class: "expect-hint" },
+      "Chưa có assertion — lượt này không bị policy scorer chấm (chỉ golden mới chấm)."));
+  }
+  keys.forEach(key => field.appendChild(renderExpectRow(turn, key)));
+  field.appendChild(renderExpectAdd(turn));
+  return field;
+}
+
+function defaultExpectValue(key){
+  switch (EXPECT_SPECS[key].kind){
+    case "needles": return [""];
+    case "regex": return "";
+    case "customer": return [newCustomerFieldRow()];
+    default: return true;   // escalated: true là ca dùng thường gặp
+  }
+}
+
+function renderExpectAdd(turn){
+  const remaining = EXPECT_ORDER.filter(k => !(k in turn.expect));
+  if (!remaining.length) return el("div", { class: "expect-hint" }, "đã dùng hết assertion của schema v2");
+  const pick = el("select", { onchange: (e) => {
+    const k = e.target.value;
+    if (!k) return;
+    turn.expect[k] = defaultExpectValue(k);
+    markDirty(); renderMainBody();
+  } },
+    el("option", { value: "", selected: true }, "＋ thêm assertion…"),
+    ...remaining.map(k => el("option", { value: k, title: EXPECT_SPECS[k].hint },
+      `${k} — ${EXPECT_SPECS[k].label}`)),
+  );
+  return el("div", { class: "expect-add" }, pick);
+}
+
+function renderExpectRow(turn, key){
+  const spec = EXPECT_SPECS[key];
+  const head = el("div", { class: "expect-row-head" },
+    el("span", { class: "expect-key" }, key),
+    el("button", { class: "row-del", title: "Xoá assertion", onclick: () => {
+      delete turn.expect[key]; markDirty(); renderMainBody();
+    } }, "✕"),
+  );
+  if (!spec) return renderUnknownExpectRow(turn, key, head);
+  return el("div", { class: "expect-row" }, head,
+    el("div", { class: "expect-hint" }, `${spec.label}. ${spec.hint}`),
+    spec.kind === "needles" ? renderNeedleList(turn, key)
+      : spec.kind === "regex" ? renderRegexInput(turn, key)
+      : spec.kind === "customer" ? renderCustomerFieldTable(turn, key)
+      : renderEscalatedSelect(turn, key),
+  );
+}
+
+// Key lạ (case cũ, gõ nhầm): giữ nguyên giá trị dưới dạng JSON thô để save không
+// làm mất dữ liệu — server là chỗ từ chối, không phải UI.
+function renderUnknownExpectRow(turn, key, head){
+  const moved = EXPECT_MOVED[key];
+  const input = el("input", { type: "text", class: "mono", value: JSON.stringify(turn.expect[key]), oninput: (e) => {
+    try { turn.expect[key] = JSON.parse(e.target.value); e.target.classList.remove("invalid"); }
+    catch (err) { e.target.classList.add("invalid"); }
+    markDirty();
+  } });
+  return el("div", { class: "expect-row unknown" }, head,
+    el("div", { class: "expect-hint" }, moved
+      ? `Key này đã bỏ ở schema v2 — ${moved}. Server sẽ từ chối lưu (422).`
+      : "Key không thuộc vocabulary expect v2 — server sẽ từ chối lưu (422)."),
+    input);
+}
+
+function renderNeedleList(turn, key){
+  let arr = turn.expect[key];
+  if (!Array.isArray(arr)){ arr = (arr == null || arr === "") ? [""] : [String(arr)]; turn.expect[key] = arr; }
+  if (!arr.length) arr.push("");
+  const rows = arr.map((needle, i) => el("div", { class: "expect-needle" },
+    el("input", { type: "text", placeholder: "chuỗi cần tìm trong reply", value: String(needle ?? ""),
+      oninput: (e) => { arr[i] = e.target.value; markDirty(); } }),
+    el("button", { class: "row-del", title: "Xoá dòng", onclick: () => {
+      arr.splice(i, 1); markDirty(); renderMainBody();
+    } }, "✕"),
+  ));
+  return el("div", null, ...rows,
+    el("button", { class: "mini", onclick: () => { arr.push(""); markDirty(); renderMainBody(); } }, "＋ thêm chuỗi"));
+}
+
+function renderRegexInput(turn, key){
+  return el("input", { type: "text", class: "mono", placeholder: "regex Python (re.search)",
+    value: String(turn.expect[key] ?? ""),
+    oninput: (e) => { turn.expect[key] = e.target.value; markDirty(); } });
+}
+
+function renderEscalatedSelect(turn, key){
+  return el("select", { class: "expect-bool", onchange: (e) => {
+    turn.expect[key] = e.target.value === "true"; markDirty();
+  } },
+    el("option", { value: "true", selected: turn.expect[key] !== false || null }, "true — phải escalate"),
+    el("option", { value: "false", selected: turn.expect[key] === false || null }, "false — cấm escalate"),
+  );
+}
+
+function newCustomerFieldRow(){
+  return { field: customerFieldNames()[0] || "name", contains: "" };
+}
+
+function defaultCustomerValue(spec){
+  if (!spec) return "";
+  if (spec.enum) return spec.enum[0];
+  if (spec.type === "boolean") return true;
+  return "";
+}
+
+function renderCustomerFieldTable(turn, key){
+  let rows = turn.expect[key];
+  if (!Array.isArray(rows)){ rows = (rows && typeof rows === "object") ? [rows] : []; turn.expect[key] = rows; }
+  if (!rows.length) rows.push(newCustomerFieldRow());
+  const table = el("table", { class: "tools-table" },
+    el("thead", null, el("tr", null, el("th", null, "field"), el("th", null, "kiểu"), el("th", null, "giá trị"), el("th"))),
+    el("tbody", null, ...rows.map((_, i) => renderCustomerFieldRow(rows, i))),
+  );
+  return el("div", null, table,
+    el("button", { class: "mini", onclick: () => { rows.push(newCustomerFieldRow()); markDirty(); renderMainBody(); } }, "＋ thêm field"));
+}
+
+function renderCustomerFieldRow(rows, i){
+  const row = rows[i];
+  const cSpec = CUSTOMER_FIELDS[row.field] || null;
+  const kind = "equals" in row ? "equals" : "contains";
+
+  let nameControl;
+  if (customerFieldNames().length){
+    nameControl = el("select", { class: cSpec ? null : "invalid", onchange: (e) => {
+      row.field = e.target.value;
+      // Đổi sang field bool/enum thì `contains` vô nghĩa (so substring trên str(actual)).
+      const s = CUSTOMER_FIELDS[row.field];
+      if (s && (s.enum || s.type !== "string")){ delete row.contains; row.equals = defaultCustomerValue(s); }
+      markDirty(); renderMainBody();
+    } },
+      ...customerFieldNames().map(n => el("option", { value: n, selected: n === row.field || null },
+        `${n} · ${CUSTOMER_FIELDS[n].enum ? CUSTOMER_FIELDS[n].enum.join("|") : CUSTOMER_FIELDS[n].type}`)),
+      cSpec ? null : el("option", { value: row.field || "", selected: true },
+        `${row.field || "(trống)"} — không có trong Customer`),
+    );
+  } else {
+    nameControl = el("input", { type: "text", class: "mono", value: row.field || "",
+      oninput: (e) => { row.field = e.target.value; markDirty(); } });
+  }
+
+  const kindSelect = el("select", { onchange: (e) => {
+    const k = e.target.value;
+    delete row.contains; delete row.equals;
+    if (k === "contains") row.contains = ""; else row.equals = defaultCustomerValue(cSpec);
+    markDirty(); renderMainBody();
+  } }, ...MATCHERS.map(m => el("option", { value: m, selected: m === kind || null,
+    title: m === "contains" && cSpec && cSpec.type !== "string" ? `field kiểu ${cSpec.type} — nên dùng equals` : null,
+  }, m)));
+
+  let valueControl;
+  if (kind === "equals" && cSpec && cSpec.enum){
+    const cur = row.equals;
+    const outside = cur != null && cur !== "" && !cSpec.enum.includes(String(cur));
+    valueControl = el("select", { class: outside ? "invalid" : null, onchange: (e) => {
+      row.equals = e.target.value; markDirty(); renderMainBody();
+    } },
+      ...cSpec.enum.map(v => el("option", { value: v, selected: String(cur) === v || null }, v)),
+      outside ? el("option", { value: String(cur), selected: true }, `${cur} — ngoài enum`) : null,
+    );
+  } else if (kind === "equals" && cSpec && cSpec.type === "boolean"){
+    valueControl = el("select", { onchange: (e) => { row.equals = e.target.value === "true"; markDirty(); } },
+      ...["true", "false"].map(v => el("option", { value: v, selected: String(row.equals) === v || null }, v)));
+  } else {
+    const cur = kind === "contains" ? (row.contains ?? "") : (row.equals ?? "");
+    valueControl = el("input", { type: "text", class: "mono", value: String(cur), oninput: (e) => {
+      // Giữ nguyên chuỗi: scorer so `actual == want || str(actual) == str(want)`
+      // nên không cần (và không nên) đoán kiểu bằng JSON.parse ở đây.
+      if (kind === "contains") row.contains = e.target.value; else row.equals = e.target.value;
+      markDirty();
+    } });
+  }
+
+  return el("tr", null,
+    el("td", null, nameControl),
+    el("td", null, kindSelect),
+    el("td", null, valueControl),
+    el("td", null, el("button", { class: "row-del", title: "Xoá field", onclick: () => {
+      rows.splice(i, 1); markDirty(); renderMainBody();
+    } }, "✕")),
+  );
+}
+
+function renderGoldenBlock(caseData, ti){
+  const turn = caseData.turns[ti];
+  const g = turn.golden;
+  if (!Array.isArray(g.tools)) g.tools = [];
+  if (!Array.isArray(g.banned_tools)) g.banned_tools = [];
+
+  const answerField = el("div", { class: "field" },
+    el("label", null, "Golden answer"),
+    el("textarea", { rows: 2, value: g.answer || "", oninput: (e) => { g.answer = e.target.value; markDirty(); } }),
+  );
+
+  const toolBlocks = g.tools.map((tool, toi) => renderToolBlock(g, toi));
+  const toolsField = el("div", { class: "field" },
+    el("label", null, "Tools"),
+    ...toolBlocks,
+    el("button", { class: "mini", onclick: () => { g.tools.push({ name: "", args: {} }); markDirty(); renderMainBody(); } }, "＋ Thêm tool"),
+  );
+
+  const bannedField = el("div", { class: "field" }, el("label", null, "Banned tools"));
+  const chipsBox = el("div", { class: "chips-input" });
+  bannedField.appendChild(chipsBox);
+  renderBannedChips(chipsBox, g);
+
+  const removeGolden = el("button", { class: "mini", onclick: () => {
+    if (!confirm("Xoá toàn bộ golden của lượt này?")) return;
+    turn.golden = null; markDirty(); renderMainBody();
+  } }, "Xoá golden");
+
+  // Thứ tự hiển thị theo dòng chảy một lượt thật: tool call chạy TRƯỚC, answer chốt SAU.
+  return el("div", { class: "card" }, toolsField, bannedField, answerField, removeGolden);
+}
+
+// Matcher mặc định khi thêm arg: arg không phải string (number/integer/boolean)
+// hoặc có enum thì `contains` vô nghĩa — scorer so substring trên str(actual).
+function defaultMatcher(spec){
+  if (!spec) return { contains: "" };
+  if (spec.enum) return { equals: spec.enum[0] };
+  if (spec.type === "boolean") return { equals: true };
+  if (spec.type === "integer" || spec.type === "number") return { equals: 0 };
+  return { contains: "" };
+}
+
+function argOptionLabel(arg, spec){
+  if (!spec) return `${arg} — không có trong schema`;
+  return `${arg}${spec.required ? " *" : ""} · ${spec.type}`;
+}
+
+function renderToolBlock(golden, toi){
+  const tool = golden.tools[toi];
+  if (!tool.args || typeof tool.args !== "object") tool.args = {};
+  const argEntries = Object.keys(tool.args);
+  const known = toolNames().length > 0;
+  const spec = TOOLS[tool.name] || null;
+
+  const table = el("table", { class: "tools-table" },
+    el("thead", null, el("tr", null, el("th", null, "arg"), el("th", null, "kiểu"), el("th", null, "giá trị"), el("th"))),
+    el("tbody", { id: uid("argbody") }),
+  );
+  const tbody = table.querySelector("tbody");
+  argEntries.forEach(argName => tbody.appendChild(renderArgRow(tool, argName)));
+
+  // ── chọn tool ──────────────────────────────────────────────────────────────
+  let nameControl;
+  if (known){
+    const unknownName = tool.name && !TOOLS[tool.name];
+    nameControl = el("select", {
+      class: "tool-name-select" + (unknownName ? " invalid" : ""),
+      onchange: (e) => { tool.name = e.target.value; markDirty(); renderMainBody(); },
+    },
+      el("option", { value: "", selected: !tool.name || null }, "— chọn tool —"),
+      ...toolNames().map(n => el("option", {
+        value: n, selected: n === tool.name || null, title: TOOLS[n].description,
+      }, TOOLS[n].core ? `${n} · core` : n)),
+      unknownName ? el("option", { value: tool.name, selected: true }, `${tool.name} — không có trong schemas.py`) : null,
+    );
+  } else {
+    nameControl = el("input", { type: "text", placeholder: "tool name", value: tool.name || "",
+      oninput: (e) => { tool.name = e.target.value; markDirty(); } });
+  }
+
+  // ── thêm arg: chỉ liệt kê arg CỦA TOOL ĐANG CHỌN và chưa dùng ─────────────
+  let addRow;
+  if (spec){
+    const remaining = Object.keys(spec.args).filter(a => !(a in tool.args));
+    if (remaining.length){
+      const pick = el("select", { onchange: (e) => {
+        const a = e.target.value;
+        if (!a) return;
+        tool.args[a] = defaultMatcher(spec.args[a]);
+        markDirty(); renderMainBody();
+      } },
+        el("option", { value: "", selected: true }, "＋ thêm arg…"),
+        ...remaining.map(a => el("option", { value: a, title: spec.args[a].description }, argOptionLabel(a, spec.args[a]))),
+      );
+      addRow = el("div", { class: "tool-add-arg" }, pick);
+    } else {
+      addRow = el("div", { class: "tool-hint" }, "đã dùng hết arg của tool này");
+    }
+  } else {
+    const addArgName = el("input", { type: "text", placeholder: "tên arg" });
+    const addArgBtn = el("button", { class: "mini", onclick: () => {
+      const name = addArgName.value.trim();
+      if (!name) return;
+      tool.args[name] = { contains: "" };
+      markDirty(); renderMainBody();
+    } }, "＋ arg");
+    addRow = el("div", { class: "tool-add-arg" }, addArgName, addArgBtn);
+  }
+
+  return el("div", { class: "tool-block" },
+    el("div", { class: "tool-block-head" },
+      nameControl,
+      el("button", { class: "row-del", title: "Xoá tool", onclick: () => { golden.tools.splice(toi, 1); markDirty(); renderMainBody(); } }, "✕"),
+    ),
+    spec ? el("div", { class: "tool-hint" }, spec.description) : null,
+    argEntries.length ? table : null,
+    addRow,
+  );
+}
+
+function renderArgRow(tool, argName){
+  const matcher = tool.args[argName] || { contains: "" };
+  const kind = "contains" in matcher ? "contains" : "equals";
+  const rawValue = kind === "contains" ? (matcher.contains ?? "") : JSON.stringify(matcher.equals ?? "");
+  const tSpec = TOOLS[tool.name] || null;
+  const aSpec = argSpec(tool.name, argName);
+
+  const kindSelect = el("select", { onchange: (e) => {
+    const k = e.target.value;
+    tool.args[argName] = k === "contains" ? { contains: "" } : { equals: aSpec ? (defaultMatcher(aSpec).equals ?? "") : "" };
+    markDirty(); renderMainBody();
+  } }, ...MATCHERS.map(m => el("option", {
+    value: m, selected: m === kind || null,
+    // `contains` so substring trên str(actual) — với số/bool/enum thì `equals` mới đúng.
+    title: m === "contains" && aSpec && aSpec.type !== "string" ? `arg kiểu ${aSpec.type} — nên dùng equals` : null,
+  }, m)));
+
+  // Arg có enum → giá trị cũng là dropdown, khỏi gõ sai giá trị ngoài enum.
+  let valueControl;
+  if (kind === "equals" && aSpec && aSpec.enum){
+    const cur = matcher.equals;
+    const outside = cur != null && cur !== "" && !aSpec.enum.includes(cur);
+    valueControl = el("select", { class: outside ? "invalid" : null, onchange: (e) => {
+      matcher.equals = e.target.value; markDirty(); renderMainBody();
+    } },
+      el("option", { value: "", selected: cur === "" || cur == null || null }, "— chọn —"),
+      ...aSpec.enum.map(v => el("option", { value: v, selected: v === cur || null }, v)),
+      outside ? el("option", { value: String(cur), selected: true }, `${cur} — ngoài enum`) : null,
+    );
+  } else if (kind === "equals" && aSpec && aSpec.type === "boolean"){
+    valueControl = el("select", { onchange: (e) => { matcher.equals = e.target.value === "true"; markDirty(); } },
+      ...["true", "false"].map(v => el("option", { value: v, selected: String(matcher.equals) === v || null }, v)));
+  } else {
+    valueControl = el("input", { type: "text", class: "mono", value: rawValue, oninput: (e) => {
+      if (kind === "contains") matcher.contains = e.target.value;
+      else { try { matcher.equals = JSON.parse(e.target.value); } catch (err) { matcher.equals = e.target.value; } }
+      markDirty();
+    } });
+  }
+
+  // Đổi tên arg: dropdown theo tool đang chọn (giữ nguyên matcher), khỏi gõ sai tên.
+  let nameControl;
+  if (tSpec){
+    const used = new Set(Object.keys(tool.args));
+    const options = Object.keys(tSpec.args).filter(a => a === argName || !used.has(a));
+    nameControl = el("select", { class: aSpec ? null : "invalid", onchange: (e) => {
+      const newName = e.target.value;
+      if (newName === argName) return;
+      const v = tool.args[argName];
+      delete tool.args[argName];
+      tool.args[newName] = argSpec(tool.name, newName) ? v : v;
+      markDirty(); renderMainBody();
+    } },
+      ...options.map(a => el("option", { value: a, selected: a === argName || null, title: tSpec.args[a].description },
+        argOptionLabel(a, tSpec.args[a]))),
+      aSpec ? null : el("option", { value: argName, selected: true }, `${argName} — không thuộc tool này`),
+    );
+  } else {
+    nameControl = el("input", { type: "text", class: "mono", value: argName, oninput: (e) => {
+      const newName = e.target.value;
+      if (newName === argName) return;
+      const v = tool.args[argName];
+      delete tool.args[argName];
+      tool.args[newName] = v;
+      markDirty();
+    } });
+  }
+
+  return el("tr", { title: aSpec ? aSpec.description : null },
+    el("td", null, nameControl),
+    el("td", null, kindSelect),
+    el("td", null, valueControl),
+    el("td", null, el("button", { class: "row-del", onclick: () => { delete tool.args[argName]; markDirty(); renderMainBody(); } }, "✕")),
+  );
+}
+
+function renderBannedChips(box, golden){
+  const tags = golden.banned_tools.map((name, i) => el("span", { class: "tag" + (toolNames().length && !TOOLS[name] ? " invalid" : "") }, name,
+    el("button", { onclick: () => { golden.banned_tools.splice(i, 1); markDirty(); renderMainBody(); } }, "✕"),
+  ));
+  let input;
+  if (toolNames().length){
+    const remaining = toolNames().filter(n => !golden.banned_tools.includes(n));
+    input = remaining.length ? el("select", { onchange: (e) => {
+      if (!e.target.value) return;
+      golden.banned_tools.push(e.target.value);
+      markDirty(); renderMainBody();
+    } },
+      el("option", { value: "", selected: true }, "＋ cấm tool…"),
+      ...remaining.map(n => el("option", { value: n, title: TOOLS[n].description }, n)),
+    ) : el("span", { class: "tool-hint" }, "đã cấm hết tool");
+  } else {
+    input = el("input", { type: "text", placeholder: "tên tool + Enter", onkeydown: (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      const v = e.target.value.trim();
+      if (!v) return;
+      golden.banned_tools.push(v);
+      e.target.value = "";
+      markDirty(); renderMainBody();
+    } });
+  }
+  mount(box, ...tags, input);
+}
+
+/* ---------- JSON field wiring (customer / expect) ---------- */
+function wireJsonField(textarea, onValid, fallbackWhenEmpty){
+  textarea.addEventListener("blur", () => {
+    const raw = textarea.value.trim();
+    textarea.classList.remove("invalid");
+    const hint = textarea.parentElement.querySelector(".hint-err");
+    if (hint) hint.remove();
+    if (raw === ""){ onValid(clone(fallbackWhenEmpty)); return; }
+    try {
+      const parsed = JSON.parse(raw);
+      onValid(parsed);
+    } catch (e){
+      textarea.classList.add("invalid");
+      textarea.parentElement.appendChild(el("div", { class: "hint-err" }, "JSON không hợp lệ: " + e.message));
+    }
+  });
+}
+
+/* ---------- golden mode editor ---------- */
+function renderGoldenEditor(box){
+  const line = state.lines[state.selected];
+  const data = line.data;
+  if (!Array.isArray(data.golden_chunks)) data.golden_chunks = [];
+
+  const queryField = el("div", { class: "field" },
+    el("label", null, "Query"),
+    el("input", { type: "text", value: data.query || "", oninput: (e) => { data.query = e.target.value; markDirty(); } }),
+  );
+  const answerField = el("div", { class: "field" },
+    el("label", null, "Answer"),
+    el("textarea", { rows: 3, value: data.answer || "", oninput: (e) => { data.answer = e.target.value; markDirty(); } }),
+  );
+  const chunkBlocks = data.golden_chunks.map((chunk, ci) => renderChunkBlock(data, ci));
+  const chunksField = el("div", { class: "field" },
+    el("label", null, "Golden chunks"),
+    ...chunkBlocks,
+    el("button", { class: "mini", onclick: () => { data.golden_chunks.push({ chunk_id: "", evidence: "" }); markDirty(); renderMainBody(); } }, "＋ Thêm chunk"),
+  );
+  const projectField = el("div", { class: "field" },
+    el("label", null, "Project code"),
+    el("input", { type: "text", value: data.project_code || "", oninput: (e) => { data.project_code = e.target.value; markDirty(); } }),
+  );
+
+  mount(box, el("div", { class: "golden-form" }, queryField, answerField, chunksField, projectField));
+}
+
+function renderChunkBlock(data, ci){
+  const chunk = data.golden_chunks[ci];
+  return el("div", { class: "chunk-block" },
+    el("div", { class: "chunk-head" },
+      el("span", { class: "idx" }, `#${ci + 1}`),
+      el("button", { class: "row-del del", onclick: () => { data.golden_chunks.splice(ci, 1); markDirty(); renderMainBody(); } }, "✕"),
+    ),
+    el("div", { class: "field" }, el("label", null, "chunk_id"),
+      el("input", { type: "text", class: "mono", value: chunk.chunk_id || "", oninput: (e) => { chunk.chunk_id = e.target.value; markDirty(); } })),
+    el("div", { class: "field" }, el("label", null, "evidence"),
+      el("textarea", { rows: 2, value: chunk.evidence || "", oninput: (e) => { chunk.evidence = e.target.value; markDirty(); } })),
+  );
+}
+
+/* ============================== render: meta panel ============================== */
+function renderMeta(){
+  const box = document.getElementById("meta");
+  if (!state.path || !state.lines.length){
+    mount(box, el("div", { class: "meta-empty" }, "Chưa có case nào được chọn."));
+    return;
+  }
+  const line = state.lines[state.selected];
+  if (line.data == null){
+    mount(box, el("div", { class: "meta-empty" }, "Dòng hỏng — không có meta để sửa."));
+    return;
+  }
+  const data = line.data;
+  if (state.kind === "cases") renderCaseMeta(box, data);
+  else renderGoldenMeta(box, data);
+}
+
+function renderCaseMeta(box, data){
+  if (!Array.isArray(data.tags)) data.tags = [];
+
+  const idField = el("div", { class: "meta-block field" },
+    el("label", null, "id"),
+    el("input", { type: "text", class: "mono", value: data.id || "", oninput: (e) => { data.id = e.target.value; markDirty(); renderCaseList(); } }),
+  );
+
+  const tagsField = el("div", { class: "meta-block field" },
+    el("label", null, "tags"),
+    el("div", { class: "checkbox-row" }, ...TAGS.map(tag => {
+      const checked = data.tags.includes(tag);
+      const cb = el("input", { type: "checkbox", checked, onchange: (e) => {
+        if (e.target.checked){ if (!data.tags.includes(tag)) data.tags.push(tag); }
+        else data.tags = data.tags.filter(t => t !== tag);
+        markDirty();
+      } });
+      return el("label", null, cb, tag);
+    })),
+  );
+
+  const channelField = el("div", { class: "meta-block field" },
+    el("label", null, "channel"),
+    el("select", { onchange: (e) => { data.channel = e.target.value; markDirty(); } },
+      ...CHANNELS.map(c => el("option", { value: c, selected: c === (data.channel || "chat") || null }, c))),
+  );
+
+  const originField = el("div", { class: "meta-block field" },
+    el("label", null, "origin"),
+    el("select", { onchange: (e) => { data.origin = e.target.value; markDirty(); } },
+      ...ORIGINS.map(o => el("option", { value: o, selected: o === data.origin || null }, o))),
+  );
+
+  const customerTextarea = el("textarea", { class: "mono", rows: 4, value: data.customer ? JSON.stringify(data.customer, null, 2) : "" });
+  wireJsonField(customerTextarea, (v) => { data.customer = (v && Object.keys(v).length) ? v : null; markDirty(); }, null);
+  const customerField = el("div", { class: "meta-block field" }, el("label", null, "customer (JSON)"), customerTextarea);
+
+  const reviewedField = el("div", { class: "meta-block" },
+    el("div", { class: "toggle-row" },
+      el("label", null, "reviewed"),
+      el("label", { class: "switch" },
+        el("input", { type: "checkbox", checked: !!data.reviewed, onchange: (e) => { data.reviewed = e.target.checked; markDirty(); renderCaseList(); renderProgress(); } }),
+        el("span", { class: "track" }),
+      ),
+    ),
+  );
+
+  mount(box, el("div", { class: "eyebrow" }, "Meta"), idField, tagsField, channelField, originField, customerField, reviewedField);
+}
+
+function renderGoldenMeta(box, data){
+  const idField = el("div", { class: "meta-block field" },
+    el("label", null, "id"),
+    el("input", { type: "text", class: "mono", value: data.id || "", oninput: (e) => { data.id = e.target.value; markDirty(); renderCaseList(); } }),
+  );
+  const tenantField = el("div", { class: "meta-block field" },
+    el("label", null, "tenant"),
+    el("input", { type: "text", class: "mono", value: data.tenant || "", disabled: true }),
+  );
+  const statusField = el("div", { class: "meta-block" },
+    el("div", { class: "toggle-row" },
+      el("label", null, "status: " + (data.status || "draft")),
+      el("label", { class: "switch" },
+        el("input", { type: "checkbox", checked: data.status === "approved", onchange: (e) => { data.status = e.target.checked ? "approved" : "draft"; markDirty(); renderCaseList(); renderProgress(); renderGoldenMeta(box, data); } }),
+        el("span", { class: "track" }),
+      ),
+    ),
+  );
+  mount(box, el("div", { class: "eyebrow" }, "Meta"), idField, tenantField, statusField);
+}
+
+/* ============================== header wiring ============================== */
+function setMode(kind){
+  state.kind = kind;
+  state.path = null;
+  state.folder = null;
+  state.lines = [];
+  state.selected = 0;
+  state.saveErr = null;
+  state.draftBanner = null;
+  clearDirty();
+  document.getElementById("mode-cases").classList.toggle("active", kind === "cases");
+  document.getElementById("mode-golden").classList.toggle("active", kind === "golden");
+  renderAll();
+}
+
+document.getElementById("mode-cases").addEventListener("click", () => setMode("cases"));
+document.getElementById("mode-golden").addEventListener("click", () => setMode("golden"));
+document.getElementById("btn-save").addEventListener("click", saveFile);
+document.getElementById("btn-new").addEventListener("click", async () => {
+  // File mới sinh ra TRONG folder đang chọn (click tên folder ở sidebar để chọn).
+  const folder = state.folder || currentTenant();
+  if (!folder){ toast("Chọn một folder ở sidebar trước (hoặc tạo bằng ＋ Folder mới).", true); return; }
+  const file = prompt(`Tên file mới trong "${folder}"?`, "");
+  if (!file) return;
+  const fname = file.endsWith(".jsonl") ? file : file + ".jsonl";
+  const path = `${folder}/${fname}`;
+  const res = await api.newFile(state.kind, path);
+  if (!res.ok){ toast("Không tạo được file: " + (res.body.error || res.status), true); return; }
+  toast("Đã tạo file mới");
+  await loadTree();
+  await openFile(state.kind, path);
+});
+
+document.getElementById("btn-newdir").addEventListener("click", async () => {
+  const name = prompt("Tên folder mới (trong " + (state.kind === "cases" ? "cases/" : "golden/") + ")?", "");
+  if (!name) return;
+  const res = await api.newDir(state.kind, name.trim());
+  if (!res.ok){ toast("Không tạo được folder: " + (res.body.error || res.status), true); return; }
+  state.folder = name.trim();
+  toast("Đã tạo folder — giờ bấm ＋ File mới để thêm file vào đó");
+  await loadTree();
+  renderAll();
+});
+
+/* ============================== keyboard shortcuts ============================== */
+function isTypingTarget(t){
+  if (!t) return false;
+  const tag = t.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t.isContentEditable;
+}
+document.addEventListener("keydown", (e) => {
+  const ctrlS = (e.key === "s" || e.key === "S") && (e.ctrlKey || e.metaKey);
+  if (ctrlS){ e.preventDefault(); saveFile(); return; }
+  if (isTypingTarget(e.target)) return;
+  if (e.key === "j"){ e.preventDefault(); moveSelection(1); }
+  else if (e.key === "k"){ e.preventDefault(); moveSelection(-1); }
+  else if (e.key === "a"){ e.preventDefault(); toggleReviewedApproved(); }
+  else if (e.key === "/"){
+    e.preventDefault();   // chặn quick-find của Firefox
+    const s = document.getElementById("case-search-input");
+    if (s){ s.focus(); s.select(); }
+  }
+});
+window.addEventListener("beforeunload", (e) => { if (state.dirty){ e.preventDefault(); e.returnValue = ""; } });
+
+/* ============================== init ============================== */
+(async function init(){
+  document.getElementById("mode-cases").classList.add("active");
+  TOOLS = await api.tools();          // trước loadTree: sidebar/main render sau đó đã có catalog
+  CUSTOMER_FIELDS = await api.customerFields();
+  await loadTree();
+  // Mở link là thấy ngay case để review: tự mở file agent-case đầu tiên.
+  const first = (state.tree.cases || [])[0];
+  if (first){ await openFile("cases", first.path); return; }
+  renderAll();
+})();
+</script>

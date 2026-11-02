@@ -1,0 +1,48 @@
+name: full_funnel_dautu
+description: >-
+  Nhà đầu tư — full funnel: khai thác nhu cầu → gợi ý dự án khu Long Biên → chi tiết
+  dự án → chính sách thanh toán/vay → hỏi giá căn cụ thể (private) phải defer → chốt
+  happy case đặt lịch tham quan. Kiểm tra Luna dẫn dắt + không tự phun giá căn cụ thể.
+
+turns:
+  - user: "Alo em, anh đang muốn tìm căn hộ để đầu tư ấy"
+    expect:
+      # Luna engage như tư vấn viên — hoặc khai thác nhu cầu (ngân sách/khu/mục đích),
+      # hoặc chào + xin tên/hỏi thêm. Không trả lời cụt/lạc đề.
+      reply_contains_any:
+        ["ngân sách", "khu vực", "dự án", "đầu tư", "phòng ngủ", "Luna", "tên", "hỗ trợ", "giúp", "quan tâm"]
+
+  - user: "Ngân sách anh tầm 5 tỷ, thích khu Long Biên, căn 2 phòng ngủ"
+    expect:
+      reply_contains_any: ["Long Biên", "2 phòng ngủ", "2PN", "5 tỷ", "phù hợp"]
+
+  - user: "Thế bên em có dự án nào hợp với anh không?"
+    expect:
+      # Gợi ý dự án khu Long Biên (Noble Crystal / Palace Long Biên, Sunshine Green Iconic).
+      reply_contains_any: ["Long Biên", "Noble", "Sunshine"]
+
+  - user: "Kể anh nghe về Noble Crystal Long Biên đi"
+    expect:
+      reply_contains_any: ["Long Biên", "Noble Crystal"]
+
+  - user: "Chính sách thanh toán với vay ngân hàng bên này thế nào em?"
+    expect:
+      reply_contains_any: ["thanh toán", "vay", "ngân hàng", "chính sách", "ưu đãi"]
+
+  - user: "Giá chính xác một căn 2PN tầng cao là bao nhiêu?"
+    expect:
+      # Giá căn cụ thể = private → phải defer (mời CVTV / để lại SĐT), KHÔNG tự chốt con số.
+      # [strict/flaky] lý tưởng còn kèm escalate department=CVTV; assert stable defer-language.
+      reply_contains_any: ["chuyên viên", "để lại số", "liên hệ", "báo giá", "cụ thể hơn"]
+
+  - user: "Ừ thế cuối tuần này anh qua xem thử được không?"
+    expect:
+      # Khách sẵn sàng xem → Luna phải chuyển sang luồng đặt lịch tham quan.
+      reply_contains_any: ["đặt lịch", "tham quan", "cuối tuần", "thứ", "mấy giờ", "sắp xếp"]
+
+  - user: "Sáng thứ Bảy nhé, số anh 0987654321"
+    expect:
+      # [strict/flaky] đủ ngày + SĐT → nên gọi booking (update_info/schedule) để chốt lịch.
+      tool_called: booking
+      # Xác nhận lại lịch/liên hệ (tín hiệu ổn định).
+      reply_contains_any: ["thứ Bảy", "sáng", "xác nhận", "lịch", "sắp xếp"]

@@ -1,0 +1,42 @@
+{
+  "case_id": "S-4",
+  "title": "Khách chê giá cao",
+  "setup": "Anh Đức, 35 tuổi, đang xem căn 2PN dự án Vinhomes Green Paradise Cần Giờ giá 4,5 tỷ. Đã tự tìm hiểu và biết dự án X bên cạnh giá 4 tỷ. DISC type: C (cẩn trọng, so sánh logic, cần số liệu cụ thể). Sale cần xử lý từ chối giá bằng so sánh khách quan có dữ liệu và chia nhỏ giá.",
+  "turns": [
+    {
+      "speaker": "KH",
+      "text": "Sao giá cao quá vậy em? 4,5 tỷ căn 2PN này đắt!"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: đồng cảm trước — cân nhắc giá là đúng đắn; hỏi HEAR-D step A: 'cao so với dự án nào' để có cơ sở so sánh"
+    },
+    {
+      "speaker": "KH",
+      "text": "Dự án X bên cạnh chỉ 4 tỷ."
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: so sánh có data (không nói xấu đối thủ): X chưa nội thất vs full Marriott, mật độ 45% vs 28%, vận hành tự làm vs CBRE; tính X cộng nội thất = 4,7 tỷ; chia nhỏ giá: 4,5 tỷ / 50 năm = 7,5 triệu/tháng bằng tiền thuê 1PN Q.7; CTA trial close book xem nhà mẫu"
+    }
+  ],
+  "rubric_checkpoints": [
+    [
+      "M4 acknowledge giá là quan tâm hợp lý — KHÔNG biện minh ngay",
+      "đồng cảm + ghi nhận concern (HEAR-D step E)",
+      "M2 hỏi 'cao so với dự án nào' để có cơ sở so sánh — không phòng thủ"
+    ],
+    [
+      "M3 so sánh có data: nội thất Marriott vs chưa có nội thất",
+      "mật độ xây dựng 28% vs 45%",
+      "đơn vị vận hành CBRE vs tự vận hành",
+      "tránh nói xấu đối thủ — chỉ đưa sự kiện khách quan",
+      "chia nhỏ giá theo thời gian: 4,5 tỷ / 50 năm = 7,5 triệu/tháng → anchoring so sánh thuê nhà",
+      "M5 trial close: book lịch xem nhà mẫu hoặc CTA cụ thể"
+    ]
+  ],
+  "judge_extras": "Sales rubric P3 — tập trung M3 (data) + M4 (acknowledge trước khi reframe). Phạt tranh luận/chê đối thủ trực tiếp. Phạt nếu thiếu phép chia nhỏ giá hoặc thiếu CTA.",
+  "max_extra_turns": 1,
+  "points": 20.0,
+  "delivery_mode": "scripted_multiturn"
+}

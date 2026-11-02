@@ -1,0 +1,31 @@
+name: dat_lich_lien_he
+description: >-
+  Happy case đầy đủ — đặt lịch tham quan: khách chốt xem → Luna hỏi ngày/giờ →
+  khách cấp tên + SĐT + thời gian → Luna chốt lịch (booking) và xác nhận lại.
+  Kiểm tra luồng đặt lịch chạy được và thu thập liên hệ.
+
+turns:
+  - user: "Chào em, anh quan tâm dự án Sunshine Green Iconic bên Long Biên"
+    expect:
+      reply_contains_any: ["Sunshine Green", "Long Biên", "Green Iconic"]
+
+  - user: "Anh muốn qua xem nhà mẫu trực tiếp"
+    expect:
+      # Chuyển sang luồng đặt lịch → hỏi ngày/giờ/liên hệ.
+      reply_contains_any: ["ngày", "thứ", "mấy giờ", "sắp xếp", "lịch", "khi nào"]
+
+  - user: "Chiều Chủ Nhật tuần này được không em?"
+    expect:
+      # [strict/flaky] check_availability/update_info cho slot.
+      reply_contains_any: ["Chủ Nhật", "chiều", "được", "slot", "khung giờ", "sắp xếp"]
+
+  - user: "Tên anh là Tuấn, số 0968123456, 3 giờ chiều nhé"
+    expect:
+      # [strict/flaky] đủ tên + SĐT + giờ → booking (update_info/schedule) + lưu liên hệ.
+      tool_called: booking
+      reply_contains_any: ["Tuấn", "xác nhận", "3 giờ", "Chủ Nhật", "lịch"]
+
+  - user: "Ừ chốt vậy đi em, cảm ơn nhé"
+    expect:
+      # [strict/flaky] xác nhận cuối → booking action=schedule (confirmed).
+      reply_contains_any: ["xác nhận", "hẹn gặp", "lịch", "cảm ơn", "chốt"]
