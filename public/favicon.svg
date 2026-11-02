@@ -1,0 +1,25 @@
+<!--
+  NX Agent — dấu thương hiệu, bản THU GỌN (không có dòng AGENT).
+
+  Đây là tệp TĨNH, nằm ngoài đường ống Tailwind, nên mã màu #0d7a5f buộc phải viết
+  thẳng ở đây. Nó là token `color-ac` của `src/styles/theme.css` — đổi accent thì
+  sửa cả hai chỗ.
+
+  (XML KHÔNG cho hai dấu gạch liền nhau trong chú thích, nên tên token viết trần,
+  không mang tiền tố hai gạch như trong CSS. Viết đủ là tệp không parse được.)
+
+  Chữ AGENT KHÔNG có mặt: ở 16px nó là một vệt mờ. Bản có AGENT nằm ở
+  `logo-nx-agent.svg`, dùng từ 64px trở lên.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#0d7a5f" />
+  <g transform="translate(9 17) scale(0.72)">
+    <g fill="#fff">
+      <path d="M0 0h10l24 40H24zM0 0h9v40H0zM25 0h9v40h-9z" />
+      <path d="M30 0h10l24 40H54zM54 0h10L40 40H30z" />
+    </g>
+    <!-- Hai khe cắt màu nền: chỗ thân phải N gặp tay X, và chỗ hai tay X giao nhau. -->
+    <path fill="#0d7a5f" d="M27.4 0h3v40h-3z" />
+    <path fill="#0d7a5f" d="M46 12.8l1.6 2.6-14 22.8-1.6-2.6z" />
+  </g>
+</svg>

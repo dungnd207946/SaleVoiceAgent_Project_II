@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nền album ảnh</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --surface: #fff; --fg: #14161a; --muted: #5f6670; --border: #e6e3dc;
+    --ac: #0d7a5f; --acs: #e3f1ec;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .trang { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .phu { color: var(--muted); margin: 0 0 20px; font-size: 13px; }
+  .hai { display: grid; grid-template-columns: minmax(0, 560px) 360px; gap: 28px; align-items: start; }
+  @media (max-width: 980px) { .hai { grid-template-columns: 1fr; } }
+  .nhan { font-size: 12px; color: var(--muted); margin: 0 0 8px; font-weight: 600; letter-spacing: .02em; }
+  .dk { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; align-items: center; font-size: 13px; }
+  .dk button { height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font: inherit; }
+  .dk button.bat { background: var(--acs); border-color: var(--ac); color: var(--ac); }
+
+  /* ── Sân khấu (giống SanKhauAgent: 3:2, bo 12px) ── */
+  .san-khau { position: relative; aspect-ratio: 3 / 2; width: 100%; overflow: hidden; border-radius: 12px;
+    border: 1px solid var(--border); background: #1c1f24; user-select: none; touch-action: pan-y; }
+  /* Nền = chính ảnh đang hiện, phóng + làm mờ: màu của dự án phủ cả khung. */
+  .nen-mo { position: absolute; inset: -40px; background-size: cover; background-position: center;
+    filter: blur(28px) saturate(1.15) brightness(.72); transform: scale(1.1); transition: background-image .6s; }
+  .nen-mo.cu { opacity: 0; transition: opacity .8s ease; }
+  .nen-toi { position: absolute; inset: 0; background: radial-gradient(120% 90% at 35% 45%, transparent 40%, rgba(0,0,0,.35)); }
+
+  /* ── Album xếp chồng ── */
+  .album { position: absolute; left: 6%; top: 50%; width: 58%; aspect-ratio: 3 / 2; transform: translateY(-50%);
+    perspective: 1100px; cursor: grab; }
+  .album.keo { cursor: grabbing; }
+  .the { position: absolute; inset: 0; border-radius: 12px; overflow: hidden; background: #2a2e35;
+    box-shadow: 0 14px 34px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.25);
+    transform-origin: 50% 50%; will-change: transform, opacity, filter;
+    transition: transform .62s cubic-bezier(.2,.9,.25,1.08), opacity .5s ease-out, filter .5s ease-out; }
+  .album.keo .the, .the.nhay { transition: none; }
+  .the img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+  .the .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 10px 7px; font-size: 11px; color: #fff;
+    background: linear-gradient(transparent, rgba(0,0,0,.6)); opacity: 0; transition: opacity .3s; }
+  .the.chinh .cap { opacity: 1; }
+
+  .mui { position: absolute; top: 50%; transform: translateY(-50%); z-index: 50; width: 30px; height: 30px; border-radius: 99px;
+    border: 0; background: rgba(255,255,255,.75); color: #14161a; cursor: pointer; display: grid; place-items: center;
+    opacity: 0; transition: opacity .2s; backdrop-filter: blur(6px); }
+  .san-khau:hover .mui { opacity: 1; }
+  .mui.trai { left: 2%; } .mui.phai { left: calc(6% + 58% + 8px); }
+  @media (hover: none) { .mui { display: none; } }
+
+  /* ── Nhân vật + lớp phủ (như bản thật) ── */
+  .nguoi { position: absolute; right: 3%; bottom: 0; height: 82%; z-index: 40; pointer-events: none;
+    filter: drop-shadow(0 8px 18px rgba(0,0,0,.35)); }
+  .pill { position: absolute; left: 12px; top: 12px; z-index: 60; display: flex; gap: 6px; align-items: center; font-size: 11.5px;
+    color: #fff; padding: 4px 10px; border-radius: 99px; background: rgba(20,22,26,.55); backdrop-filter: blur(10px); }
+  .pill i { width: 6px; height: 6px; border-radius: 99px; background: #fff; }
+  .dem { position: absolute; right: 12px; top: 12px; z-index: 60; font: 11px ui-monospace, monospace; color: #fff;
+    padding: 4px 9px; border-radius: 99px; background: rgba(20,22,26,.55); backdrop-filter: blur(10px); }
+  .tien-do { position: absolute; left: 6%; width: 58%; bottom: 7%; z-index: 60; height: 2px; border-radius: 2px; background: rgba(255,255,255,.22); overflow: hidden; }
+  .tien-do b { display: block; height: 100%; width: 0; background: rgba(255,255,255,.85); }
+
+  .mobile { width: 356px; max-width: 100%; }
+  ul.ghi { margin: 24px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  ul.ghi li { margin: 3px 0; }
+  @media (prefers-reduced-motion: reduce) { .the { transition: opacity .2s; } }
+</style>
+</head>
+<body>
+<div class="trang">
+  <h1>Nền sân khấu: album ảnh xếp chồng</h1>
+  <p class="phu">Ảnh giả lập thay cho ảnh từ <code>send_media</code>. Tự chuyển sau vài giây; kéo chuột / vuốt để lướt trước–sau; lặp vòng vô hạn.</p>
+
+  <div class="dk">
+    <span>Tự chuyển sau:</span>
+    <button data-giay="3">3s</button><button data-giay="4" class="bat">4s</button><button data-giay="6">6s</button>
+    <span style="margin-left:12px">Số ảnh:</span>
+    <button data-so="2">2</button><button data-so="3">3</button><button data-so="6" class="bat">6</button>
+  </div>
+
+  <div class="hai">
+    <div>
+      <p class="nhan">DESKTOP — khung trái của bố cục cuộc gọi (560px)</p>
+      <div class="khung-demo"></div>
+    </div>
+    <div>
+      <p class="nhan">MOBILE (356px)</p>
+      <div class="khung-demo mobile"></div>
+    </div>
+  </div>
+
+  <ul class="ghi">
+    <li>Ảnh chính ở giữa-trái (tránh chỗ nhân vật đứng), ảnh trước/sau ló mép ~9% bề rộng thẻ (đề bài ghi ±20px — thử thì gần như bị che hết vì thẻ còn thu 0,94), thu 0,94, mờ 45%, nhoè 2px; ảnh xa hơn nhỏ/mờ dần, quá ±2 thì ẩn.</li>
+    <li>Nghiêng 3D theo vị trí (rotateY) để chồng ảnh trông như một vòng album, không phải dải trượt phẳng.</li>
+    <li>Nền phía sau là chính ảnh đang hiện, phóng to + làm mờ — màu dự án phủ cả khung, khung luôn kín.</li>
+    <li>Kéo/vuốt: các thẻ đi theo tay; thả quá ~15% bề rộng (hoặc vuốt nhanh) thì sang đúng MỘT ảnh. Đang kéo/rê chuột thì dừng tự chuyển.</li>
+    <li>Vạch mảnh dưới album là đồng hồ tới lần tự chuyển kế tiếp (có thể bỏ). Không có chấm phân trang — đã có bộ đếm 1/n ở góc.</li>
+  </ul>
+</div>
+
+<template id="mau">
+  <div class="san-khau">
+    <div class="nen-mo"></div><div class="nen-mo cu"></div><div class="nen-toi"></div>
+    <div class="album"></div>
+    <button class="mui trai" aria-label="Ảnh trước">‹</button>
+    <button class="mui phai" aria-label="Ảnh sau">›</button>
+    <div class="tien-do"><b></b></div>
+    <img class="nguoi" src="/nguoi-dan-nghi.webp" alt="" />
+    <div class="pill"><i></i>Agent đang nói</div>
+    <div class="dem"></div>
+  </div>
+</template>
+
+<script>
+  // Ảnh giả lập: ảnh nền mặc định + ảnh kiến trúc/nội thất ngẫu nhiên (picsum).
+  const TAT_CA = [
+    { src: '/background.jpg', cap: 'Phối cảnh tổng thể' },
+    { src: 'https://picsum.photos/seed/canho-phongkhach/900/600', cap: 'Phòng khách căn 2PN' },
+    { src: 'https://picsum.photos/seed/toa-thap-dem/900/600', cap: 'Toà tháp về đêm' },
+    { src: 'https://picsum.photos/seed/ho-boi-vo-cuc/900/600', cap: 'Hồ bơi vô cực' },
+    { src: 'https://picsum.photos/seed/cong-vien-noi-khu/900/600', cap: 'Công viên nội khu' },
+    { src: 'https://picsum.photos/seed/sanh-don-tiep/900/600', cap: 'Sảnh đón tiếp' },
+  ]
+  // Ảnh không tải được (mất mạng) ⇒ thẻ màu có chữ, demo vẫn chạy.
+  const anhDuPhong = (cap, i) => 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+     <stop offset="0" stop-color="hsl(${(i*57)%360} 45% 52%)"/><stop offset="1" stop-color="hsl(${(i*57+40)%360} 50% 28%)"/></linearGradient></defs>
+     <rect width="900" height="600" fill="url(#g)"/><text x="40" y="560" font-family="sans-serif" font-size="44" fill="#fff">${cap}</text></svg>`)
+
+  let GIAY = 4, SO = 6
+  const albums = []
+
+  function taoAlbum(khung) {
+    khung.innerHTML = ''
+    khung.append(document.getElementById('mau').content.cloneNode(true))
+    const goc = khung.querySelector('.san-khau'), album = goc.querySelector('.album')
+    const [nen, nenCu] = goc.querySelectorAll('.nen-mo'), dem = goc.querySelector('.dem'), vach = goc.querySelector('.tien-do b')
+    const ds = TAT_CA.slice(0, SO)
+    const the = ds.map((a, i) => {
+      const el = document.createElement('div'); el.className = 'the'
+      const img = new Image(); img.src = a.src; img.alt = a.cap; img.draggable = false
+      img.onerror = () => { img.onerror = null; img.src = anhDuPhong(a.cap, i); ds[i] = { ...a, src: img.src }; if (i === hien) datNen() }
+      el.append(img); const c = document.createElement('div'); c.className = 'cap'; c.textContent = a.cap; el.append(c)
+      album.append(el); return el
+    })
+    let hien = 0, keo = 0, dangKeo = false, x0 = 0, t0 = 0, rongAlbum = 1, dCu = new Array(ds.length).fill(null)
+    let mocChuyen = performance.now()
+
+    // Khoảng cách VÒNG có dấu từ thẻ i tới thẻ đang hiện: lặp vô hạn không cần nhân bản thẻ.
+    const kc = (i) => { const n = ds.length; let d = ((i - hien) % n + n) % n; if (d > n / 2) d -= n; return d }
+
+    function ve() {
+      const f = rongAlbum ? keo / rongAlbum : 0 // phần kéo, tính theo bề rộng thẻ
+      the.forEach((el, i) => {
+        const dNguyen = kc(i), d = dNguyen + f * 1.6 // kéo 1 bề rộng ≈ dịch hơn một vị trí
+        const a = Math.abs(d), s = Math.sign(d)
+        const hienThi = a <= 2.6
+        const w = album.clientWidth || 300
+        // Ló mép: ±20px theo đề bài là quá ít khi thẻ còn thu 0,94 (mép chỉ còn ~10px) —
+        // lấy theo bề rộng thẻ: vị trí 1 ≈ 9%, vị trí 2 ≈ 15%, tối thiểu 20px.
+        const b1 = Math.max(20, w * 0.09), b2 = Math.max(32, w * 0.15)
+        const tx = s * (a <= 1 ? a * b1 : b1 + (a - 1) * (b2 - b1))
+        const ty = Math.min(a, 2) * 3
+        const sc = 1 - Math.min(a, 3) * 0.06
+        const op = a < 0.001 ? 1 : Math.max(0, a <= 1 ? 1 - a * 0.55 : 0.45 - (a - 1) * 0.2)
+        const bl = Math.min(a, 2.5) * 2
+        const ry = -s * Math.min(a, 2) * 9
+        // Thẻ «nhảy» từ một đầu vòng sang đầu kia: tắt transition, không cho nó bay ngang qua.
+        const nhay = dCu[i] !== null && Math.abs(dNguyen - dCu[i]) > 1
+        el.classList.toggle('nhay', nhay); dCu[i] = dNguyen
+        el.style.transform = `translateX(${tx}px) translateY(${ty}px) translateZ(${-a * 40}px) rotateY(${ry}deg) scale(${sc})`
+        el.style.opacity = hienThi ? op : 0
+        el.style.filter = `blur(${bl}px)`
+        el.style.zIndex = String(100 - Math.round(a * 10))
+        el.classList.toggle('chinh', dNguyen === 0)
+        if (nhay) requestAnimationFrame(() => el.classList.remove('nhay'))
+      })
+      dem.textContent = `${hien + 1}/${ds.length}`
+    }
+    function datNen() {
+      // Mờ chéo nền: lớp cũ giữ ảnh trước rồi mờ đi.
+      nenCu.style.backgroundImage = nen.style.backgroundImage; nenCu.style.transition = 'none'; nenCu.style.opacity = 1
+      nen.style.backgroundImage = `url("${ds[hien].src}")`
+      requestAnimationFrame(() => { nenCu.style.transition = ''; nenCu.style.opacity = 0 })
+    }
+    function sang(buoc) {
+      if (ds.length < 2) return
+      hien = ((hien + buoc) % ds.length + ds.length) % ds.length
+      mocChuyen = performance.now(); ve(); datNen()
+    }
+
+    album.addEventListener('pointerdown', (e) => {
+      if (ds.length < 2) return
+      dangKeo = true; x0 = e.clientX; t0 = performance.now(); rongAlbum = album.clientWidth
+      album.classList.add('keo'); album.setPointerCapture(e.pointerId)
+    })
+    album.addEventListener('pointermove', (e) => { if (!dangKeo) return; keo = e.clientX - x0; ve() })
+    const tha = (e) => {
+      if (!dangKeo) return
+      dangKeo = false; album.classList.remove('keo')
+      const v = keo / Math.max(1, performance.now() - t0) // px/ms
+      const buoc = keo < -rongAlbum * 0.15 || v < -0.5 ? 1 : keo > rongAlbum * 0.15 || v > 0.5 ? -1 : 0
+      keo = 0
+      if (buoc) sang(buoc); else { mocChuyen = performance.now(); ve() }
+    }
+    album.addEventListener('pointerup', tha); album.addEventListener('pointercancel', tha)
+    goc.querySelector('.mui.trai').onclick = () => sang(-1)
+    goc.querySelector('.mui.phai').onclick = () => sang(1)
+    let roChuot = false
+    goc.addEventListener('pointerenter', () => (roChuot = true)); goc.addEventListener('pointerleave', () => (roChuot = false))
+
+    ve(); datNen()
+    return {
+      nhip(now) {
+        if (ds.length < 2) { vach.style.width = '0'; return }
+        // Đang kéo / rê chuột trên khung ⇒ dừng đồng hồ (đẩy mốc theo).
+        if (dangKeo || roChuot) { mocChuyen = now - (parseFloat(vach.dataset.p || 0) * GIAY * 1000); return }
+        const p = Math.min(1, (now - mocChuyen) / (GIAY * 1000))
+        vach.dataset.p = p; vach.style.width = p * 100 + '%'
+        if (p >= 1) sang(1)
+      },
+    }
+  }
+
+  function dungLai() {
+    albums.length = 0
+    document.querySelectorAll('.khung-demo').forEach((k) => albums.push(taoAlbum(k)))
+  }
+  ;(function vong(now) { albums.forEach((a) => a.nhip(now)); requestAnimationFrame(vong) })(performance.now())
+
+  document.querySelectorAll('[data-giay]').forEach((b) => b.onclick = () => {
+    GIAY = +b.dataset.giay; document.querySelectorAll('[data-giay]').forEach((x) => x.classList.toggle('bat', x === b))
+  })
+  document.querySelectorAll('[data-so]').forEach((b) => b.onclick = () => {
+    SO = +b.dataset.so; document.querySelectorAll('[data-so]').forEach((x) => x.classList.toggle('bat', x === b)); dungLai()
+  })
+  dungLai()
+</script>
+</body>
+</html>

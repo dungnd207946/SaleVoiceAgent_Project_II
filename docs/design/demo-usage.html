@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Demo — Usage (lượng dùng) · Odyssey Portal</title>
+<!--
+  ══════════════════════════════════════════════════════════════════════════
+   DEMO — màn `/usage`  ·  vòng 6  ·  2026-08-24
+  ══════════════════════════════════════════════════════════════════════════
+  Màn kia: `demo-billing.html` (khung số TIỀN, route `/billing`).
+
+  ══ BỎ HẲN KHUÔN «BỐN MỤC ĐÁNH SỐ» (người dùng chốt) ══════════════════════
+  V1–V5 đều cùng một khuôn: ô số ① + dải KPI ngang → ô số ② + biểu đồ →
+  ô số ③ + bảng → ô số ④ + bảng. Khuôn đó bắt người xem đọc từ trên xuống hết
+  bốn khối mới biết màn có gì, và mỗi khối lại là một thẻ rời trôi trên nền
+  trang. V6 còn HAI thẻ, không ô số nào:
+
+    ① MỘT bảng điều khiển: RAIL CHỈ SỐ (dọc, trái) × BIỂU ĐỒ (phải).
+       Năm chỉ số xếp DỌC và BẤM ĐƯỢC — chúng vừa là con số tổng (việc của dải
+       KPI cũ) vừa là bộ chọn của biểu đồ (việc của bảy khung nhỏ cũ). Hai vai
+       trong một chỗ: không còn khối nào chỉ để bày số, và không còn bảy biểu
+       đồ tí hon nào.
+    ② Bảng «Lượt dùng chi tiết», tiêu đề NẰM TRONG thẻ (đúng lỗi `/api-keys`
+       đã sửa 2026-08-08: thẻ → chữ trần trên nền trang → thẻ).
+
+  Bảng «Cường độ theo service» ĐÃ BỎ (người dùng chốt). Năm con số của nó
+  không mất trắng: tổng mỗi service nay đọc ở chip legend của biểu đồ, còn
+  đỉnh/ngày hoạt động thì ở tooltip. Đừng dựng lại bảng đó.
+
+  ══ BIỂU ĐỒ: LINE CHART, GRADIENT (người dùng chốt) ═══════════════════════
+  V5 dùng cột đứng vì «đường + vùng tô» là hình của `/billing`; người dùng
+  chốt ngược lại — line chart, gradient, và đó là quyết định về sản phẩm nên
+  ghi chú này KHÔNG bàn lại. Vẫn KHÔNG phải bản sao của `/billing`, khác ở
+  chỗ quan trọng nhất là NHIỀU ĐƯỜNG thay vì một:
+
+  ⚠️ LUẬT ĐƠN VỊ, và nó là thứ quyết định kiến trúc chứ không phải một lời
+  cảnh báo dán thêm: `/billing` vẽ TIỀN nên mọi thành phần cộng chéo được và
+  một đường tổng là hợp lệ. Ở đây bảy service có ba đơn vị, và `audio_sec` của
+  bốn chặng audio CHỒNG LẤN nhau trong thời gian (agent nghe trong lúc TTS
+  phát) nên không phép cộng nào giữa chúng hợp lệ (hợp đồng BE §3 — chính
+  phép cộng BE đã gỡ ở `9d78d04`, đo được ~2.64× sự thật).
+  Vì thế MỘT CHỈ SỐ = MỘT ĐƠN VỊ, và các đường trong cùng một biểu đồ luôn
+  CÙNG đơn vị **do cách khai `CHI_SO[].dong` bảo đảm**, không do ai nhớ. Hệ
+  quả: không có đường TỔNG nào, và không có trục y thứ hai nào. Thêm một chỉ
+  số mới thì khai đủ `do` cho nó, đừng trộn hai đơn vị vào một `dong`.
+
+  Ba quy tắc hình của biểu đồ (đọc trước khi sửa):
+   · MỘT đường ⇒ có vùng tô gradient + quầng sáng. NHIỀU đường ⇒ CHỈ nét, bỏ
+     vùng tô: bốn vùng gradient chồng nhau ra một vũng màu không đọc được
+     đường nào.
+   · Nét vẽ là gradient NGANG (x1→x2) trong CÙNG một hệ màu của service —
+     chuyển sắc dọc theo thời gian thì đẹp, nhưng nếu hai đầu lệch hue thì
+     hai đường khác nhau sẽ gặp nhau ở mép phải và mất định danh.
+   · Monotone cubic (Fritsch–Carlson), KHÔNG Catmull-Rom: spline tự do vượt
+     ngưỡng ở chỗ dữ liệu đổi chiều gấp, mà ở đây chỗ đó là hai ngày nghỉ —
+     đường sẽ chui xuống dưới 0, tức vẽ ra một lượng dùng ÂM.
+
+  CẦN BE MỚI: `GET /billing/usage-by-day` — `theo_ngay[].phan[]` mang số đo
+  TỪNG component, GỒM CẢ TOKEN. Chỗ nào cần nó mang dấu ⓝ.
+-->
+<style>
+/* ── Token: chép nguyên `src/styles/theme.css` ───────────────────────────── */
+:root{
+  --n0:#fcfbf7;--n1:#fffefc;--n2:#fbfaf5;--n3:#f3f1ea;--n4:#edebe5;
+  --n5:#ded9d0;--n6:#948e81;--n7:#666c76;--n8:#5f656e;--n9:#4a5058;
+  --n10:#2a2e35;--n11:#14161a;
+  --ac:#0d7a5f;--acs:#e7f2ee;--acd:#0a5e49;
+  --bg:var(--n0);--fg:var(--n11);--surface:var(--n1);
+  --border:var(--n4);--border-strong:var(--n5);--border-field:var(--n6);
+  --fill:var(--n2);--fill-strong:var(--n3);--rule:var(--n4);
+  --muted:var(--n8);--muted-2:var(--n7);--nav:var(--n9);
+  --chrome-1:#f1eee7;--chrome-2:#f8f6f1;
+  --alert-bg:#fdeceb;--alert-fg:#b3402e;
+  --warn-bg:#fdf3e0;--warn-fg:#8a5c0d;
+  --chat-bg:#e8f0fb;--chat-fg:#1f5aa8;--chat-vien:#4d84d0;
+  --voice-bg:#f0ecfa;--voice-fg:#5b45a8;--voice-vien:#8f78d9;
+  --sans:'Be Vietnam Pro',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --r-sm:6px;--r-md:8px;--r-lg:12px;
+  --noi-nhe:0 2px 10px rgba(20,22,26,.1);
+  --noi-the:0 1px 2px rgba(20,22,26,.04);
+
+  /* ── Bảy hệ màu gradient, MỘT hệ cho MỘT tab ─────────────────────────────
+     `--c-*`  sắc ĐẶC — chữ, chấm định danh, con số trên rail. Đây là bậc phải
+              đo tương phản (≥ 4.5 trên `surface`); hai bậc dưới KHÔNG chở chữ.
+     `--a-*`  stop đầu nét (mép trái, tươi)  ·  `--b-*`  stop cuối (mép phải)
+     Hai stop CÙNG hệ màu, lệch về độ sáng chứ không lệch hue.
+
+     ⚠️ Bảy hue nay được chọn TỰ DO, và lý do đáng ghi: từ vòng này mỗi tab là
+     MỘT biểu đồ MỘT đường, nên không bao giờ có hai hệ màu nằm cùng một khung.
+     Ràng buộc cũ («bảy hue phải tách nhau đủ để phân biệt bảy đường chồng
+     nhau») hết hiệu lực, và nó chính là thứ đã ép VAD thành xám xanh xỉn để
+     không lẫn với LLM. Nay chỉ còn một điều kiện: mỗi hệ phải đẹp một mình và
+     nhận ra được trên rail. Đừng khôi phục sắc xám cho VAD. */
+  --c-llm:#4338ca;   --a-llm:#6366f1;   --b-llm:#a78bfa;
+  --c-stt:#0e7490;   --a-stt:#06b6d4;   --b-stt:#67e8f9;
+  --c-tts:#9333ea;   --a-tts:#a855f7;   --b-tts:#e879f9;
+  --c-vad:#1d4ed8;   --a-vad:#3b82f6;   --b-vad:#93c5fd;
+  --c-call:#c2410c;  --a-call:#f97316;  --b-call:#fbbf24;
+  --c-embed:#047857; --a-embed:#10b981; --b-embed:#6ee7b7;
+  --c-sv:#be123c;    --a-sv:#f43f5e;    --b-sv:#fda4af;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 13.5px/1.5 var(--sans);
+     -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px;border-radius:4px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.t-nhan{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2)}
+.t-phu{font-size:12.5px;color:var(--muted)}
+
+/* ── Khung app giả ───────────────────────────────────────────────────────── */
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100dvh}
+.navpanel{border-right:1px solid var(--border);background:var(--chrome-2);
+          padding:18px 12px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100dvh}
+.nav-logo{display:flex;align-items:center;gap:9px;padding:0 8px 18px;font-weight:600;letter-spacing:-.01em}
+.nav-logo .dau{width:22px;height:22px;border-radius:6px;background:var(--ac);display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700}
+.nav-khoi{border-top:1px solid var(--n4);margin:6px 0;padding-top:8px}
+.nav-khoiten{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2);padding:2px 8px 6px}
+.nav-muc{display:flex;align-items:center;gap:9px;height:34px;padding:0 9px;border-radius:var(--r-sm);
+         color:var(--nav);font-size:13.5px;text-decoration:none}
+.nav-muc:hover{background:var(--fill-strong);color:var(--fg)}
+.nav-muc.hoat{background:var(--acs);color:var(--acd);font-weight:500}
+.nav-muc .ic{width:15px;text-align:center;opacity:.75}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{height:58px;display:flex;align-items:center;gap:12px;padding:0 26px;
+        border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;
+        background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px)}
+.topbar h1{font-size:19px;font-weight:600;letter-spacing:-.015em;margin:0}
+.demo-tag{margin-left:auto;font-size:10.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+          color:var(--muted-2);border:1px dashed var(--border-strong);border-radius:999px;padding:3px 9px}
+.trang{padding:22px 26px 60px;display:flex;flex-direction:column;gap:16px;max-width:1420px}
+
+.hangky{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.nutky{display:flex;gap:8px}
+.nutky button{border:1px solid var(--border-field);border-radius:var(--r-sm);padding:7px 14px;
+              font-size:13.5px;font-weight:500;color:var(--muted);background:var(--surface)}
+.nutky button:hover{color:var(--fg)}
+.nutky button[aria-pressed=true]{border-color:var(--ac);background:var(--acs);color:var(--acd)}
+.khoang{font-family:var(--mono);font-size:12.5px;color:var(--muted-2)}
+
+.the{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--noi-the)}
+.can-be{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;
+        background:var(--warn-bg);color:var(--warn-fg);font-size:9.5px;font-weight:700;
+        vertical-align:middle;margin-left:6px;cursor:help}
+
+/* ══ BẢNG ĐIỀU KHIỂN — rail chỉ số × biểu đồ ══════════════════════════════ */
+.bdk{display:grid;grid-template-columns:274px minmax(0,1fr);overflow:hidden}
+.rail{border-right:1px solid var(--rule);display:flex;flex-direction:column}
+/* Mỗi mục rail LÀ một con số tổng VÀ một cú chọn. Trạng thái đang chọn nói
+   bằng nền + vạch accent bên trái, KHÔNG bằng chữ đậm: con số vốn đã đậm, một
+   nấc đậm nữa thì hai mục đọc ra hai kiểu chữ chứ không ra một trạng thái. */
+.cs{position:relative;text-align:left;padding:13px 18px 14px;display:flex;flex-direction:column;gap:3px;
+    border-bottom:1px solid var(--rule)}
+.cs:last-child{border-bottom:0}
+.cs::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent}
+.cs:hover{background:var(--fill)}
+.cs[aria-pressed=true]{background:var(--acs)}
+.cs[aria-pressed=true]::before{background:var(--c)}
+.cs .nh{display:flex;align-items:center;gap:7px}
+.cs .nh i{width:7px;height:7px;border-radius:50%;flex:none;
+          background:linear-gradient(135deg,var(--a),var(--b))}
+.cs .so{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:23px;font-weight:500;
+        letter-spacing:-.025em;line-height:1.15;color:var(--c)}
+.cs .ph{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);
+        display:flex;flex-wrap:wrap;gap:1px 9px}
+
+.khung{min-width:0;display:flex;flex-direction:column;padding:14px 18px 10px}
+.khung-dau{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;min-height:26px}
+.khung-dau h2{margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.khung-dau .dv{font-family:var(--mono);font-size:11px;color:var(--muted-2)}
+/* ⚠️ KHÔNG có chip legend, và đừng thêm lại: từ vòng này mỗi tab vẽ ĐÚNG MỘT
+   đường, nên một chip đơn độc là công tắc mà bấm vào thì mất luôn nội dung
+   biểu đồ, còn tổng của đường đó thì mục rail bên trái đã chở. */
+
+/* Biểu đồ CĂNG hết chiều cao còn lại của thẻ, không khoá một con số px: chiều
+   cao thẻ do RAIL quyết (năm mục), nên mọi hằng viết ở đây đều lệch — bản đầu
+   khoá 326px và để lại một khoảng trắng ~70px dưới trục ngày. Chiều cao là
+   thứ bố cục quyết, không phải thứ component tự đặt (cùng bài học đã ghi ở
+   `BieuDoChiPhi` 2026-08-21). `min-height` là sàn cho lúc rail ngắn hơn. */
+.chart{position:relative;flex:1;min-height:260px;margin-top:8px}
+.chart svg{position:absolute;inset:0;display:block;overflow:visible}
+@media (max-width:1080px){.bdk{grid-template-columns:minmax(0,1fr)}
+  .rail{border-right:0;border-bottom:1px solid var(--rule);
+        flex-direction:row;overflow-x:auto}
+  .cs{border-bottom:0;border-right:1px solid var(--rule);min-width:190px}
+  .cs::before{inset:auto 0 0 0;width:auto;height:3px}}
+
+/* Tooltip gắn ở <body>, `position: fixed` — KHÔNG đặt trong thẻ: thẻ có
+   `overflow:hidden` (bo góc) và sẽ cắt nó. */
+#tip{position:fixed;z-index:99;pointer-events:none;opacity:0;transition:opacity .12s;
+     background:var(--n11);color:#fff;border-radius:var(--r-md);padding:9px 11px;
+     font-size:11px;line-height:1.6;white-space:nowrap;
+     box-shadow:0 12px 34px -10px rgba(20,22,26,.55)}
+#tip .t{font-weight:600;font-size:11px;padding-bottom:5px;margin-bottom:4px;
+        border-bottom:1px solid rgba(255,255,255,.16)}
+#tip .d{display:flex;align-items:center;gap:9px;font-size:10.5px;color:#b9bdc4}
+#tip .d i{width:12px;height:3px;border-radius:2px;flex:none}
+#tip .d span{flex:1}
+#tip .d b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500;color:#fff}
+
+/* ══ Bảng lượt dùng chi tiết ══════════════════════════════════════════════ */
+.the-dau{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:13px 15px;
+         border-bottom:1px solid var(--border)}
+.the-dau h2{margin:0;font-size:16px;font-weight:600;letter-spacing:-.012em}
+/* Nhãn «Gộp theo» đi CÙNG cụm điều khiển sang mép phải, không ở lại cạnh tiêu
+   đề: đứng đó thì nó đọc như một phần của tên bảng, và cách chính cái nó gọi
+   tên gần một mét ngang. */
+.the-dau .t-phu{margin-left:auto}
+.bang-cuon{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead th{background:var(--fill);font-size:10.5px;font-weight:600;letter-spacing:.06em;
+         text-transform:uppercase;color:var(--muted-2);text-align:left;padding:9px 15px;
+         border-bottom:1px solid var(--border);white-space:nowrap}
+thead th.p{text-align:right}
+tbody td{padding:10px 15px;border-bottom:1px solid var(--rule);vertical-align:middle}
+tbody td.p{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr.bam{cursor:pointer}
+tbody tr.bam:hover{background:var(--fill)}
+tfoot td{padding:10px 15px;border-top:1px solid var(--border-strong);background:var(--fill);font-size:12.5px}
+tfoot td.p{text-align:right;font-family:var(--mono);font-weight:600}
+.khoa-ten{display:flex;flex-direction:column;gap:1px;min-width:0}
+.khoa-ten b{font-weight:500;font-size:13.5px}
+.khoa-ten span{font-family:var(--mono);font-size:11px;color:var(--muted-2)}
+.pill{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:var(--r-sm);
+      font-size:11px;font-weight:500}
+.pill-chat{background:var(--chat-bg);color:var(--chat-fg);box-shadow:inset 0 0 0 1px var(--chat-vien)}
+.pill-voice{background:var(--voice-bg);color:var(--voice-fg);box-shadow:inset 0 0 0 1px var(--voice-vien)}
+.pill-do{background:var(--alert-bg);color:var(--alert-fg)}
+.nd{color:var(--muted-2)}
+.tabpill{display:flex;gap:2px;background:var(--fill-strong);border-radius:var(--r-sm);padding:2px}
+.tabpill button{font-size:12.5px;padding:5px 11px;border-radius:4px;color:var(--muted)}
+.tabpill button[aria-pressed=true]{background:var(--surface);color:var(--fg);box-shadow:var(--noi-nhe)}
+.phantrang{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:10px 15px;
+           border-top:1px solid var(--rule);font-size:12.5px;color:var(--muted)}
+.phantrang button{border:1px solid var(--border-field);border-radius:var(--r-sm);padding:5px 11px;font-size:12.5px}
+.phantrang button[disabled]{opacity:.45;cursor:default}
+</style>
+</head>
+<body>
+<div id="tip"></div>
+<div class="app">
+
+  <aside class="navpanel">
+    <div class="nav-logo"><span class="dau">NX</span> Odyssey <span style="color:var(--muted-2);font-weight:400">Portal</span></div>
+    <a class="nav-muc" href="#"><span class="ic">◇</span> Tổng quan</a>
+    <a class="nav-muc" href="#"><span class="ic">◇</span> Hội thoại</a>
+    <a class="nav-muc" href="#"><span class="ic">◇</span> Agent</a>
+    <div class="nav-khoi">
+      <div class="nav-khoiten">Chi phí</div>
+      <a class="nav-muc hoat" href="demo-usage.html"><span class="ic">▤</span> Usage</a>
+      <a class="nav-muc" href="demo-billing.html"><span class="ic">₫</span> Billing</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <h1>Usage</h1>
+      <span class="demo-tag">Demo · lượng dùng · vòng 6</span>
+    </header>
+
+    <div class="trang">
+
+      <div class="hangky">
+        <div class="nutky" role="group" aria-label="Chọn kỳ">
+          <button aria-pressed="true">Tháng này</button>
+          <button aria-pressed="false">Tháng trước</button>
+          <button aria-pressed="false">7 ngày</button>
+          <button aria-pressed="false">30 ngày</button>
+        </div>
+        <span class="khoang">01/08 – 21/08/2026</span>
+      </div>
+
+      <section class="the bdk">
+        <div class="rail" id="rail" role="group" aria-label="Chọn chỉ số"></div>
+        <div class="khung">
+          <div class="khung-dau">
+            <h2 id="ct-ten"></h2>
+            <span class="dv" id="ct-dv"></span>
+          </div>
+          <div class="chart" id="chart"></div>
+        </div>
+      </section>
+
+      <section class="the" style="overflow:hidden">
+        <div class="the-dau">
+          <h2>Lượt dùng chi tiết</h2>
+          <span class="t-phu">Gộp theo</span>
+          <div class="tabpill" role="group" aria-label="Chiều gộp">
+            <button data-gop="khoa" aria-pressed="true">Khoá</button>
+            <button data-gop="nguoi" aria-pressed="false">Người tạo</button>
+            <button data-gop="phien" aria-pressed="false">Phiên</button>
+          </div>
+        </div>
+        <div class="bang-cuon"><table>
+          <thead id="bhead"></thead><tbody id="bbody"></tbody><tfoot id="bfoot"></tfoot>
+        </table></div>
+        <div class="phantrang" id="ptr" hidden>
+          <span>1–50 / <span id="tongphien"></span> phiên</span>
+          <button disabled>← Trang trước</button><button>Trang sau →</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   DỮ LIỆU GIẢ — MỘT nguồn: chuỗi 21 ngày × 7 service. Mọi con số khác trên
+   màn (rail · biểu đồ · chip legend · bảng · tooltip) TÍNH RA từ đây.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/** Cường độ hoạt động từng ngày, 0 → 1. Hai số 0 là chủ nhật 09/08 và 16/08 —
+ *  agent không chạy. `theo_ngay` của BE có ĐỦ mọi ngày kể cả ngày 0. */
+const HOAT = [.42,.13,.58,.68,.65,.71,.63,.24,0,.55,.74,.79,.76,.65,.27,0,.70,.83,.90,.85,.78];
+const NGAY = HOAT.map((_, i) => `2026-08-${String(i + 1).padStart(2, '0')}`);
+const N = NGAY.length;
+
+/** Nhiễu TIỀN ĐỊNH (không `Math.random`): demo phải ra cùng con số mỗi lần mở,
+ *  nếu không thì hai người xem hai bản khác nhau và không ai đối chiếu được. */
+const nhieu = (i, hat) => 1 + .13 * Math.sin(i * 1.7 + hat) + .06 * Math.cos(i * .9 + hat * 2);
+
+/**
+ * Bảy service. `do` = ĐƠN VỊ (không so được giữa hai service khác `do`).
+ * `he` = giá trị ở cường độ 1.0; `evHe` = số event ở cường độ 1.0.
+ *
+ * ⚠️ `vad` nhiều giây HƠN `call` — cố ý: VAD nghe suốt cả phiên (kể cả lúc TTS
+ * đang phát) còn `call` chỉ đếm quãng thật của component `call`. Cộng hai con
+ * số này ra một thứ không tồn tại.
+ */
+/**
+ * ⚠️ ĐƠN VỊ LẤY TỪ `billing.pricing_basis`, KHÔNG tự chọn (người dùng chốt
+ * 2026-08-24). Đây là chỗ bản vẽ đã sai một lần: nó vẽ TTS theo GIÂY và Embed
+ * theo TOKEN, trong khi migration `0948` chuyển cả hai sang `text_units` —
+ * KÝ TỰ. Và công thức đối chiếu của bên agent
+ * (`tests/modules/billing/test_doi_chieu_cong_thuc_agent.py`) KHÔNG có vế
+ * `audio_sec` nào cho `tts`, nên vẽ TTS theo giây gần như chắc chắn ra một
+ * đường phẳng bằng 0 trên dữ liệu thật.
+ *   llm            → input/output/cache_read_tokens   (token)
+ *   call · vad · speaker_verify → audio_sec           (giây)
+ *   stt            → audio_sec + text_units (HAI vế ĐỘC LẬP; màn vẽ vế giây)
+ *   tts · embed    → text_units                       (KÝ TỰ)
+ * ⚠️ `speaker_verify` là mã THẬT trong `usage_events.component`; `sv` dưới đây
+ * chỉ là khoá ngắn của demo. Code thật phải dùng mã đầy đủ.
+ */
+const SV = [
+  { ma:'llm',   nhan:'LLM',            do:'token', he:90000, evHe:709 },
+  { ma:'call',  nhan:'Cuộc gọi',       do:'giay',  he:1510,  evHe:29  },
+  { ma:'vad',   nhan:'VAD',            do:'giay',  he:1820,  evHe:102 },
+  { ma:'stt',   nhan:'STT',            do:'giay',  he:193,   evHe:157 },
+  { ma:'tts',   nhan:'TTS',            do:'kytu',  he:46000, evHe:145 },
+  { ma:'sv',    nhan:'Xác thực giọng', do:'giay',  he:75,    evHe:12  },
+  { ma:'embed', nhan:'Embed',          do:'kytu',  he:31000, evHe:19  },
+];
+
+SV.forEach((s, k) => {
+  s.chuoi  = HOAT.map((h, i) => (h === 0 ? 0 : Math.round(s.he * h * nhieu(i, k + 1))));
+  s.ev     = HOAT.map((h, i) => (h === 0 ? 0 : Math.round(s.evHe * h * nhieu(i, k + 4))));
+  s.tong   = s.chuoi.reduce((a, b) => a + b, 0);
+  s.tongEv = s.ev.reduce((a, b) => a + b, 0);
+  s.dinh   = Math.max(...s.chuoi);
+  s.iDinh  = s.chuoi.indexOf(s.dinh);
+  s.soNgay = s.chuoi.filter((v) => v > 0).length;
+  /* LLM tách in/out/cache cho dòng phụ của rail. Tỷ lệ đo từ một kỳ thật:
+     out ≈ 14,2% của in, cache read ≈ 13,1%. */
+  if (s.ma === 'llm') {
+    s.out   = s.chuoi.map((v) => Math.round(v * .142));
+    s.cache = s.chuoi.map((v) => Math.round(v * .131));
+  }
+});
+const sv = (ma) => SV.find((s) => s.ma === ma);
+
+/** Số phiên hội thoại từng ngày — cùng đường cong hoạt động. */
+const PHIEN_NGAY = HOAT.map((h, i) => (h === 0 ? 0 : Math.round(29 * h * nhieu(i, 11))));
+
+const TONG = {
+  in:    sv('llm').tong + sv('embed').tong,
+  out:   sv('llm').out.reduce((a, b) => a + b, 0),
+  cache: sv('llm').cache.reduce((a, b) => a + b, 0),
+  giay:  sv('call').tong,                                  /* CHỈ component `call` */
+  event: SV.reduce((a, s) => a + s.tongEv, 0),
+  phien: PHIEN_NGAY.reduce((a, b) => a + b, 0),
+};
+TONG.token = TONG.in + TONG.out + TONG.cache;
+
+/* ══ ĐỊNH DẠNG — hậu tố bội số VIẾT LIỀN số (CLAUDE.md 2026-08-21) ════════ */
+const SO   = (n) => Math.round(n).toLocaleString('vi-VN');
+const tok  = (n) => n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : SO(n);
+const giay = (s) => {
+  s = Math.round(s);
+  if (!s) return '0s';
+  const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60;
+  return h ? `${h}h ${String(m).padStart(2, '0')}m` : m ? `${m}m ${String(r).padStart(2, '0')}s` : `${r}s`;
+};
+/** Bộ định dạng theo ĐƠN VỊ. Không có hàm "chung" nào cho cả bốn.
+ *  `kytu` (ký tự — cơ sở tính tiền của TTS/Embed) rút gọn theo bội số như
+ *  token: một tab ký tự chạy tới hàng triệu, in đủ chữ số thì cột số dẫn của
+ *  rail rộng gấp đôi các tab khác và cả cột lệch mép. */
+const FMT = { token: tok, giay: giay, kytu: tok, so: SO };
+/** Riêng MỐC TRỤC thời gian bỏ phần giây khi nó bằng 0: `30m 00s` · `1h 00m`
+ *  là hai chuỗi mà nửa sau chỉ là số 0 đứng cho đẹp, và trên một trục có 4-5
+ *  mốc xếp dọc thì bốn cái `00s` đọc thành một cột nhiễu. Giá trị trong
+ *  tooltip và ở mọi chỗ khác VẪN dùng `giay()` đầy đủ — ở đó `4m 07s` là số
+ *  đo thật, không phải một mốc tròn. */
+const FMT_TRUC = {
+  ...FMT,
+  giay: (v) => (v && v % 3600 === 0 ? `${v / 3600}h` : v && v % 60 === 0 ? `${v / 60}m` : giay(v)),
+};
+const NHAN_DV = { token: 'token', giay: 'giây', kytu: 'ký tự', so: 'lượt' };
+const ngayVN = (iso) => iso.slice(8) + '/' + iso.slice(5, 7);
+
+/** Token của LLM theo ngày = in + out + cache read. Tab «Token» vẽ CHUỖI NÀY,
+ *  không vẽ riêng `chuoi` (= in): nếu con số dẫn là tổng ba loại mà đường chỉ
+ *  là một loại thì hai thứ cạnh nhau nói hai điều khác nhau. Embed KHÔNG cộng
+ *  vào đây — nó có tab riêng (người dùng chốt 2026-08-24). */
+const _llm = sv('llm');
+const TOKEN_NGAY = _llm.chuoi.map((v, i) => v + _llm.out[i] + _llm.cache[i]);
+const TOKEN_TONG = TOKEN_NGAY.reduce((a, b) => a + b, 0);
+
+/* ── Dữ liệu bảng «Lượt dùng chi tiết» ───────────────────────────────────
+   Khai Ở ĐÂY, cạnh mọi dữ liệu khác, chứ không cạnh hàm vẽ bảng ở cuối tệp:
+   `CHI_SO` ngay dưới đọc `_K.length`, và `const` khai sau thì rơi vào TDZ —
+   `ReferenceError` ngay lúc dựng rail, tức cả màn trắng. Tệp này theo lối
+   DỮ LIỆU TRƯỚC · GIAO DIỆN SAU; đừng kéo khối này xuống lại.
+
+   Tính TỪ `TONG` theo tỷ lệ, hàng cuối lấy PHẦN CÒN LẠI ⇒ mọi cột cộng đúng
+   bằng tổng hiển thị. Đây là bất biến hợp đồng §2 («ẩn hàng chưa phân loại ⇒
+   tổng dòng < tổng hiển thị») làm thành phép tính thay vì một lời hứa. */
+const COT = ['phien', 'in', 'out', 'cache', 'giay', 'event'];
+const _K = [
+  { ten:'Bot bán hàng Vinhomes', pre:'sk_live_a1b2…', nguoi:'Nguyễn Văn A', ty:.524 },
+  { ten:'Bot CSKH',              pre:'sk_live_c3d4…', nguoi:'Trần Thị B',   ty:.274 },
+  { ten:'Bot lead form',         pre:'sk_live_e5f6…', nguoi:'Nguyễn Văn A', ty:.144 },
+  { ten:'Test nội bộ',           pre:'sk_live_g7h8…', nguoi:'Lê C', thuhoi:true, ty:.045 },
+];
+const KHOA = _K.map((k) => ({ ...k, ...Object.fromEntries(COT.map((c) => [c, Math.round(TONG[c] * k.ty)])) }));
+KHOA.push({ ten:null, pre:null, nguoi:null,
+  ...Object.fromEntries(COT.map((c) => [c, TONG[c] - KHOA.reduce((s, k) => s + k[c], 0)])) });
+
+const cong = (...h) => Object.fromEntries(COT.map((c) => [c, h.reduce((s, x) => s + x[c], 0)]));
+const NGUOI = [
+  { ten:'Nguyễn Văn A', mail:'a@vinhomes.vn', key:2, ...cong(KHOA[0], KHOA[2]) },
+  { ten:'Trần Thị B',   mail:'b@vinhomes.vn', key:1, ...cong(KHOA[1]) },
+  { ten:'Lê C',         mail:'c@noblex.vn',   key:1, ...cong(KHOA[3]) },
+  { ten:null,           mail:null,            key:0, ...cong(KHOA[4]) },
+];
+const PHIEN_DS = [
+  { id:'s_9f3c…', khach:'Phạm Minh', kenh:'voice', batdau:'21/08 14:22', turn:18, in:6200, out:880,  giay:412, exact:true },
+  { id:'s_7a11…', khach:'Đỗ Lan',    kenh:'chat',  batdau:'21/08 13:58', turn:24, in:8100, out:1140, giay:0,   exact:true },
+  { id:'s_4b8e…', khach:'—',         kenh:'voice', batdau:'21/08 13:05', turn: 9, in:3100, out:420,  giay:198, exact:false },
+  { id:'s_2c60…', khach:'Vũ Hải',    kenh:'chat',  batdau:'21/08 11:41', turn:31, in:9600, out:1320, giay:0,   exact:true },
+  { id:'s_e5d2…', khach:'Ngô Thu',   kenh:'voice', batdau:'21/08 10:17', turn:14, in:4800, out:660,  giay:326, exact:true },
+];
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BẢY TAB — MỘT TAB, MỘT THỨ ĐO, MỘT ĐƯỜNG (người dùng chốt 2026-08-24)
+   ══════════════════════════════════════════════════════════════════════════
+   Vòng trước gộp nhiều service vào một khung («Cuộc gọi + VAD», «STT + TTS +
+   Xác thực giọng») rồi phải đi giải quyết hai hệ quả của chính phép gộp đó:
+   các đường phải cùng đơn vị, VÀ phải cùng bậc độ lớn — không thì đường nhỏ
+   bẹt sát trục. Tách hẳn ra một-tab-một-đường làm cả hai điều kiện tan biến:
+     · mỗi khung một đơn vị, hiển nhiên, không cần cổng nào canh;
+     · mỗi khung một thang riêng theo đỉnh của CHÍNH nó, nên không đường nào
+       bị một đường khác đè bẹp — kể cả Xác thực giọng (14m38s) nay cũng có
+       trọn chiều cao khung để đọc hình dạng;
+     · và bảy hue được chọn tự do vì không bao giờ có hai đường cùng khung.
+
+   ⚠️ ĐÂY LÀ CHỖ LUẬT «KHÔNG CỘNG CHÉO audio_sec» ĐƯỢC THI HÀNH MẠNH NHẤT, và
+   nó xảy ra do KIẾN TRÚC chứ không do ai nhớ: không khung nào chứa hai chuỗi
+   thì cũng không khung nào cộng được hai chuỗi. Bốn quãng audio (VAD · STT ·
+   TTS · Xác thực giọng) chồng lấn nhau trong thời gian — agent nghe trong lúc
+   TTS đang phát — nên tổng của chúng không tồn tại (hợp đồng BE §3, chính
+   phép cộng BE đã gỡ ở `9d78d04`, đo được ~2.64× sự thật). ĐỪNG thêm một tab
+   «tổng audio», và đừng gộp hai chặng lại «cho đỡ nhiều tab».
+
+   ⚠️ ĐÃ BỎ, đừng dựng lại: tab «Phiên hội thoại» và tab «Event ghi nhận»
+   (người dùng chốt). Cả hai không phải một thứ ĐO của service nào — chúng là
+   số đếm gộp cả workspace, đứng cạnh bảy tab service thì rail mất một quy tắc
+   đọc. Số phiên vẫn còn nguyên hai chỗ có ích hơn: dòng đầu tooltip (ngữ cảnh
+   cho từng ngày) và cột «Phiên» của bảng dưới.
+
+   Thứ tự tab do người dùng chốt: Token → STT → TTS → VAD → Thời gian gọi →
+   Embed → Xác thực giọng. Đừng sắp lại theo độ lớn: xếp theo con số thì đổi
+   kỳ là các tab đổi chỗ, và người dùng mất khả năng nhớ «STT nằm thứ hai». */
+const _t = (a) => a.reduce((x, y) => x + y, 0);
+
+/** Dòng phụ CHUNG cho các tab service — đỉnh trong kỳ + số ngày hoạt động.
+ *  Chỉ chở SỐ, không chở lời giảng. */
+const phuSV = (s) => [`đỉnh ${FMT[s.do](s.dinh)}`, `${s.soNgay}/${N} ngày`];
+
+const CHI_SO = [
+  { khoa:'token', ten:'Token', ma:'llm', do:'token',
+    so:tok(TOKEN_TONG),
+    phu:[`in ${tok(_llm.tong)}`, `out ${tok(_t(_llm.out))}`, `cache ${tok(_t(_llm.cache))}`],
+    dong:[{ ma:'llm', nhan:'Token', do:'token', chuoi:TOKEN_NGAY }] },
+
+  ...['stt', 'tts', 'vad', 'call', 'embed', 'sv'].map((m) => {
+    const s = sv(m);
+    return { khoa:m, ten:m === 'call' ? 'Thời gian gọi' : s.nhan, ma:m, do:s.do,
+             so:FMT[s.do](s.tong), phu:phuSV(s), dong:[{ ...s }] };
+  }),
+];
+
+/* ── Rail chỉ số ─────────────────────────────────────────────────────────── */
+const rail = document.getElementById('rail');
+rail.innerHTML = CHI_SO.map((c, i) => `
+  <button class="cs" data-i="${i}" aria-pressed="${i === 0}"
+          style="--c:var(--c-${c.ma});--a:var(--a-${c.ma});--b:var(--b-${c.ma})">
+    <span class="nh"><i></i><span class="t-nhan">${c.ten}</span></span>
+    <span class="so">${c.so}</span>
+    <span class="ph">${c.phu.map((p) => `<span>${p}</span>`).join('')}</span>
+  </button>`).join('');
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BIỂU ĐỒ — line chart, nét gradient
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * MONOTONE CUBIC (Fritsch–Carlson) — xem chú thích đầu tệp về lý do không
+ * dùng spline tự do. Đây là điều kiện ĐÚNG ĐẮN (không vẽ ra lượng dùng âm ở
+ * hai ngày nghỉ), không phải khẩu vị.
+ */
+function muot(p) {
+  const n = p.length;
+  if (n < 2) return '';
+  const dx = [], dy = [], m = [];
+  for (let i = 0; i < n - 1; i++) {
+    dx[i] = p[i + 1].x - p[i].x;
+    dy[i] = p[i + 1].y - p[i].y;
+    m[i] = dy[i] / dx[i];
+  }
+  const t = [m[0]];
+  for (let i = 1; i < n - 1; i++) {
+    if (m[i - 1] * m[i] <= 0) { t[i] = 0; continue; }
+    const w1 = 2 * dx[i] + dx[i - 1], w2 = dx[i] + 2 * dx[i - 1];
+    t[i] = (w1 + w2) / (w1 / m[i - 1] + w2 / m[i]);
+  }
+  t[n - 1] = m[n - 2];
+  let d = `M${p[0].x.toFixed(1)},${p[0].y.toFixed(1)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const h = dx[i] / 3;
+    d += `C${(p[i].x + h).toFixed(1)},${(p[i].y + t[i] * h).toFixed(1)}`
+       + ` ${(p[i + 1].x - h).toFixed(1)},${(p[i + 1].y - t[i + 1] * h).toFixed(1)}`
+       + ` ${p[i + 1].x.toFixed(1)},${p[i + 1].y.toFixed(1)}`;
+  }
+  return d;
+}
+
+/**
+ * Mốc trục dọc «tròn số» theo ĐƠN VỊ — không chia đều giá trị đỉnh.
+ * `giay` có bậc riêng (15s · 1m · 5m · 30m · 1h…): chia đều một trục thời gian
+ * ra `1m 47s`/`3m 34s` thì không mốc nào đọc được thành một quãng người ta
+ * nghĩ bằng. Trục luôn gồm 0 và luôn cao hơn đỉnh — đường chạm mép trên là
+ * đường bị cắt.
+ */
+function mocTruc(dinh, don, soChia = 4) {
+  const BAC = don === 'giay'
+    ? [10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 14400, 43200]
+    : null;
+  let buoc;
+  if (BAC) {
+    buoc = BAC.find((b) => dinh / b <= soChia) ?? BAC[BAC.length - 1];
+  } else {
+    const bac = Math.pow(10, Math.floor(Math.log10(dinh / soChia || 1)));
+    buoc = [1, 2, 2.5, 5, 10].map((k) => k * bac).find((b) => dinh / b <= soChia) ?? bac * 10;
+  }
+  const moc = [];
+  for (let v = 0; v <= dinh + buoc * .001; v += buoc) moc.push(v);
+  if (moc[moc.length - 1] < dinh) moc.push(moc.length * buoc);
+  return moc;
+}
+
+/**
+ * Mật độ nhãn ngày TỰ CHỌN theo bề rộng đo được (~1 nhãn / 74px), luôn giữ
+ * ngày ĐẦU và ngày CUỐI. `/billing` chốt cứng mốc 1·5·10·15·20 và đã phải
+ * sửa: kỳ «7 ngày» chỉ còn hai nhãn, kỳ «30 ngày» bắc qua hai tháng thì mốc
+ * lặp lại. Cùng bài học đó, làm thành phép tính.
+ */
+function mocNgay(rong) {
+  const buoc = Math.max(1, Math.ceil((N - 1) / Math.max(2, Math.floor(rong / 74))));
+  const ra = [];
+  for (let i = 0; i < N - 1; i += buoc) ra.push(i);
+  if (N - 1 - ra[ra.length - 1] < buoc * .55) ra.pop();
+  ra.push(N - 1);
+  return ra;
+}
+
+/**
+ * KIỂU NÉT — đổi MỘT hằng này là đổi cả năm biểu đồ. Ba lựa chọn, và khác
+ * nhau về NGHĨA chứ không chỉ về hình:
+ *
+ *  'thang'  Nối thẳng điểm-tới-điểm + chấm mỗi ngày (chấm chỉ hiện khi ≤ 2
+ *           đường — 21 chấm × 3 đường là 63 chấm, thành nhiễu). Nét nói đúng
+ *           thứ có thật: 21 SỐ ĐO, và giữa hai ngày thì không có dữ liệu nào.
+ *           Hai ngày nghỉ thành hai chữ V gãy — đọc ra ngay là «rơi về 0».
+ *  'bac'    Bậc thang CĂN GIỮA ngày (nửa bước mỗi bên). Đúng nhất về hợp đồng:
+ *           `theo_ngay` là XÔ theo ngày, giá trị của nó đúng cho trọn ngày chứ
+ *           không phải cho một điểm lúc 00:00. Bậc rộng đúng một ngày nên đọc
+ *           được cả «ngày nào» lẫn «bao nhiêu».
+ *  'muot'   Monotone cubic (bản trước). Đẹp nhưng nó VẼ RA dữ liệu không có:
+ *           đường cong giữa hai ngày là nội suy, mà ở đây không có gì để nội
+ *           suy — không có lượng dùng lúc 12h trưa nằm giữa hai xô ngày.
+ *
+ * ⚠️ Đổi sang 'muot' thì giữ nguyên `muot()`: hàm đó là Fritsch–Carlson
+ * (monotone), KHÔNG phải Catmull-Rom — spline tự do vượt ngưỡng ở chỗ dữ liệu
+ * đổi chiều gấp, và ở đây chỗ đó là hai ngày nghỉ, nên đường sẽ chui xuống
+ * dưới 0 tức vẽ ra một lượng dùng ÂM.
+ */
+const KIEU_NET = 'thang';
+
+/** Nối thẳng — mỗi ngày một điểm, không nội suy gì giữa hai ngày. */
+function thang(p) {
+  return p.map((o, i) => `${i ? 'L' : 'M'}${o.x.toFixed(1)},${o.y.toFixed(1)}`).join('');
+}
+
+/** Bậc thang CĂN GIỮA: mỗi giá trị giữ nguyên qua nửa bước hai bên, và đổi
+ *  bậc ở ĐÚNG ranh giới giữa hai ngày — không đổi tại tâm ngày (kiểu
+ *  `step-after` sẽ đẩy cả hình lệch nửa ngày sang phải). */
+function bac(p) {
+  let d = `M${p[0].x.toFixed(1)},${p[0].y.toFixed(1)}`;
+  for (let i = 0; i < p.length - 1; i++) {
+    const xm = ((p[i].x + p[i + 1].x) / 2).toFixed(1);
+    d += `L${xm},${p[i].y.toFixed(1)}L${xm},${p[i + 1].y.toFixed(1)}`;
+  }
+  return d + `L${p[p.length - 1].x.toFixed(1)},${p[p.length - 1].y.toFixed(1)}`;
+}
+
+const VE_NET = { thang, bac, muot };
+const netPath = (p) => VE_NET[KIEU_NET](p);
+
+const PL = 58, PR = 16, PT = 18, PB = 28;   /* lề trong SVG: chỗ cho hai trục */
+const chartEl = document.getElementById('chart');
+let iChon = 0;                 /* tab đang chọn */
+let ttToaDo = null;            /* toạ độ đã tính, giữ cho tooltip khỏi tính lại */
+
+function veChart() {
+  const c = CHI_SO[iChon], W = chartEl.clientWidth, H = chartEl.clientHeight;
+  if (!W) return;
+  /* `dong` LUÔN đúng một phần tử (một tab một đường) — nhưng code dưới vẫn
+     viết theo mảng: nó rẻ hơn một nhánh đặc biệt, và ngày nào có một tab cần
+     hai đường thì chỉ phải xét lại phần `mot` bên dưới. */
+  const ds = c.dong;
+  const fmt = FMT[c.do];
+  const dinh = Math.max(1, ...ds.map((d) => Math.max(...d.chuoi)));
+  /* Số khoảng chia theo CHIỀU CAO đo được (~1 mốc / 95px, kẹp 3–6): khung nay
+     cao theo rail bảy mục (~600px), và 4 mốc cố định trên chừng đó chiều cao
+     để lại ba dải trống 150px — mắt mất mốc để ước lượng giữa hai gridline. */
+  const moc = mocTruc(dinh, c.do, Math.max(3, Math.min(6, Math.round((H - PT - PB) / 95))));
+  const tran = moc[moc.length - 1];
+  const X = (i) => PL + i * (W - PL - PR) / (N - 1);
+  const Y = (v) => PT + (1 - v / tran) * (H - PT - PB);
+  const day = Y(0);
+  const mot = ds.length === 1;   /* MỘT đường ⇒ vùng tô + quầng; nhiều ⇒ chỉ nét */
+
+  ttToaDo = ds.map((d) => ({ ...d, p: d.chuoi.map((v, i) => ({ x: X(i), y: Y(v) })) }));
+
+  const defs = ds.map((d) => `
+    <linearGradient id="net-${d.ma}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="var(--a-${d.ma})"/>
+      <stop offset="1" stop-color="var(--b-${d.ma})"/>
+    </linearGradient>
+    ${mot ? `<linearGradient id="vung-${d.ma}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="var(--a-${d.ma})" stop-opacity=".30"/>
+      <stop offset=".55" stop-color="var(--a-${d.ma})" stop-opacity=".10"/>
+      <stop offset="1"   stop-color="var(--b-${d.ma})" stop-opacity="0"/>
+    </linearGradient>` : ''}`).join('')
+    + `<filter id="quang" x="-10%" y="-30%" width="120%" height="180%">
+         <feGaussianBlur stdDeviation="4"/></filter>`;
+
+  const luoi = moc.map((v) => `
+    <line x1="${PL}" y1="${Y(v).toFixed(1)}" x2="${W - PR}" y2="${Y(v).toFixed(1)}"
+          stroke="var(${v === 0 ? '--border-strong' : '--rule'})" stroke-width="1"
+          ${v === 0 ? '' : 'stroke-dasharray="3 5"'}/>
+    <text x="${PL - 10}" y="${(Y(v) + 3.5).toFixed(1)}" text-anchor="end"
+          font-family="var(--mono)" font-size="10" fill="var(--muted-2)">${FMT_TRUC[c.do](v)}</text>`).join('');
+
+  const nhanNgay = mocNgay(W - PL - PR).map((i) => `
+    <text x="${X(i).toFixed(1)}" y="${H - 8}"
+          text-anchor="${i === 0 ? 'start' : i === N - 1 ? 'end' : 'middle'}"
+          font-family="var(--mono)" font-size="10.5"
+          fill="var(${PHIEN_NGAY[i] ? '--muted-2' : '--n6'})">${ngayVN(NGAY[i])}</text>`).join('');
+
+  /* Chấm mỗi ngày CHỈ khi ≤ 2 đường và kiểu nét là 'thang' — với bậc thang thì
+     chấm rơi vào giữa mặt bậc và đọc ra như một lỗi vẽ, còn ba đường thì 63
+     chấm thành nhiễu. */
+  const coCham = KIEU_NET === 'thang' && ds.length <= 2;
+
+  const duong = ttToaDo.map((d) => {
+    const path = netPath(d.p), cuoi = d.p[N - 1];
+    return `
+      ${mot ? `<path d="${path}L${cuoi.x.toFixed(1)},${day}L${d.p[0].x.toFixed(1)},${day}Z"
+                     fill="url(#vung-${d.ma})"/>
+               <path d="${path}" fill="none" stroke="var(--a-${d.ma})" stroke-width="4"
+                     opacity=".30" filter="url(#quang)" stroke-linecap="round"/>` : ''}
+      <path d="${path}" fill="none" stroke="url(#net-${d.ma})" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+      ${/* Chấm mỗi ngày — nói ra rằng nét này nối 21 SỐ ĐO, không phải một
+           dòng liên tục. Vẽ TRƯỚC vòng tròn ngày-0 để cái sau đè lên. */''}
+      ${coCham ? d.p.map((o, i) => d.chuoi[i] === 0 ? ''
+        : `<circle cx="${o.x.toFixed(1)}" cy="${o.y.toFixed(1)}" r="2.6"
+                   fill="var(--surface)" stroke="var(--c-${d.ma})" stroke-width="1.6"/>`).join('') : ''}
+      ${/* NGÀY 0: vòng tròn rỗng ngay trên đáy — nói «đã ĐO và bằng 0», phân
+           biệt với «thiếu dữ liệu» (không vẽ gì). Hợp đồng §theo_ngay. */''}
+      ${d.chuoi.map((v, i) => v === 0
+        ? `<circle cx="${X(i).toFixed(1)}" cy="${day}" r="2.8" fill="var(--surface)"
+                   stroke="var(--n6)" stroke-width="1.2"/>` : '').join('')}
+      <circle cx="${cuoi.x.toFixed(1)}" cy="${cuoi.y.toFixed(1)}" r="5.5" fill="var(--surface)"/>
+      <circle cx="${cuoi.x.toFixed(1)}" cy="${cuoi.y.toFixed(1)}" r="3.2" fill="var(--c-${d.ma})"/>`;
+  }).join('');
+
+  chartEl.innerHTML = `<svg width="${W}" height="${H}" role="img"
+      aria-label="${c.ten} theo ngày, đơn vị ${NHAN_DV[c.do]}${ds.map((d) => `, ${d.nhan} tổng ${fmt(d.chuoi.reduce((a, b) => a + b, 0))}`).join('')}">
+    <defs>${defs}</defs>${luoi}${nhanNgay}${duong}
+    <line class="gx" x1="0" y1="${PT - 6}" x2="0" y2="${day}" stroke="var(--border-field)"
+          stroke-width="1" stroke-dasharray="3 3" opacity="0"/>
+    <g class="gd" opacity="0">${ds.map((d) =>
+      `<circle r="4" fill="var(--c-${d.ma})" stroke="var(--surface)" stroke-width="2"/>`).join('')}</g>
+  </svg>`;
+}
+
+/* ── Đầu khung ───────────────────────────────────────────────────────────── */
+function veDau() {
+  const c = CHI_SO[iChon];
+  document.getElementById('ct-ten').textContent = c.ten + ' theo ngày';
+  document.getElementById('ct-dv').innerHTML =
+    `đơn vị ${NHAN_DV[c.do]}<span class="can-be" title="Cần GET /billing/usage-by-day — theo_ngay[].phan[] phải mang số đo từng component, gồm cả token">ⓝ</span>`;
+}
+
+function ve() { veDau(); veChart(); }
+
+rail.addEventListener('click', (e) => {
+  const b = e.target.closest('.cs');
+  if (!b) return;
+  iChon = +b.dataset.i;
+  rail.querySelectorAll('.cs').forEach((o) => o.setAttribute('aria-pressed', o === b));
+  ve();
+});
+
+/* ── Crosshair + tooltip ─────────────────────────────────────────────────── */
+const tip = document.getElementById('tip');
+function anTip() {
+  tip.style.opacity = 0;
+  chartEl.querySelector('.gx')?.setAttribute('opacity', '0');
+  chartEl.querySelector('.gd')?.setAttribute('opacity', '0');
+}
+chartEl.addEventListener('pointermove', (e) => {
+  if (!ttToaDo || !ttToaDo.length) return;
+  const c = CHI_SO[iChon], fmt = FMT[c.do], r = chartEl.getBoundingClientRect();
+  /* Khoảng cách giữa các ngày là đều nên suy trực tiếp, không quét cả mảng. */
+  const i = Math.max(0, Math.min(N - 1,
+    Math.round((e.clientX - r.left - PL) / ((r.width - PL - PR) / (N - 1)))));
+
+  const gx = chartEl.querySelector('.gx'), gd = chartEl.querySelector('.gd');
+  const x = ttToaDo[0].p[i].x;
+  gx.setAttribute('x1', x); gx.setAttribute('x2', x); gx.setAttribute('opacity', '.6');
+  gd.setAttribute('opacity', '1');
+  [...gd.children].forEach((o, k) => {
+    o.setAttribute('cx', ttToaDo[k].p[i].x);
+    o.setAttribute('cy', ttToaDo[k].p[i].y);
+  });
+
+  tip.innerHTML =
+    `<div class="t">${ngayVN(NGAY[i])} · ${PHIEN_NGAY[i] ? `${SO(PHIEN_NGAY[i])} phiên` : 'không có phiên'}</div>`
+    + ttToaDo.map((d) => `<div class="d">
+        <i style="background:linear-gradient(90deg,var(--a-${d.ma}),var(--b-${d.ma}))"></i>
+        <span>${d.nhan}</span><b>${d.chuoi[i] === 0 ? '—' : fmt(d.chuoi[i])}</b></div>`).join('');
+
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.opacity = 1;
+  tip.style.left = Math.min(Math.max(r.left + x - w / 2, 8), innerWidth - w - 8) + 'px';
+  tip.style.top = Math.max(r.top + ttToaDo[0].p[i].y - h - 14, 8) + 'px';
+});
+chartEl.addEventListener('pointerleave', anTip);
+
+ve();
+/* Bọc trong `typeof` — thiếu `ResizeObserver` thì một `new` trần ném
+   ReferenceError giữa `<script>` và MỌI thứ dưới nó (cả bảng) không chạy nữa,
+   tức một hàm đo bề rộng làm trắng một mục không liên quan. Đã sập thật. */
+if (typeof ResizeObserver !== 'undefined') new ResizeObserver(veChart).observe(chartEl);
+else addEventListener('resize', veChart);
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BẢNG LƯỢT DÙNG CHI TIẾT — ba chiều gộp, bộ cột LƯỢNG
+   (dữ liệu khai ở khối «Dữ liệu bảng» phía trên — xem lý do TDZ ở đó)
+   ══════════════════════════════════════════════════════════════════════════ */
+const TH = (t, p) => `<th${p ? ' class="p"' : ''}>${t}</th>`;
+const TD = (t, p) => `<td${p ? ' class="p"' : ''}>${t}</td>`;
+const CHUA = '<span class="nd">Chưa phân loại (không có khoá)</span>';
+document.getElementById('tongphien').textContent = SO(TONG.phien);
+
+const BANG = {
+  khoa: () => ({
+    head:'<tr>' + TH('Khoá') + TH('Người tạo') + TH('Phiên', 1) + TH('In', 1) + TH('Out', 1)
+      + TH('Cache read', 1) + TH('Giây gọi', 1) + TH('Event', 1) + '</tr>',
+    body:KHOA.map((k) => '<tr>'
+      + TD(k.ten
+          ? `<span class="khoa-ten"><b>${k.ten}${k.thuhoi ? ' <span class="pill pill-do">đã thu hồi</span>' : ''}</b><span>${k.pre}</span></span>`
+          : CHUA)
+      + TD(k.nguoi ?? '<span class="nd">—</span>')
+      + TD(SO(k.phien), 1) + TD(tok(k.in), 1) + TD(tok(k.out), 1) + TD(tok(k.cache), 1)
+      + TD(giay(k.giay), 1) + TD(SO(k.event), 1) + '</tr>').join(''),
+    foot:'<tr>' + TD('<b>Tổng</b>') + TD('') + TD(SO(TONG.phien), 1) + TD(tok(TONG.in), 1)
+      + TD(tok(TONG.out), 1) + TD(tok(TONG.cache), 1) + TD(giay(TONG.giay), 1) + TD(SO(TONG.event), 1) + '</tr>',
+    ptr:false,
+  }),
+  nguoi: () => ({
+    head:'<tr>' + TH('Người tạo') + TH('Khoá', 1) + TH('Phiên', 1) + TH('In', 1) + TH('Out', 1)
+      + TH('Cache read', 1) + TH('Giây gọi', 1) + TH('Event', 1) + '</tr>',
+    body:NGUOI.map((n) => '<tr>'
+      + TD(n.ten ? `<span class="khoa-ten"><b>${n.ten}</b><span>${n.mail}</span></span>` : CHUA)
+      + TD(SO(n.key), 1) + TD(SO(n.phien), 1) + TD(tok(n.in), 1) + TD(tok(n.out), 1)
+      + TD(tok(n.cache), 1) + TD(giay(n.giay), 1) + TD(SO(n.event), 1) + '</tr>').join(''),
+    foot:'<tr>' + TD('<b>Tổng</b>') + TD(SO(_K.length), 1) + TD(SO(TONG.phien), 1) + TD(tok(TONG.in), 1)
+      + TD(tok(TONG.out), 1) + TD(tok(TONG.cache), 1) + TD(giay(TONG.giay), 1) + TD(SO(TONG.event), 1) + '</tr>',
+    ptr:false,
+  }),
+  phien: () => ({
+    head:'<tr>' + TH('Phiên') + TH('Khách') + TH('Kênh') + TH('Bắt đầu') + TH('Turn', 1)
+      + TH('In', 1) + TH('Out', 1) + TH('Giây gọi', 1) + '</tr>',
+    body:PHIEN_DS.map((p) => '<tr class="bam">'
+      + TD(`<span class="mono" style="font-size:12px">${p.id}</span>`)
+      + TD(p.khach)
+      + TD(`<span class="pill ${p.kenh === 'chat' ? 'pill-chat' : 'pill-voice'}">${p.kenh === 'chat' ? 'Chat' : 'Voice'}</span>`)
+      + TD(`<span class="mono" style="font-size:12px;color:var(--muted)">${p.batdau}</span>`)
+      + TD(SO(p.turn), 1)
+      + TD(tok(p.in) + (p.exact ? '' : '<span class="can-be" title="exact=false — đo THIẾU token, không phải 0">!</span>'), 1)
+      + TD(tok(p.out), 1) + TD(giay(p.giay), 1) + '</tr>').join(''),
+    foot:'',
+    ptr:true,
+  }),
+};
+function veBang(gop) {
+  const b = BANG[gop]();
+  document.getElementById('bhead').innerHTML = b.head;
+  document.getElementById('bbody').innerHTML = b.body;
+  document.getElementById('bfoot').innerHTML = b.foot;
+  document.getElementById('ptr').hidden = !b.ptr;
+}
+veBang('khoa');
+document.querySelectorAll('.tabpill button').forEach((b) => b.onclick = () => {
+  document.querySelectorAll('.tabpill button').forEach((o) => o.setAttribute('aria-pressed', o === b));
+  veBang(b.dataset.gop);
+});
+
+/* ══ TỰ KIỂM ═════════════════════════════════════════════════════════════ */
+COT.forEach((c) => {
+  const a = KHOA.reduce((s, r) => s + r[c], 0), b = NGUOI.reduce((s, r) => s + r[c], 0);
+  if (a !== TONG[c] || b !== TONG[c]) console.warn(`LỆCH ${c}: khoá ${a} · người ${b} · nguồn ${TONG[c]}`);
+});
+if (sv('vad').tong <= sv('call').tong)
+  console.warn('VAD không còn nhiều giây hơn Cuộc gọi — mất ví dụ về việc không cộng chéo audio_sec');
+/* MỘT TAB = MỘT ĐƯỜNG, kiểm bằng máy chứ không bằng lời nhắc. Đây là cổng
+   quan trọng nhất của tệp: một tab hai đường là một tab CỘNG ĐƯỢC hai chuỗi,
+   và với `audio_sec` thì phép cộng đó không tồn tại (§3). Cổng cũng canh luôn
+   đơn vị và độ dài chuỗi. */
+CHI_SO.forEach((c) => {
+  if (c.dong.length !== 1) console.warn(`Tab «${c.ten}» có ${c.dong.length} đường, phải đúng 1`);
+  c.dong.forEach((d) => {
+    if (d.do !== c.do) console.warn(`Tab «${c.ten}» (${c.do}) có đường «${d.nhan}» đơn vị ${d.do}`);
+    if (!d.chuoi || d.chuoi.length !== N) console.warn(`Đường «${d.nhan}» không có đủ ${N} ngày`);
+  });
+});
+/* Bảy tab phải phủ ĐÚNG bảy service, không thiếu không trùng — thiếu một cái
+   là một service không có đường nào xem được, mà không cổng nào khác thấy. */
+{
+  const ma = CHI_SO.map((c) => c.ma).sort().join(',');
+  const du = SV.map((s) => s.ma).sort().join(',');
+  if (ma !== du) console.warn(`Tab phủ [${ma}] nhưng service là [${du}]`);
+}
+/* Mốc trục dọc phải PHỦ đỉnh — đường chạm mép trên là đường bị cắt. */
+CHI_SO.forEach((c) => {
+  const dinh = Math.max(...c.dong.flatMap((d) => d.chuoi));
+  const moc = mocTruc(dinh, c.do);
+  if (moc[moc.length - 1] < dinh) console.warn(`Trục «${c.ten}» trần ${moc[moc.length - 1]} < đỉnh ${dinh}`);
+  if (moc.length < 3) console.warn(`Trục «${c.ten}» chỉ có ${moc.length} mốc`);
+});
+</script>
+</body>
+</html>

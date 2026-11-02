@@ -1,0 +1,25 @@
+{
+  /* Chỉ file cấu hình chạy trên node. Không có `exactOptionalPropertyTypes` —
+     kiểu plugin của Vite không tương thích với nó. Đây là ngoại lệ hẹp, cố ý:
+     code app vẫn bật cờ đó (xem tsconfig.app.json). */
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "verbatimModuleSyntax": true,
+
+    "noEmit": true,
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "allowJs": true
+  },
+  "include": ["vite.config.ts", "eslint.config.js"]
+}

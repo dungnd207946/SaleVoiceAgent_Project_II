@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Demo — Bố cục tab Voice (/thu-agent)</title>
+<style>
+  @font-face { font-family: 'Be Vietnam Pro'; font-weight: 400; src: url(fonts/be-vietnam-pro-400-vietnamese.woff2) format('woff2'); }
+  @font-face { font-family: 'Be Vietnam Pro'; font-weight: 500; src: url(fonts/be-vietnam-pro-500-vietnamese.woff2) format('woff2'); }
+  @font-face { font-family: 'Be Vietnam Pro'; font-weight: 600; src: url(fonts/be-vietnam-pro-600-vietnamese.woff2) format('woff2'); }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 400; src: url(fonts/jetbrains-mono-400-latin.woff2) format('woff2'); }
+
+  /* Token CHÉP từ src/styles/theme.css — bản vẽ phải nói đúng màu của portal. */
+  :root {
+    --bg: #fcfbf7; --surface: #fffefc; --sunk: #fbfaf5; --fill: #f3f1ea;
+    --border: #edebe5; --border-strong: #ded9d0; --field: #948e81;
+    --fg: #14161a; --muted: #5f656e; --muted-2: #666c76; --nav: #4a5058;
+    --ac: #0d7a5f; --acs: #e7f2ee; --acd: #0a5e49; --alert: #b3402e;
+    --r-sm: 6px; --r-md: 8px; --r-lg: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #e9e7e1; color: var(--fg); font-family: 'Be Vietnam Pro', system-ui, sans-serif; }
+  button { font: inherit; cursor: pointer; }
+
+  /* ── Thanh điều khiển của BẢN VẼ (không thuộc thiết kế) ── */
+  .demo-bar { position: sticky; top: 0; z-index: 50; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    padding: 10px 16px; background: #1a1c20; color: #e8e6e0; font-size: 13px; }
+  .demo-bar b { font-weight: 600; margin-right: 6px; }
+  .seg { display: inline-flex; background: #2a2d33; border-radius: var(--r-md); padding: 3px; gap: 2px; }
+  .seg button { border: 0; background: transparent; color: #c9c6be; padding: 6px 11px; border-radius: var(--r-sm); font-size: 12.5px; }
+  .seg button[aria-pressed=true] { background: #fffefc; color: #14161a; font-weight: 600; }
+  .demo-bar .ghi { color: #9a978f; margin-left: auto; font-size: 12px; }
+
+  /* ── Khung giả lập: màn portal (topbar + vùng nội dung) ── */
+  .khung-ngoai { display: flex; justify-content: center; padding: 22px 16px 40px; }
+  .man { width: 1240px; height: 820px; background: var(--bg); border-radius: 14px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(20,22,26,.18); display: flex; flex-direction: column; transition: width .35s ease, height .35s ease; }
+  .man.mobile { width: 390px; height: 780px; border-radius: 28px; }
+  .topbar { flex: none; height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 22px;
+    border-bottom: 1px solid var(--border); background: var(--surface); }
+  .topbar h1 { margin: 0; font-size: 16px; font-weight: 600; }
+  .tabs { display: inline-flex; background: var(--fill); border-radius: var(--r-md); padding: 3px; }
+  .tabs span { padding: 5px 12px; font-size: 13px; border-radius: var(--r-sm); color: var(--muted); }
+  .tabs span.on { background: var(--surface); color: var(--fg); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .noi-dung { flex: 1; min-height: 0; padding: 16px 22px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .man.mobile .noi-dung { padding: 10px 12px 12px; gap: 10px; }
+
+  /* Thanh thiết lập THU GỌN (sau khi Áp dụng) — dùng chung 3 phương án */
+  .thiet-lap { flex: none; display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--r-lg); font-size: 13px; color: var(--nav); }
+  .thiet-lap .av { width: 28px; height: 28px; border-radius: 50%; background: var(--acs); color: var(--ac); display: grid; place-items: center; font-weight: 600; font-size: 12px; flex: none; }
+  .thiet-lap .tt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .thiet-lap .tt b { color: var(--fg); font-weight: 600; }
+  .thiet-lap .cham { color: var(--border-strong); margin: 0 6px; }
+  .nut-phu { margin-left: auto; flex: none; border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg);
+    border-radius: var(--r-md); padding: 6px 12px; font-size: 12.5px; }
+
+  /* ── SÂN KHẤU (dùng chung) ── */
+  .san-khau { position: relative; overflow: hidden; border-radius: var(--r-lg); background: #cfd6d3; isolation: isolate; }
+  .san-khau .nen { position: absolute; inset: 0; }
+  .san-khau .nen img { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .san-khau .nen .mo { object-fit: cover; filter: blur(22px) brightness(.85); transform: scale(1.12); }
+  .san-khau .nen .net { object-fit: contain; transition: opacity .6s ease; }
+  .san-khau .nen.phu .net { object-fit: cover; }
+  .san-khau::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(to top, rgba(10,14,16,.55) 0%, rgba(10,14,16,0) 38%), linear-gradient(to bottom, rgba(10,14,16,.28), rgba(10,14,16,0) 22%); z-index: 1; }
+  .nguoi { position: absolute; bottom: 0; right: 4%; height: 92%; z-index: 2; transform-origin: bottom center; animation: tho 4.2s ease-in-out infinite; }
+  .nguoi img { height: 100%; display: block; }
+  @keyframes tho { 50% { transform: scale(1.006); } }
+  .nguoi.noi { animation: noi .5s ease-in-out infinite; }
+  @keyframes noi { 50% { transform: translateY(-1px) scale(1.003); } }
+
+  .pill-tt { position: absolute; top: 12px; left: 12px; z-index: 3; display: inline-flex; align-items: center; gap: 8px; padding: 6px 11px 6px 9px;
+    border-radius: 999px; background: rgba(20,22,26,.55); backdrop-filter: blur(10px); color: #fff; font-size: 12.5px; font-weight: 500; }
+  .pill-tt .cham-tt { width: 8px; height: 8px; border-radius: 50%; background: #39d39a; box-shadow: 0 0 0 0 rgba(57,211,154,.6); animation: nhay 1.6s infinite; }
+  @keyframes nhay { 70% { box-shadow: 0 0 0 8px rgba(57,211,154,0); } 100% { box-shadow: 0 0 0 0 rgba(57,211,154,0); } }
+  .song { display: inline-flex; align-items: center; gap: 2px; height: 12px; }
+  .song i { width: 3px; border-radius: 2px; background: #fff; height: 30%; }
+  .dang-noi .song i { animation: song .9s ease-in-out infinite; }
+  .song i:nth-child(2) { animation-delay: .15s !important; } .song i:nth-child(3) { animation-delay: .3s !important; } .song i:nth-child(4) { animation-delay: .45s !important; }
+  @keyframes song { 50% { height: 100%; } }
+  .dem-anh { position: absolute; top: 12px; right: 12px; z-index: 3; padding: 5px 10px; border-radius: 999px; background: rgba(20,22,26,.5);
+    backdrop-filter: blur(10px); color: #fff; font: 12px 'JetBrains Mono', monospace; display: flex; gap: 6px; align-items: center; }
+  .dem-anh .ch { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.4); }
+  .dem-anh .ch.on { background: #fff; }
+
+  .phu-de { position: absolute; z-index: 3; left: 50%; transform: translateX(-50%); bottom: 92px; width: min(560px, 62%);
+    text-align: center; color: #fff; font-size: 16px; line-height: 1.5; font-weight: 500; text-shadow: 0 1px 8px rgba(0,0,0,.45); }
+  .phu-de .khach { display: block; font-size: 12.5px; font-weight: 400; color: rgba(255,255,255,.75); margin-bottom: 4px; }
+  .phu-de .chu { background: rgba(20,22,26,.42); backdrop-filter: blur(6px); padding: 6px 12px; border-radius: 10px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  .dieu-khien { position: absolute; z-index: 3; left: 50%; transform: translateX(-50%); bottom: 26px; display: flex; align-items: center; gap: 30px; }
+  .nut-tron { width: 54px; height: 54px; border-radius: 50%; border: 0; display: grid; place-items: center; color: #fff;
+    box-shadow: 0 6px 18px rgba(0,0,0,.25); transition: transform .15s; }
+  .nut-tron:hover { transform: scale(1.05); }
+  .nut-tron.ket-thuc { background: var(--alert); }
+  .nut-tron.mic { width: 44px; height: 44px; background: rgba(255,255,255,.18); backdrop-filter: blur(10px); position: relative; }
+  .nut-tron.mic::before { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid #39d39a; opacity: var(--muc, .2); transform: scale(calc(1 + var(--muc, .2) * .18)); transition: all .12s; }
+  .nut-tron svg { width: 22px; height: 22px; }
+  .nhan-nut { position: absolute; top: 100%; margin-top: 6px; font-size: 11px; color: rgba(255,255,255,.8); white-space: nowrap; left: 50%; transform: translateX(-50%); }
+
+  /* ── HỘI THOẠI (dùng chung) ── */
+  .hoi-thoai { display: flex; flex-direction: column; min-height: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); }
+  .hoi-thoai .dau { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .hoi-thoai .dau h2 { margin: 0; font-size: 14px; font-weight: 600; }
+  .hoi-thoai .dau span { font-size: 12px; color: var(--muted-2); }
+  .ds { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 14px 18px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
+  .bb { max-width: 86%; padding: 9px 12px; border-radius: 14px; font-size: 13.5px; line-height: 1.55; animation: vao .3s ease; }
+  @keyframes vao { from { opacity: 0; transform: translateY(6px); } }
+  .bb.khach { align-self: flex-end; background: var(--ac); color: #fff; border-bottom-right-radius: 4px; }
+  .bb.agent { align-self: flex-start; background: var(--fill); border-bottom-left-radius: 4px; }
+  .bb.tam { align-self: flex-end; background: transparent; border: 1px dashed var(--field); color: var(--muted-2); font-style: italic; }
+  .the-anh { align-self: flex-start; display: grid; grid-template-columns: repeat(3, 64px); gap: 6px; animation: vao .3s ease; }
+  .the-anh img { width: 64px; height: 48px; object-fit: cover; border-radius: var(--r-sm); border: 2px solid transparent; }
+  .the-anh img.on { border-color: var(--ac); }
+  .tool { align-self: flex-start; font: 11px 'JetBrains Mono', monospace; color: var(--muted-2); }
+
+  /* ════ PHƯƠNG ÁN A — cuộc gọi video ════ */
+  .pa-a .luoi { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); gap: 12px; }
+  .pa-a .san-khau { height: 100%; }
+  .pa-a .nguoi { height: 78%; right: 1%; }
+  .pa-a .phu-de { left: 26px; transform: none; text-align: left; width: 50%; bottom: 104px; }
+  .pa-a .dieu-khien { left: 26px; transform: none; }
+  .man.mobile .pa-a .luoi { grid-template-columns: 1fr; grid-template-rows: 46% 1fr; }
+  .man.mobile .pa-a .phu-de { bottom: 76px; left: 12px; width: 58%; font-size: 13px; }
+  .man.mobile .pa-a .dieu-khien { left: 14px; gap: 14px; }
+  .man.mobile .pa-a .phu-de .truoc, .man.mobile .pa-a .phu-de .khach { display: none !important; }
+  .man.mobile .pa-b .nguoi { height: 60%; right: 2%; }
+  .man.mobile .pa-b .phu-de .truoc { display: none !important; }
+  .man.mobile .pa-a .nut-tron { width: 46px; height: 46px; } .man.mobile .pa-a .nut-tron.mic { width: 38px; height: 38px; }
+  .man.mobile .pa-a .nhan-nut { display: none; }
+  .man.mobile .pa-a .dieu-khien { bottom: 12px; }
+  .man.mobile .nguoi { right: 0; height: 88%; }
+
+  /* ════ PHƯƠNG ÁN B — toàn màn + phụ đề + ngăn kéo ════ */
+  .pa-b { flex: 1; min-height: 0; position: relative; display: flex; }
+  .pa-b .san-khau { flex: 1; }
+  .pa-b .phu-de { bottom: 96px; width: min(640px, 70%); }
+  .pa-b .phu-de .truoc { display: inline-block; color: rgba(255,255,255,.8); background: rgba(20,22,26,.3); padding: 3px 10px; border-radius: 8px; font-size: 13px; margin-bottom: 6px; }
+  .nut-nkeo { position: absolute; z-index: 4; top: 12px; right: 12px; display: inline-flex; gap: 8px; align-items: center; padding: 7px 12px; border-radius: 999px;
+    border: 0; background: rgba(255,255,255,.92); color: var(--fg); font-size: 12.5px; font-weight: 500; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+  .pa-b .dem-anh { top: 54px; }
+  .ngan-keo { position: absolute; z-index: 5; top: 0; right: 0; bottom: 0; width: 380px; max-width: 100%; transform: translateX(105%); transition: transform .35s cubic-bezier(.2,.8,.2,1); box-shadow: -10px 0 30px rgba(0,0,0,.12); border-radius: var(--r-lg) 0 0 var(--r-lg); }
+  .ngan-keo.mo { transform: none; }
+  .dong-nk { position: absolute; z-index: 2; top: 8px; right: 10px; width: 30px; height: 30px; border: 0; border-radius: var(--r-sm); background: transparent; font-size: 20px; color: var(--muted); }
+  .dong-nk:hover { background: var(--fill); color: var(--fg); }
+  .ngan-keo .hoi-thoai { height: 100%; border-radius: inherit; }
+  .man.mobile .pa-b .phu-de { width: 88%; font-size: 13.5px; bottom: 80px; }
+  .man.mobile .pa-b .nhan-nut { display: none; }
+  .man.mobile .pa-b .dieu-khien { gap: 14px; }
+
+  /* ════ PHƯƠNG ÁN C — hội thoại chính + PiP ════ */
+  .pa-c { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; gap: 10px; }
+  .pa-c .hoi-thoai { flex: 1; }
+  .pa-c .ds { padding-right: 330px; }
+  .pip { position: absolute; z-index: 4; top: 58px; right: 14px; width: 300px; height: 210px; border-radius: var(--r-lg); box-shadow: 0 12px 30px rgba(0,0,0,.22); }
+  .pip .san-khau { position: absolute; inset: 0; }
+  .pip .phu-de, .pip .dieu-khien { display: none; }
+  .hang-nut-c { flex: none; display: flex; justify-content: flex-end; gap: 10px; align-items: center; }
+  .nut-chinh { border: 0; background: var(--alert); color: #fff; border-radius: var(--r-md); padding: 9px 16px; font-size: 13.5px; font-weight: 600; }
+  .vach { flex: 1; height: 6px; border-radius: 99px; background: var(--fill); overflow: hidden; }
+  .vach i { display: block; height: 100%; background: var(--ac); width: 20%; transition: width .12s; }
+  .man.mobile .pa-c .ds { padding-right: 14px; padding-top: 150px; }
+  .man.mobile .pip { width: 150px; height: 130px; top: 54px; right: 10px; }
+
+  .an { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="demo-bar">
+    <b>Bản vẽ — tab Voice</b>
+    <div class="seg" id="chonPa">
+      <button data-pa="a" aria-pressed="true">A · Cuộc gọi video</button>
+      <button data-pa="b" aria-pressed="false">B · Toàn màn + phụ đề</button>
+      <button data-pa="c" aria-pressed="false">C · Hội thoại + PiP</button>
+    </div>
+    <div class="seg" id="chonCo">
+      <button data-co="desktop" aria-pressed="true">Desktop</button>
+      <button data-co="mobile" aria-pressed="false">Mobile</button>
+    </div>
+    <span class="ghi">Kịch bản tự chạy: khách hỏi → agent trả lời (phụ đề) → gửi ảnh → nền luân phiên</span>
+  </div>
+
+  <div class="khung-ngoai">
+    <div class="man" id="man">
+      <div class="topbar"><h1>Thử agent</h1><div class="tabs"><span>Chat</span><span class="on">Voice</span></div></div>
+      <div class="noi-dung">
+        <div class="thiet-lap">
+          <div class="av">ND</div>
+          <div class="tt"><b>Nguyễn Văn Duy</b><span class="cham">·</span>0912 010 999<span class="cham">·</span>Nam<span class="cham">·</span>Role Sale<span class="cham">·</span>Khoá «Demo UAT»</div>
+          <button class="nut-phu">Sửa</button>
+        </div>
+
+        <!-- A -->
+        <div class="pa-a" id="paA" style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div class="luoi">
+            <div data-san-khau></div>
+            <div data-hoi-thoai></div>
+          </div>
+        </div>
+
+        <!-- B -->
+        <div class="pa-b an" id="paB">
+          <div data-san-khau style="flex:1;display:flex"></div>
+          <button class="nut-nkeo" id="moNganKeo">☰ Hội thoại <span style="color:var(--muted-2)" id="soTin">0</span></button>
+          <div class="ngan-keo" id="nganKeo"><button class="dong-nk" id="dongNganKeo" aria-label="Đóng hội thoại">×</button><div data-hoi-thoai style="height:100%"></div></div>
+        </div>
+
+        <!-- C -->
+        <div class="pa-c an" id="paC">
+          <div data-hoi-thoai style="flex:1;min-height:0;display:flex;flex-direction:column"></div>
+          <div class="pip"><div data-san-khau></div></div>
+          <div class="hang-nut-c"><span style="font-size:13px;color:var(--muted)">● Đang nghe</span><div class="vach"><i id="vachC"></i></div><button class="nut-chinh">Kết thúc</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<template id="tplSanKhau">
+  <div class="san-khau" style="width:100%;height:100%">
+    <div class="nen"><img class="mo" alt="" /><img class="net" alt="" /></div>
+    <div class="nguoi"><img src="nguoi-dan-nghi.webp" alt="" /></div>
+    <div class="pill-tt"><span class="cham-tt"></span><span class="nhan">Đang nghe</span><span class="song"><i></i><i></i><i></i><i></i></span></div>
+    <div class="dem-anh an"></div>
+    <div class="phu-de"><span class="truoc an"></span><span class="khach"></span><span class="chu an"></span></div>
+    <div class="dieu-khien">
+      <button class="nut-tron mic" title="Micro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span class="nhan-nut">Micro</span></button>
+      <button class="nut-tron ket-thuc" title="Kết thúc"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 13.5c4.7-4 12.3-4 17 0l-1.8 2.3c-.4.5-1.1.6-1.6.3l-2.3-1.4c-.4-.3-.6-.8-.5-1.3l.3-1.4a12 12 0 0 0-5.2 0l.3 1.4c.1.5-.1 1-.5 1.3l-2.3 1.4c-.5.3-1.2.2-1.6-.3z"/></svg><span class="nhan-nut">Kết thúc</span></button>
+    </div>
+  </div>
+</template>
+<template id="tplHoiThoai">
+  <div class="hoi-thoai" style="height:100%">
+    <div class="dau"><h2>Hội thoại</h2><span>Phiên thử · 02:14</span></div>
+    <div class="ds"></div>
+  </div>
+</template>
+
+<script>
+  // Ảnh 2 = chính background.jpg LẬT NGANG — public/ chỉ có một ảnh thật, mà
+  // bản vẽ cần thấy nền ĐỔI khi luân phiên.
+  const NEN = ['background.jpg', 'background.jpg#lat']
+  for (const el of document.querySelectorAll('[data-san-khau]')) el.append(document.getElementById('tplSanKhau').content.cloneNode(true))
+  for (const el of document.querySelectorAll('[data-hoi-thoai]')) el.append(document.getElementById('tplHoiThoai').content.cloneNode(true))
+
+  const man = document.getElementById('man')
+  const pa = { a: document.getElementById('paA'), b: document.getElementById('paB'), c: document.getElementById('paC') }
+  const chon = (nhom, thuocTinh, fn) => document.getElementById(nhom).addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return
+    for (const x of e.currentTarget.children) x.setAttribute('aria-pressed', String(x === b))
+    fn(b.dataset[thuocTinh])
+  })
+  chon('chonPa', 'pa', (k) => { for (const [ten, el] of Object.entries(pa)) el.classList.toggle('an', ten !== k) ; capNhatCachHien() })
+  chon('chonCo', 'co', (k) => { man.classList.toggle('mobile', k === 'mobile'); setTimeout(capNhatCachHien, 400) })
+  document.getElementById('moNganKeo').onclick = () => document.getElementById('nganKeo').classList.add('mo')
+  document.getElementById('dongNganKeo').onclick = () => document.getElementById('nganKeo').classList.remove('mo')
+
+  // ── Nền: phủ kín nếu cắt ≤ 30%, không thì hiện trọn + nền mờ (giống code thật) ──
+  let boAnh = [NEN[0]], iAnh = 0
+  const kichThuoc = {}
+  function datNen() {
+    const u = boAnh[iAnh]
+    for (const sk of document.querySelectorAll('.san-khau')) {
+      const [mo, net] = sk.querySelectorAll('.nen img')
+      if (net.getAttribute('src') !== u) { net.style.opacity = 0; setTimeout(() => { mo.src = u; net.src = u; const t = u.endsWith('#lat') ? 'scaleX(-1)' : ''; net.style.transform = t; mo.style.transform = 'scale(1.12) ' + t; net.style.opacity = 1 }, 250) }
+      const dem = sk.querySelector('.dem-anh')
+      dem.classList.toggle('an', boAnh.length < 2)
+      dem.innerHTML = boAnh.map((_, i) => `<span class="ch ${i === iAnh ? 'on' : ''}"></span>`).join('') + `<span>${iAnh + 1}/${boAnh.length}</span>`
+    }
+    capNhatCachHien()
+  }
+  function capNhatCachHien() {
+    for (const sk of document.querySelectorAll('.san-khau')) {
+      const net = sk.querySelector('.nen .net'); const k = kichThuoc[net.getAttribute('src')]
+      if (!k || !sk.clientWidth) continue
+      const r = sk.clientWidth / sk.clientHeight / (k[0] / k[1]); const cat = 1 - Math.min(r, 1 / r)
+      sk.querySelector('.nen').classList.toggle('phu', cat <= 0.3)
+    }
+  }
+  for (const u of NEN) { const im = new Image(); im.onload = () => { kichThuoc[u] = [im.naturalWidth, im.naturalHeight]; capNhatCachHien() }; im.src = u }
+  datNen()
+
+  // ── Kịch bản hội thoại ──
+  const ngu = (ms) => new Promise((r) => setTimeout(r, ms))
+  let soTin = 0
+  function themTin(lop, html) {
+    for (const ds of document.querySelectorAll('.ds')) { const d = document.createElement('div'); d.className = lop; d.innerHTML = html; ds.append(d); ds.scrollTop = ds.scrollHeight }
+    if (lop.startsWith('bb')) document.getElementById('soTin').textContent = ++soTin
+  }
+  function trangThai(noi) {
+    for (const p of document.querySelectorAll('.pill-tt')) { p.classList.toggle('dang-noi', noi); p.querySelector('.nhan').textContent = noi ? 'Agent đang nói' : 'Đang nghe' }
+    for (const n of document.querySelectorAll('.nguoi')) n.classList.toggle('noi', noi)
+  }
+  function phuDe(khach, chu, truoc) {
+    for (const p of document.querySelectorAll('.phu-de')) {
+      p.querySelector('.khach').textContent = khach ? 'Bạn: ' + khach : ''
+      const c = p.querySelector('.chu'); c.classList.toggle('an', !chu); c.textContent = chu || ''
+      const t = p.querySelector('.truoc'); t.classList.toggle('an', !truoc); t.textContent = truoc || ''
+    }
+  }
+  async function agentNoi(cau, truoc) {
+    trangThai(true)
+    let hien = ''
+    for (const tu of cau.split(' ')) { hien += (hien ? ' ' : '') + tu; phuDe('', hien, truoc); await ngu(150) }
+    themTin('bb agent', cau)
+    await ngu(600)
+  }
+  // Mức mic giả lập
+  setInterval(() => { const m = (0.15 + Math.random() * 0.5).toFixed(2); for (const b of document.querySelectorAll('.nut-tron.mic')) b.style.setProperty('--muc', m); document.getElementById('vachC').style.width = (m * 100) + '%' }, 140)
+
+  async function kichBan() {
+    while (true) {
+      for (const ds of document.querySelectorAll('.ds')) ds.innerHTML = ''
+      soTin = 0; boAnh = [NEN[0]]; iAnh = 0; datNen()
+      trangThai(false); phuDe('', '', '')
+      await ngu(1200)
+      phuDe('Cho tôi xem phối cảnh dự án Noble Crystal', '', ''); themTin('bb khach', 'Cho tôi xem phối cảnh dự án Noble Crystal'); await ngu(900)
+      themTin('tool', 'tool_start · send_media'); await ngu(500)
+      boAnh = [NEN[0], NEN[1]]; iAnh = 0; datNen()
+      themTin('the-anh', NEN.map((u, i) => `<img src="${u}" class="${i === 0 ? 'on' : ''}" style="${u.endsWith('#lat') ? 'transform:scaleX(-1)' : ''}">`).join(''))
+      await agentNoi('Dạ, đây là phối cảnh tổng thể dự án Noble Crystal ạ.')
+      await agentNoi('Dự án gồm hai toà tháp cao 40 tầng, nằm ngay cạnh tuyến metro.', 'Dạ, đây là phối cảnh tổng thể dự án Noble Crystal ạ.')
+      iAnh = 1; datNen()
+      await agentNoi('Em gửi thêm ảnh tiện ích nội khu để anh tham khảo nhé.', 'Dự án gồm hai toà tháp cao 40 tầng, nằm ngay cạnh tuyến metro.')
+      trangThai(false); phuDe('', '', ''); await ngu(1500)
+      phuDe('Giá căn hai phòng ngủ khoảng bao nhiêu?', '', ''); themTin('bb tam', 'Giá căn hai phòng ngủ khoảng bao…'); await ngu(900)
+      for (const ds of document.querySelectorAll('.ds')) ds.lastElementChild.remove()
+      themTin('bb khach', 'Giá căn hai phòng ngủ khoảng bao nhiêu?'); await ngu(700)
+      iAnh = 0; datNen()
+      await agentNoi('Dạ, căn hai phòng ngủ hiện có giá từ khoảng 4,2 tỷ đồng ạ.')
+      trangThai(false); phuDe('', '', ''); await ngu(3500)
+    }
+  }
+  kichBan()
+  addEventListener('resize', capNhatCachHien)
+</script>
+</body>
+</html>

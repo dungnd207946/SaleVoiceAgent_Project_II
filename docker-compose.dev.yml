@@ -1,0 +1,53 @@
+# File DEPLOY (dev-server + prod) — SPA tĩnh: image build sẵn bundle rồi nginx
+# phục vụ nó. Máy dev dùng docker-compose.local.yml (build tại chỗ).
+#
+#   docker network create odyssey-network      # một lần mỗi máy, tạo tay
+#   aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com
+#   IMAGE_TAG=<sha> docker compose -f docker-compose.dev.yml pull
+#   IMAGE_TAG=<sha> docker compose -f docker-compose.dev.yml up -d --wait
+name: odyssey-portal-frontend
+
+services:
+  frontend:
+    # KHÔNG có `build:` — file này chỉ kéo image đã qua cổng test trên CI. Default
+    # `dev-latest` chỉ để gõ tay; đừng deploy bằng nó (trỏ chỗ khác sau mỗi merge).
+    image: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-portal-frontend:${IMAGE_TAG:-dev-latest}
+    container_name: odyssey-portal-frontend
+
+    environment:
+      # Biến RUNTIME (nginx envsubst lúc khởi động), KHÔNG phải biến `VITE_*` —
+      # biến đó nhúng cứng vào bundle lúc build. ⚠️ KHÔNG có `/` ở cuối: dấu `/`
+      # làm nginx cắt mất tiền tố `/api/` và mọi lời gọi API thành 404.
+      #
+      #   http://odyssey-portal-backend:8100   backend trong container
+      #   http://172.17.0.1:8100               backend trên host (`make api`) — IP của
+      #                                        host gateway, KHÔNG dùng tên
+      #                                        `host.docker.internal`: nginx phân giải
+      #                                        upstream qua `resolver`, mà resolver
+      #                                        KHÔNG đọc /etc/hosts nên tên do
+      #                                        `extra_hosts` sinh ra không tra được.
+      #                                        Lấy IP: `docker network inspect
+      #                                        odyssey-network -f '{{(index .IPAM.Config 0).Gateway}}'`
+      ODYSSEY_PORTAL_API_UPSTREAM: ${ODYSSEY_PORTAL_API_UPSTREAM:-http://odyssey-portal-backend:8100}
+      # Lip sync (khối /lipsync/): nginx gắn token này khi chuyển tiếp tới service
+      # lipsync-musetalk của odyssey-models — CÙNG giá trị ODYSSEY_MODELS_TOKEN bên đó
+      # (thêm vào ODYSSEY_SECRET_FRONTEND_ENV). Thiếu ⇒ portal chạy, không có lip sync.
+      ODYSSEY_PORTAL_MODELS_TOKEN: ${ODYSSEY_MODELS_TOKEN:-}
+      ODYSSEY_PORTAL_LIPSYNC_UPSTREAM: ${ODYSSEY_PORTAL_LIPSYNC_UPSTREAM:-http://lipsync-musetalk:8020}
+
+    ports:
+      # 5274 chứ không 5273 (vite dev server) — hai đường phải chạy được đồng thời.
+      - "${PORTAL_FE_PORT:-5274}:80"
+
+    # Giữ cho các công cụ khác trong container tra được tên host (curl/wget lúc soi
+    # lỗi). KHÔNG còn dùng được cho `ODYSSEY_PORTAL_API_UPSTREAM` — xem chú thích ở
+    # biến đó: nginx tra upstream bằng `resolver`, không qua /etc/hosts.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    restart: unless-stopped
+
+networks:
+  default:
+    name: odyssey-network
+    external: true

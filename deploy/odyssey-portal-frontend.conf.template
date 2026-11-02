@@ -1,0 +1,183 @@
+# nginx của service `odyssey-portal-frontend`: phục vụ SPA + chuyển tiếp /api/
+# sang `odyssey-portal-backend`.
+#
+# File .template, không phải .conf: image nginx tự chạy envsubst trên
+# /etc/nginx/templates/*.template lúc khởi động rồi ghi ra /etc/nginx/conf.d/.
+# Nhờ vậy địa chỉ backend là biến RUNTIME — devops đổi môi trường bằng cách đổi
+# biến, không phải build lại image. Một image chạy được mọi môi trường.
+#
+# NGINX_ENVSUBST_FILTER=^ODYSSEY_PORTAL_ (đặt ở Dockerfile) giới hạn envsubst chỉ
+# thay biến có tiền tố đó. Không có nó, envsubst cũng ăn luôn $uri/$host/$scheme
+# dưới đây — chúng là biến của nginx, thay đi là hỏng cấu hình.
+
+# WebSocket: `Connection: upgrade` khi client xin nâng cấp, `close` khi không.
+# `map` thuộc khối http — file này nằm trong conf.d nên được include ở đó.
+map $http_upgrade $ws_connection {
+  default upgrade;
+  ''      close;
+}
+
+server {
+  listen 80;
+  server_name _;
+
+  root /usr/share/nginx/html;
+  index index.html;
+
+  # Nén chữ: bundle entry 283 KB → ~91 KB, CSS 113 KB → ~20 KB. Trước 2026-10-05
+  # không bật ở đâu — openresty phía trước chỉ nén HTML, đo trên agent-portal-dev
+  # thấy JS/CSS về không có Content-Encoding. Bật Ở ĐÂY chứ không ở proxy phía
+  # trước: image này chạy cả dev, UAT, prod lẫn on-prem, không phải chỗ nào cũng
+  # có proxy của mình.
+  #   · `text/html` nginx luôn nén khi `gzip on`, không khai lại (khai là warning).
+  #   · `application/json` gồm cả `/api/` — nén áp lên response của upstream.
+  #   · Không có font/ảnh/video: woff2, jpg, webp, mp4 đã nén sẵn, nén lần nữa
+  #     chỉ tốn CPU.
+  #   · `gzip_proxied any`: mặc định nginx KHÔNG nén khi request có header `Via`
+  #     (tức đi qua một proxy) — mà ở mọi môi trường đều có proxy đứng trước.
+  #   · Mức 5: quá mức này tệp nhỏ đi rất ít mà CPU tăng nhanh.
+  gzip on;
+  gzip_comp_level 5;
+  gzip_min_length 1024;
+  gzip_proxied any;
+  gzip_vary on;
+  gzip_types text/css text/plain application/javascript application/json image/svg+xml;
+
+  # Load balancer hỏi đường này. Tách khỏi `location /` vì nếu dùng chung, SPA
+  # fallback trả index.html kèm 200 cho MỌI đường — kể cả khi file tĩnh đã hỏng.
+  # Probe khi đó xanh vĩnh viễn và không còn nói lên điều gì.
+  location = /healthz {
+    access_log off;
+    add_header Content-Type text/plain;
+    return 200 "ok\n";
+  }
+
+  # Frontend gọi bằng đường TƯƠNG ĐỐI (`fetch('/api/v1/me')` ở src/lib/session.tsx),
+  # nên cùng origin — không cần cấu hình CORS, và cookie phiên đăng nhập đi theo
+  # request một cách tự nhiên.
+  #
+  # proxy_pass KHÔNG có dấu / ở cuối: như vậy nginx chuyển nguyên URI. `/api/v1/me`
+  # tới backend vẫn là `/api/v1/me` — khớp TIEN_TO = "/api/v1" trong
+  # src/portal/api/app.py. Thêm dấu / vào là nginx cắt mất tiền tố `/api/` và mọi
+  # request thành 404.
+  location /api/ {
+    # ⚠️ proxy_pass qua BIẾN + `resolver`, KHÔNG phải hằng. Hai lý do, cả hai đã
+    # dựng lại được bằng container thật (2026-08-04):
+    #   · Hằng ⇒ nginx phân giải upstream LÚC KHỞI ĐỘNG và TỪ CHỐI chạy nếu tên chưa
+    #     có: `[emerg] host not found in upstream`. Container Exited(1), `restart:
+    #     unless-stopped` cho nó lặp, và deploy báo `unhealthy` — dù frontend hoàn
+    #     toàn lành. Tức là không deploy được frontend khi backend chưa lên.
+    #   · Hằng ⇒ IP bị cache VĨNH VIỄN. Recreate container backend là nó đổi IP,
+    #     nginx vẫn gõ IP cũ và MỌI /api/ thành 502 cho tới khi restart frontend —
+    #     mỗi lần deploy backend là một lần frontend hỏng im lặng.
+    # Với biến + resolver, nginx phân giải lại theo request (TTL 10s), và thiếu
+    # backend thì `/api/` trả 502 còn phần SPA vẫn phục vụ bình thường.
+    #
+    # 127.0.0.11 là DNS nội bộ của docker — chỉ tồn tại trên user-defined network
+    # (`odyssey-network`), không có trên network `default` của docker.
+    # ⚠️ `resolver` KHÔNG đọc /etc/hosts, nên `host.docker.internal` do `extra_hosts`
+    # sinh ra sẽ KHÔNG phân giải được nữa: ở máy dev trỏ thẳng IP của host gateway.
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    # Mặc định của nginx là 30s. Backend chưa lên thì mọi lời gọi API treo 30s rồi
+    # mới 502 — người dùng thấy màn hình đứng chứ không thấy lỗi. 5s là đủ cho một
+    # DNS nội bộ, và khớp `proxy_connect_timeout` dưới đây.
+    resolver_timeout 5s;
+    set $upstream_api ${ODYSSEY_PORTAL_API_UPSTREAM};
+
+    # `$request_uri` là BẮT BUỘC ở dạng biến: nginx chỉ tự nối URI gốc khi proxy_pass
+    # là hằng không có path. Thiếu nó thì mọi request tới backend đều thành `/`.
+    proxy_pass $upstream_api$request_uri;
+    proxy_http_version 1.1;
+
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # Mặc định của nginx là 60s. Portal không có endpoint chạy lâu; để 60s nghĩa
+    # là một backend treo giữ kết nối của người dùng suốt một phút trước khi báo lỗi.
+    proxy_connect_timeout 5s;
+    proxy_read_timeout    30s;
+    proxy_send_timeout    30s;
+  }
+
+  # Gateway agent (WS /v1/chat, /v1/voice) — CÙNG ORIGIN với portal, nên mỗi môi
+  # trường tự gọi gateway của chính nó (src/features/platform/api.ts). Trước
+  # 2026-10-01 FE trỏ cứng `wss://agent-uat.noble.vn` nên dev cũng gọi gateway uat.
+  # Biến + resolver như `/api/`: gateway chưa lên thì /v1/ trả 502, SPA vẫn chạy.
+  location /v1/ {
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    resolver_timeout 5s;
+    set $upstream_gateway ${ODYSSEY_PORTAL_AGENT_GATEWAY_UPSTREAM};
+    proxy_pass $upstream_gateway$request_uri;
+    proxy_http_version 1.1;
+
+    proxy_set_header Upgrade           $http_upgrade;
+    proxy_set_header Connection        $ws_connection;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # Một cuộc gọi voice/phiên chat sống hàng chục phút; 30s của /api/ sẽ cắt ngang.
+    proxy_connect_timeout 5s;
+    proxy_read_timeout    3600s;
+    proxy_send_timeout    3600s;
+    proxy_buffering off;
+  }
+
+  # Lip sync (WS /lipsync/avatar) — service `lipsync-musetalk` bên odyssey-models.
+  # Trình duyệt KHÔNG giữ được bí mật nên KHÔNG gửi token: nginx GẮN token chung
+  # (ODYSSEY_PORTAL_MODELS_TOKEN — cùng giá trị ODYSSEY_MODELS_TOKEN của models)
+  # rồi chuyển tiếp trong mạng nội bộ. Bỏ tiền tố /lipsync: service nghe /avatar.
+  # Service chưa lên ⇒ 502 ⇒ portal vẫn phát tiếng agent, chỉ không có lip sync.
+  location /lipsync/ {
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    resolver_timeout 5s;
+    set $upstream_lipsync ${ODYSSEY_PORTAL_LIPSYNC_UPSTREAM};
+    rewrite ^/lipsync(/.*)$ $1 break;
+    # ⚠️ `$uri` KHÔNG mang query string — phải nối `$is_args$args`, không thì
+    # `?avatar=<id>` (nhân vật workspace tự tạo) rơi mất và service lặng lẽ dùng
+    # người dẫn mặc định. Dev không dính vì đi qua proxy vite, proxy đó giữ query.
+    proxy_pass $upstream_lipsync$uri$is_args$args;
+    proxy_http_version 1.1;
+
+    proxy_set_header Upgrade           $http_upgrade;
+    proxy_set_header Connection        $ws_connection;
+    proxy_set_header Host              $host;
+    proxy_set_header Authorization     "Bearer ${ODYSSEY_PORTAL_MODELS_TOKEN}";
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    proxy_connect_timeout 5s;
+    proxy_read_timeout    3600s;
+    proxy_send_timeout    3600s;
+    proxy_buffering off;
+  }
+
+  # Tên file trong dist/assets/ có hash nội dung, nên nội dung đổi thì tên đổi —
+  # cache vĩnh viễn là an toàn và không bao giờ trả bản cũ.
+  #
+  # Chỉ `add_header`, KHÔNG kèm `expires 1y`. Dùng cả hai thì nginx trả HAI dòng
+  # Cache-Control (`max-age=…` của expires, và dòng add_header) — hợp lệ về mặt
+  # giao thức nhưng nhập nhằng, và cache trung gian nào đọc dòng đầu rồi dừng sẽ
+  # bỏ mất `immutable`.
+  location /assets/ {
+    add_header Cache-Control "public, max-age=31536000, immutable";
+    try_files $uri =404;
+  }
+
+  # index.html thì NGƯỢC LẠI: tên nó không đổi, và chính nó là thứ trỏ tới bộ
+  # asset mới. Để trình duyệt cache nó là deploy xong mà người dùng vẫn chạy bản
+  # cũ tới khi tự bấm hard-refresh.
+  location = /index.html {
+    add_header Cache-Control "no-cache";
+  }
+
+  # SPA fallback: mọi đường không phải file đều trả index.html, nếu không thì F5
+  # ở /projects ra 404 của nginx thay vì màn hình projects.
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+}

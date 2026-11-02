@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Demo · Tổng quan — Odyssey Portal</title>
+<!--
+  ╔══════════════════════════════════════════════════════════════════════════╗
+  ║  FILE DEMO — KHÔNG PHẢI CODE SẢN PHẨM. Xoá sau khi duyệt thiết kế.       ║
+  ║  Mở: http://localhost:5273/demo-tong-quan.html                            ║
+  ║                                                                          ║
+  ║  VÒNG 5 · 6 ô, KHOÁ TRONG MỘT MÀN HÌNH, không cuộn ở mọi chiều cao       ║
+  ║  viewport. Ô «Hội thoại» là hai đường Chat/Voice trên 7 ngày, có dải      ║
+  ║  crosshair; trạng thái nghỉ dừng ở HÔM NAY.                               ║
+  ║                                                                          ║
+  ║  Token + font lấy nguyên từ styles/theme.css và /fonts/*.woff2.           ║
+  ║  Dữ liệu là FAKE, sinh tất định trong file này.                           ║
+  ╚══════════════════════════════════════════════════════════════════════════╝
+-->
+<style>
+@font-face{font-family:'Be Vietnam Pro';font-weight:400;font-display:swap;src:url('/fonts/be-vietnam-pro-400-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Be Vietnam Pro';font-weight:400;font-display:swap;src:url('/fonts/be-vietnam-pro-400-latin.woff2') format('woff2')}
+@font-face{font-family:'Be Vietnam Pro';font-weight:500;font-display:swap;src:url('/fonts/be-vietnam-pro-500-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Be Vietnam Pro';font-weight:500;font-display:swap;src:url('/fonts/be-vietnam-pro-500-latin.woff2') format('woff2')}
+@font-face{font-family:'Be Vietnam Pro';font-weight:600;font-display:swap;src:url('/fonts/be-vietnam-pro-600-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Be Vietnam Pro';font-weight:600;font-display:swap;src:url('/fonts/be-vietnam-pro-600-latin.woff2') format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-weight:400;font-display:swap;src:url('/fonts/jetbrains-mono-400-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'JetBrains Mono';font-weight:400;font-display:swap;src:url('/fonts/jetbrains-mono-400-latin.woff2') format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-weight:500;font-display:swap;src:url('/fonts/jetbrains-mono-500-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'JetBrains Mono';font-weight:500;font-display:swap;src:url('/fonts/jetbrains-mono-500-latin.woff2') format('woff2')}
+
+/* ── Token — COPY NGUYÊN từ styles/theme.css ────────────────────────────── */
+:root{
+  --n0:#fcfbf7; --n1:#fffefc; --n2:#fbfaf5; --n3:#f3f1ea; --n4:#edebe5; --n5:#ded9d0;
+  --n6:#948e81; --n7:#666c76; --n8:#5f656e; --n9:#4a5058; --n10:#2a2e35; --n11:#14161a;
+  --ac:#0d7a5f; --acs:#e7f2ee; --acd:#0a5e49;
+  --bg:var(--n0); --fg:var(--n11); --surface:var(--n1);
+  --border:var(--n4); --border-strong:var(--n5); --border-soft:var(--n3);
+  --muted:var(--n8); --muted-2:var(--n7);
+  --fill:var(--n2); --fill-strong:var(--n3);
+  --chrome-1:#f1eee7; --chrome-2:#f8f6f1;
+  --badge-alert-bg:#fdeceb; --badge-alert-fg:#b3402e;
+  --badge-warn-bg:#fdf3e0; --badge-warn-fg:#8a5c0d;
+  --badge-neutral-bg:#f0efec; --badge-neutral-fg:var(--n8);
+  --panel:#1a1c20; --panel-line:#2b2e34; --panel-muted:#9aa0a8; --tren-panel:#ffffff;
+  --radius-sm:6px; --radius-md:8px; --radius-lg:12px;
+  --sans:'Be Vietnam Pro',system-ui,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+
+  /* ── BẬC MỚI đề xuất cho theme.css ─────────────────────────────────────
+     Màu chuỗi dữ liệu — đã chạy validator (skill dataviz) trên đúng nền
+     `surface` #fffefc. Đây là bộ ĐẦU TIÊN không còn cảnh báo nào: cặp kề xấu
+     nhất ΔE 12.0 deutan (mọi vòng trước đều rơi vào dải 6–8). Cặp ds1+ds2 —
+     hai đường Chat/Voice và gauge chuyển sale — đo riêng ở chế độ all-pairs:
+     ΔE 24.4 protan · 35.2 mắt thường.
+
+     ⚠ BA VÒNG MÀU ĐÃ BỎ, đừng quay lại:
+       ① Neo vào ChipKenh (chat #1f5aa8 + voice #5b45a8) — ΔE 0.6 deutan,
+          gần như một màu.
+       ② #1f5aa8 lam + #a05a00 hổ phách — #a05a00 chroma sát sàn, trên nền
+          giấy ấm ra nâu bùn chứ không phải một sắc.
+       ③ #3a5fa8 chàm + #c2593f đất nung — đạt cổng nhưng trầm và bão hoà
+          thấp, đọc ra cũ. */
+  --ds1:#4361ee; /* indigo  — Chat */
+  --ds2:#ef4d5a; /* san hô  — Voice · Chuyển sale */
+  --ds3:#0ea5a4; /* teal    — Zalo OA */
+  --ds4:#8b5cf6; /* tím oải — slot 4 */
+  --ds-khac:var(--n6);
+  --ds1-mo:#eef1fd;  /* dải crosshair — ds1 pha rất nhạt, chỉ để phân nền */
+
+  /* `acs` đậm hơn một nấc — nền hàng kỹ năng lúc rê chuột. Cần bậc riêng vì
+     `acs` đang là nền mục nav đang mở: dùng lại đúng nó cho hover thì hàng rê
+     vào trông y hệt hàng đang được chọn. */
+  --acs-manh:#dcece6;
+  /* Bo góc của MARK biểu đồ — KHÔNG phải bậc thứ tư của UI. Thang 6/8/12 đo
+     cho nút · ô nhập · thẻ; một mảng thanh cao 10px bo 6px thì thành viên
+     thuốc. Khai có tên để không ai viết `rounded-[3px]` rải trong component. */
+  --radius-mark:3px;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;font-size:14px;line-height:1.5;overflow:hidden}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0,0,0,0);white-space:nowrap;border:0}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+
+/* ══ KHUNG — khoá 100dvh, không có đường nào để cuộn ═══════════════════════
+   `dvh` chứ không `vh`: trên trình duyệt di động `vh` tính theo viewport khi
+   thanh địa chỉ đã thu, nên `100vh` cao hơn chỗ thật sự nhìn thấy và màn
+   "không cuộn" vẫn cuộn được vài chục pixel. */
+.shell{display:flex;height:100dvh;overflow:hidden}
+.rail{width:68px;background:var(--chrome-1);border-right:1px solid var(--border-soft);
+  flex:none;padding:12px 0;text-align:center}
+.panel{width:240px;background:var(--chrome-2);border-right:1px solid var(--border-soft);
+  flex:none;padding:14px}
+.mo-nav{font-size:10.5px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.06em}
+.mo-nav div{padding:6px 0;text-transform:none;font-size:12.5px;letter-spacing:0}
+.mo-nav div.on{color:var(--ac);font-weight:500}
+main{flex:1;min-width:0;display:flex;flex-direction:column;padding:16px 20px;gap:14px}
+
+/* ── Đầu màn ────────────────────────────────────────────────────────────── */
+.dau{display:flex;align-items:center;gap:16px;flex:none}
+.dau h1{font-size:19px;font-weight:600;margin:0;letter-spacing:-.01em}
+.dau .phu{font-size:12px;color:var(--muted-2);margin:1px 0 0}
+.dau .cuoi{margin-left:auto;display:flex;align-items:center;gap:12px}
+.mocgio{font-size:11.5px;color:var(--muted-2)}
+.khoang{display:flex;background:var(--fill-strong);border-radius:var(--radius-md);padding:3px}
+.khoang button{font:inherit;font-size:12.5px;border:0;background:transparent;color:var(--muted);
+  padding:4px 11px;border-radius:var(--radius-sm);cursor:pointer}
+.khoang button[aria-pressed=true]{background:var(--surface);color:var(--fg);font-weight:500;
+  box-shadow:0 1px 2px rgba(20,22,26,.07)}
+
+/* ── Lưới 2 hàng đều nhau, tràn hết chiều cao còn lại ───────────────────── */
+.luoi{flex:1;min-height:0;display:grid;gap:14px;
+  grid-template-columns:repeat(12,1fr);grid-template-rows:1fr 1fr}
+.the{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:14px 16px;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}
+.c8{grid-column:span 8}
+@media(max-width:1240px){.luoi{grid-template-rows:repeat(3,1fr)}
+  .c3,.c4,.c5,.c8{grid-column:span 6}}
+
+.dau-o{display:flex;align-items:baseline;gap:8px;flex:none;margin-bottom:2px}
+.dau-o h2{font-size:12px;font-weight:600;margin:0}
+.dau-o .lien{margin-left:auto;font-size:11.5px;color:var(--ac);text-decoration:none}
+.dau-o .lien:hover{color:var(--acd)}
+.ghi{font-size:11px;color:var(--muted-2);margin:0 0 8px;flex:none}
+
+.tru{display:flex;align-items:baseline;gap:9px;flex:none}
+.tru .so{font-family:var(--mono);font-size:30px;font-weight:500;line-height:1;letter-spacing:-.025em}
+.tru .dv{font-size:12.5px;color:var(--muted-2)}
+.delta{font-size:11px;font-family:var(--mono);display:inline-flex;align-items:center;gap:3px;
+  padding:2px 7px;border-radius:999px;white-space:nowrap}
+.delta.len{background:var(--acs);color:var(--acd)}
+.delta.xuong{background:var(--badge-alert-bg);color:var(--badge-alert-fg)}
+
+/* ── ① Hội thoại: hai đường 7 ngày + dải ngày đang xem ──────────────────── */
+.cg{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;margin:9px 0 0;padding:0;
+  list-style:none;flex:none}
+.cg li{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted)}
+.cg i{width:9px;height:9px;border-radius:999px;flex:none}
+.cg b{font-family:var(--mono);font-weight:500;color:var(--fg)}
+.cg li.phu{color:var(--muted-2);font-size:11px;margin-left:auto}
+
+.bd7{flex:1;min-height:0;position:relative;margin-top:6px;cursor:crosshair}
+.bd7 svg{position:absolute;inset:0;display:block}
+
+/* Nhãn ngày là NÚT bấm được, không phải chữ trang trí: dải crosshair phải với
+   tới được bằng bàn phím và bằng ngón tay, không chỉ bằng con chuột. */
+.ngay7{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;flex:none;margin-top:7px}
+.ng{font:inherit;border:0;background:transparent;cursor:pointer;padding:5px 1px 4px;
+  border-radius:var(--radius-sm);display:flex;flex-direction:column;align-items:center;gap:1px;
+  color:var(--muted-2);transition:background .1s,color .1s}
+.ng .t{font-size:11px;line-height:1.25;white-space:nowrap}
+.ng .d{font-size:10px;font-family:var(--mono);opacity:.7}
+.ng:hover{background:var(--fill)}
+.ng.nay .t{color:var(--muted);font-weight:500}
+.ng.on{background:var(--ds1-mo);color:var(--ds1)}
+.ng.on .t{color:var(--ds1);font-weight:500}
+.ng.on .d{opacity:.9}
+
+/* ── ② Chuyển sale — gauge nửa cung ─────────────────────────────────────── */
+.vong-boc{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center}
+.gauge{position:relative;display:flex;flex-direction:column;align-items:center}
+.gauge svg{display:block}
+/* Số nằm trong MIỆNG cung, không phải giữa hình: tâm hình học của một nửa cung
+   nằm trên đường kính, tức mép dưới — đặt số ở đó thì nó tràn ra ngoài. */
+.gauge-tam{position:absolute;left:0;right:0;bottom:2px;text-align:center;pointer-events:none}
+.gauge-tam .p{font-family:var(--mono);font-size:34px;font-weight:500;line-height:1;
+  letter-spacing:-.03em}
+.gauge-tam .l{font-size:10.5px;color:var(--muted-2);margin-top:3px}
+.ct{width:100%;display:grid;gap:6px;flex:none}
+.ct div{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.ct i{width:9px;height:9px;border-radius:999px;flex:none}
+.ct b{margin-left:auto;font-family:var(--mono);font-weight:500;color:var(--fg)}
+
+/* ── ③ Khách đánh giá ───────────────────────────────────────────────────── */
+.fb-dau{flex:none;border-bottom:1px solid var(--border-soft);padding-bottom:12px}
+.fb-hang{display:flex;align-items:baseline;gap:8px}
+.fb-so{font-family:var(--mono);font-size:34px;font-weight:500;line-height:1;letter-spacing:-.03em}
+.fb-tren{font-size:14px;color:var(--muted-2)}
+.fb-luot{font-size:12px;color:var(--muted);margin:7px 0 0}
+.fb-luot b{color:var(--fg);font-weight:500}
+#fb-sao-hinh{margin-top:8px}
+.sao-hinh{display:inline-flex;align-items:center;gap:2px}
+.sao-hinh .s{position:relative;display:inline-block;flex:none}
+.sao-hinh .s svg{display:block}
+.sao-hinh .phu{position:absolute;inset:0 auto 0 0;overflow:hidden}
+.sao-ds{flex:1;min-height:0;display:grid;grid-auto-rows:1fr;gap:6px;margin-top:10px}
+.sao-h{display:grid;grid-template-columns:26px 1fr 34px;gap:10px;align-items:center;font-size:12.5px}
+.sao-h .k{text-align:right;color:var(--muted-2);font-family:var(--mono)}
+.sao-h .m{height:11px;background:var(--fill);border-radius:999px;overflow:hidden}
+.sao-h .m span{display:block;height:100%;border-radius:999px;background:var(--ac)}
+.sao-h .v{font-family:var(--mono);color:var(--muted);text-align:right}
+
+
+/* ── ⑤ Kiến thức — DANH SÁCH HÀNG, không còn sáu ô ──────────────────────
+   Bản trước xếp sáu ô, mỗi ô một THANH BO TRÒN đặc — đúng cái hình mà ô ③
+   Khách đánh giá đang dùng cho phân bố sao, và hai ô nằm cùng một màn.
+   Cùng một hình thì mắt đọc ra "cùng một loại số", trong khi một bên là
+   phân bố phiếu còn bên kia là độ phủ kho dữ liệu.
+
+   Hai thứ đổi để tách hẳn:
+     · HÀNG thay vì ô — sáu con số % xếp thành một cột thẳng thì so sáu
+       dòng là quét mắt xuống, không phải nhảy qua sáu khối rời.
+     · THƯỚC KHẮC VẠCH thay vì thanh đặc — khác hình, khác nhịp. Nấc rời
+       còn đọc được giá trị thô ("11 trên 14 vạch") khi in đen trắng, thứ
+       thanh đặc không cho.
+   Con số đứng trước vẫn là phần agent ĐỌC ĐƯỢC, không phải tổng: agent
+   không thấy bản nháp (view `agent_api` lọc `published`), nên "12 dự án"
+   là con số làm người xem yên tâm sai. */
+.kt-cap{display:flex;align-items:baseline;gap:10px}
+.kt-cap b{margin-left:auto;font-family:var(--mono);font-weight:500;color:var(--fg);
+  font-size:12px;letter-spacing:-.01em}
+.kt-cap b i{font-style:normal;color:var(--muted-2);font-weight:400}
+.kt{flex:1;min-height:0;display:grid;grid-auto-rows:1fr;gap:6px}
+.kt-h{display:grid;align-items:center;gap:12px;min-width:0;padding:0 12px;
+  grid-template-columns:30px minmax(104px,1fr) minmax(0,1.15fr) 78px auto 46px 148px;
+  background:var(--fill);border:1px solid var(--border);border-radius:var(--radius-md);
+  cursor:default;transition:background .12s,border-color .12s}
+.kt-h:hover{background:var(--acs-manh);border-color:var(--border-strong)}
+.kt-h .ic{width:30px;height:30px;border-radius:var(--radius-sm);background:var(--surface);
+  border:1px solid var(--border);display:grid;place-items:center}
+.kt-h .n{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Cột thứ hai nói RÕ "đọc được" nghĩa là gì ở dòng đó — mỗi dòng một điều
+   kiện lọc khác nhau, không ghi ra thì sáu tỉ lệ trông như cùng một phép
+   đo. Nó cũng lấp đúng khoảng trống mà một hàng rộng 840px sinh ra. */
+.kt-h .dk{font-size:11.5px;color:var(--muted-2);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.kt-h .ty{font-family:var(--mono);font-size:11.5px;color:var(--muted-2);text-align:right;
+  white-space:nowrap}
+.kt-h .ty b{color:var(--fg);font-weight:500}
+.kt-h .pc{font-family:var(--mono);font-size:12.5px;text-align:right;letter-spacing:-.02em}
+/* Thước: 14 nấc. Nấc đã đạt tô một sắc duy nhất (`ac`) mờ dần về đầu —
+   độ phủ là ĐẠI LƯỢNG LIÊN TỤC, mà thang liên tục thì một sắc chuyển đậm
+   nhạt, không phải xanh/vàng/đỏ. Màu trạng thái để dành cho viên nhãn bên
+   phải, nơi nó đi kèm chữ. */
+.kt-th{display:flex;gap:3px;align-items:center}
+.kt-th i{width:3px;height:16px;border-radius:var(--radius-mark);background:var(--fill-strong)}
+.kt-tt{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;line-height:1;
+  padding:4px 10px 4px 8px;border-radius:999px;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;justify-self:start;max-width:100%}
+.kt-tt i{width:6px;height:6px;border-radius:999px;flex:none}
+.kt-tt.ok{background:var(--acs);color:var(--acd)}
+.kt-tt.ok i{background:var(--ac)}
+.kt-tt.thieu{background:var(--badge-warn-bg);color:var(--badge-warn-fg)}
+.kt-tt.thieu i{background:var(--badge-warn-fg)}
+
+/* ── ⑥ Usage & Billing — chỗ đã chừa ────────────────────────────────────── */
+.cho{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:space-evenly;gap:12px}
+.cho-o{flex:none;border:1px dashed var(--border-strong);border-radius:var(--radius-md);
+  padding:13px 12px;display:flex;align-items:center;gap:9px;background:var(--fill)}
+.cho-o .ic{width:30px;height:30px;border-radius:var(--radius-sm);background:var(--surface);
+  border:1px solid var(--border);display:grid;place-items:center;flex:none}
+.cho-o .t{font-size:12.5px;font-weight:500}
+.cho-o .d{font-size:11px;color:var(--muted-2)}
+.cho-o .b{margin-left:auto;font-size:10.5px;padding:2px 8px;border-radius:999px;
+  background:var(--badge-neutral-bg);color:var(--badge-neutral-fg);white-space:nowrap}
+
+/* ── Tooltip dùng chung ─────────────────────────────────────────────────── */
+#tip{position:fixed;z-index:99;pointer-events:none;opacity:0;transition:opacity .09s;
+  background:var(--panel);color:var(--tren-panel);border-radius:var(--radius-md);
+  padding:9px 11px;font-size:12px;line-height:1.45;
+  box-shadow:0 8px 24px rgba(20,22,26,.24);max-width:240px}
+#tip.hien{opacity:1}
+#tip .t{font-weight:600;margin-bottom:5px;font-size:11.5px}
+#tip .r{display:flex;align-items:center;gap:8px;white-space:nowrap;line-height:1.7}
+#tip .r i{width:8px;height:8px;border-radius:999px;flex:none}
+#tip .r b{margin-left:auto;font-family:var(--mono);font-weight:500}
+#tip .r span{color:var(--panel-muted)}
+#tip .n{color:var(--panel-muted);white-space:normal;margin-top:6px;
+  border-top:1px solid var(--panel-line);padding-top:6px;font-size:11px}
+</style>
+</head>
+<body>
+<div id="tip" role="status" aria-live="off"></div>
+
+<div class="shell">
+  <div class="rail"><div class="mo-nav">rail<br>68</div></div>
+  <div class="panel"><div class="mo-nav">Vận hành
+    <div class="on">▸ Tổng quan</div><div>Hội thoại</div><div>Lịch hẹn</div><div>Chất lượng</div>
+  </div></div>
+
+  <main>
+    <div class="dau">
+      <div>
+        <h1>Tổng quan</h1>
+        <p class="phu">An Phú Land · 7 ngày gần nhất</p>
+      </div>
+      <div class="cuoi">
+        <span class="mocgio">Cập nhật <b class="mono">14:32</b></span>
+        <div class="khoang" role="group" aria-label="Khoảng thời gian">
+          <button type="button" aria-pressed="true">7 ngày</button>
+          <button type="button" aria-pressed="false">4 tuần</button>
+          <button type="button" aria-pressed="false">Tất cả</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="luoi">
+      <!-- ① HỘI THOẠI -->
+      <section class="the c5">
+        <div class="dau-o"><h2>Hội thoại</h2><a class="lien" href="#">Xem tất cả →</a></div>
+        <p class="ghi">Chat và Voice theo ngày · rê chuột để xem từng ngày</p>
+        <div class="tru">
+          <span class="so mono" id="ht-so"></span>
+          <span class="dv">phiên</span>
+          <span class="delta len" id="ht-delta"></span>
+        </div>
+        <ul class="cg" id="ht-cg"></ul>
+        <div class="bd7" id="ht-bd"></div>
+        <div class="ngay7" id="ht-ngay"></div>
+      </section>
+
+      <!-- ② CHUYỂN SALE -->
+      <section class="the c3">
+        <div class="dau-o"><h2>Chuyển sale</h2></div>
+        <p class="ghi">Phiên agent giao lại cho người thật</p>
+        <div class="vong-boc" id="cs-vong"></div>
+        <div class="ct" id="cs-ct"></div>
+      </section>
+
+      <!-- ③ KHÁCH ĐÁNH GIÁ -->
+      <section class="the c4">
+        <div class="dau-o"><h2>Khách đánh giá</h2><a class="lien" href="#">Chi tiết →</a></div>
+        <p class="ghi">Điểm hài lòng cuối phiên</p>
+        <div class="fb-dau">
+          <div class="fb-hang">
+            <span class="fb-so mono" id="fb-diem"></span>
+            <span class="fb-tren">/ 5</span>
+            <span class="delta xuong">▼ 0,08</span>
+          </div>
+          <div id="fb-sao-hinh"></div>
+          <p class="fb-luot"><b class="mono" id="fb-luot"></b> lượt đánh giá</p>
+        </div>
+        <div class="sao-ds" id="fb-sao"></div>
+      </section>
+
+
+      <!-- ⑤ KIẾN THỨC -->
+      <section class="the c8">
+        <div class="dau-o"><h2>Kiến thức</h2><a class="lien" href="#">Quản lý →</a></div>
+        <p class="ghi kt-cap">Dữ liệu agent dùng để trả lời khách<b id="kt-tong"></b></p>
+        <div class="kt" id="kt-ds"></div>
+      </section>
+
+      <!-- ⑥ USAGE & BILLING -->
+      <section class="the c4">
+        <div class="dau-o"><h2>Usage &amp; Billing</h2></div>
+        <p class="ghi">Chỗ đã chừa sẵn — chưa có dữ liệu</p>
+        <div class="cho" id="ub-ds"></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+/* ══════════════════════════════════════════════════════════════════════════
+   Bản nháp của `components/ui/chart/*`. Không thư viện nào.
+   ═════════════════════════════════════════════════════════════════════════ */
+const NS = 'http://www.w3.org/2000/svg'
+const el = (t, a = {}, kids = []) => { const n = document.createElementNS(NS, t)
+  for (const k in a) n.setAttribute(k, a[k]); for (const c of [].concat(kids)) n.appendChild(c); return n }
+const so = (n, d = 0) => n.toLocaleString('vi-VN', { minimumFractionDigits: d, maximumFractionDigits: d })
+/* ⚠ KHÔNG truyền var(--…) vào attribute `rx` của <rect>: đó là presentation
+   attribute, trình duyệt không phân giải var() ở đó — nó rơi về 0 lặng lẽ. */
+const RX = parseFloat(getComputedStyle(document.documentElement)
+  .getPropertyValue('--radius-mark')) || 3
+
+/* ── Dữ liệu giả, TẤT ĐỊNH ──────────────────────────────────────────────────
+   Mỗi ngày mang SỐ THEO TỪNG KÊNH, không phải một tổng rồi chia tỉ lệ ra sau.
+   Suy kênh từ tổng nhân một tỉ lệ cố định thì mọi ngày có cùng cơ cấu, và hai
+   đường vẽ từ đó sẽ SONG SONG hoàn hảo — một hình không bao giờ xuất hiện
+   trong dữ liệu thật và không nói được gì. ─────────────────────────────────── */
+const rnd = (s => () => (s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)(20260813)
+const NGAY = 7
+const THU = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
+const chuoi = Array.from({ length: NGAY }, (_, i) => {
+  const d = new Date(2026, 7, 13); d.setDate(d.getDate() - (NGAY - 1 - i))  // cuối mảng = HÔM NAY
+  const cuoiTuan = d.getDay() === 0 || d.getDay() === 6
+  const chat = Math.round((22 + rnd() * 10) * (cuoiTuan ? .55 : 1))
+  // Voice KHÔNG bám theo chat: cuối tuần người ta gọi nhiều hơn nhắn, nên hai
+  // đường phải cắt nhau được — đó chính là thứ đáng nhìn trên ô này.
+  const voice = Math.round((14 + rnd() * 7) * (cuoiTuan ? 1.3 : .85))
+  const zalo = Math.round((4 + rnd() * 4) * (cuoiTuan ? .6 : 1))
+  const khac = Math.round(rnd() * 2)
+  return { d, chat, voice, zalo, khac, n: chat + voice + zalo + khac }
+})
+const HOM_NAY = NGAY - 1
+const TONG = chuoi.reduce((a, r) => a + r.n, 0)
+const nhanNgay = d => d.getDate() + '/' + (d.getMonth() + 1)
+
+// Bốn kênh — số CỘNG TỪ chuỗi ngày, không phải một bảng rời. Hai chỗ khai cùng
+// một đại lượng là hai chỗ có thể lệch nhau (đã xảy ra thật ở một vòng trước:
+// đường tổng ra 1.160 trong khi bốn kênh cộng ra 1.284).
+const KENH = [
+  { ma: 'chat',  ten: 'Chat',    mau: 'var(--ds1)' },
+  { ma: 'voice', ten: 'Voice',   mau: 'var(--ds2)' },
+  { ma: 'zalo',  ten: 'Zalo OA', mau: 'var(--ds3)' },
+  { ma: 'khac',  ten: 'Chưa rõ', mau: 'var(--ds-khac)' },
+].map(k => Object.assign({}, k, { n: chuoi.reduce((a, r) => a + r[k.ma], 0) }))
+const CHUYEN = Math.round(TONG * .216)
+
+/* ── Tooltip dùng chung ─────────────────────────────────────────────────── */
+const tip = document.getElementById('tip')
+function moTip(e, html) {
+  tip.innerHTML = html; tip.classList.add('hien')
+  const r = tip.getBoundingClientRect()
+  let x = e.clientX + 16, y = e.clientY - r.height - 14
+  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 16
+  if (y < 8) y = e.clientY + 20
+  tip.style.left = x + 'px'; tip.style.top = y + 'px'
+}
+const dongTip = () => tip.classList.remove('hien')
+function gan(node, html) {
+  node.addEventListener('mousemove', e => moTip(e, typeof html === 'function' ? html() : html))
+  node.addEventListener('mouseleave', dongTip)
+}
+
+/* ══ ① HỘI THOẠI — HAI ĐƯỜNG (Chat · Voice) trên 7 ngày, có dải crosshair ══
+
+   Vòng 5. Ba thứ đổi so với vòng 4, mỗi thứ theo một yêu cầu:
+     · 4 cột tuần → 7 ngày, mỗi ngày một điểm
+     · một tổng → HAI chuỗi tách bạch, Chat và Voice
+     · thêm dải dọc đánh dấu ngày đang xem, trạng thái nghỉ là HÔM NAY
+
+   HAI đường chứ không một đường tổng: người dùng cần Chat và Voice RIÊNG.
+   Chồng chúng thành tổng rồi bắt tra tooltip là giấu đi đúng thứ được hỏi —
+   và tổng vẫn còn, nó nằm ở con số lớn ngay đầu ô.
+
+   VÌ SAO ĐO BẰNG PIXEL THẬT, không preserveAspectRatio="none" như các vòng
+   trước: hình này có ĐIỂM TRÒN. Kéo giãn SVG phi tỉ lệ biến mọi vòng tròn
+   thành bầu dục, và `vector-effect` chỉ cứu được nét, không cứu được hình.
+   Nên component tự đo bề rộng thật rồi vẽ theo px, và vẽ lại khi ô đổi cỡ
+   (ResizeObserver). Ở React đây là một useRef + ResizeObserver. ═══════════ */
+{
+  const boc = document.getElementById('ht-bd')
+  const VE = [
+    { khoa: 'chat',  hoa: 'Chat',  ten: 'Chat',  mau: 'var(--ds1)' },
+    { khoa: 'voice', hoa: 'Voice', ten: 'Voice', mau: 'var(--ds2)' },
+  ]
+  let dangXem = HOM_NAY
+
+  document.getElementById('ht-so').textContent = so(TONG)
+  // So ba ngày cuối với ba ngày đầu — KHÔNG so ngày cuối với ngày kề nó: một
+  // ngày lẻ dao động tới ±30%, và con số delta nhảy theo nhiễu thì mỗi sáng
+  // lại kể một câu chuyện khác nhau.
+  const dau3 = chuoi.slice(0, 3).reduce((a, r) => a + r.n, 0) / 3
+  const cuoi3 = chuoi.slice(-3).reduce((a, r) => a + r.n, 0) / 3
+  const dt = (cuoi3 - dau3) / dau3 * 100
+  const dn = document.getElementById('ht-delta')
+  dn.className = 'delta ' + (dt >= 0 ? 'len' : 'xuong')
+  dn.innerHTML = (dt >= 0 ? '▲ ' : '▼ ') + so(Math.abs(dt), 1) +
+    '%<span class="sr"> — trung bình 3 ngày cuối so với 3 ngày đầu kỳ</span>'
+
+  const PT = 14, PR = 16, PB = 8, PL = 30
+  let X = [], Y = null
+
+  /* THANG BĂNG (band scale) — KHÔNG phải thang mép-tới-mép.
+     Bản trước: X[i] = PL + i·iw/(N-1), tức điểm ĐẦU và ĐIỂM CUỐI nằm đúng
+     trên biên lưới. Ba hệ quả, cả ba đều là lỗi người dùng đã chỉ ra:
+       · dải crosshair căn giữa quanh điểm biên phải thò nửa ra ngoài lưới
+         (phải kẹp lại, và kẹp xong thì nó lệch khỏi chính điểm nó đánh dấu)
+       · nhãn ngày bên dưới lại dùng 7 ô ĐỀU NHAU, tâm ô rơi vào chỗ khác
+         hẳn — hai thang khác nhau thì không đời nào thẳng hàng
+       · vạch lưới dọc trùng biên nên trông như khung, không như mốc ngày
+     Thang băng chia vùng vẽ thành ĐÚNG N ô bằng nhau và đặt điểm ở TÂM ô.
+     Nhờ vậy: dải = trọn một ô, luôn nằm trong lưới, không cần kẹp; vạch dọc
+     đi qua đúng điểm; và nhãn ngày chỉ cần cùng lề trái/phải là tự khớp. */
+  function ve() {
+    const W = boc.clientWidth, H = boc.clientHeight
+    if (!W || !H) return
+    const iw = W - PL - PR, ih = H - PT - PB
+    // Trần là bội của 20 để 5 mốc luôn rơi vào số nguyên tròn — một trục ghi
+    // 0 · 8,75 · 17,5 là trục không ai đọc.
+    const dinh = Math.max(20, Math.ceil(Math.max(...chuoi.map(r =>
+      Math.max(r.chat, r.voice))) * 1.12 / 20) * 20)
+    const buoc = iw / NGAY
+    X = chuoi.map((_, i) => PL + (i + .5) * buoc)   // TÂM ô, không phải mép
+    Y = v => PT + ih - (v / dinh) * ih
+    const DAY = PT + ih                              // đáy lưới
+
+    const s = el('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H, role: 'img',
+      'aria-label': 'Số phiên Chat và Voice mỗi ngày trong 7 ngày gần nhất' })
+
+    /* ── defs: gradient ─────────────────────────────────────────────────
+       `stop-color` đặt qua thuộc tính `style`, KHÔNG qua presentation
+       attribute: var() không được phân giải trong presentation attribute
+       (cùng lớp bẫy với `rx="var(--…)"` đã gặp) — qua `style` thì được. */
+    const defs = el('defs')
+    const grad = (id, mau, a0, a1, doc) => {
+      const g = el('linearGradient', doc
+        ? { id, x1: '0', y1: '0', x2: '1', y2: '0' }
+        : { id, x1: '0', y1: '0', x2: '0', y2: '1' })
+      g.appendChild(el('stop', { offset: '0', style: 'stop-color:' + mau + ';stop-opacity:' + a0 }))
+      g.appendChild(el('stop', { offset: '1', style: 'stop-color:' + mau + ';stop-opacity:' + a1 }))
+      defs.appendChild(g)
+    }
+    grad('gVungChat', 'var(--ds1)', '.22', '0')
+    grad('gVungVoice', 'var(--ds2)', '.17', '0')
+    grad('gDai', 'var(--ds1)', '.16', '.02')
+    // Gradient DỌC THEO TRỤC THỜI GIAN: quá khứ nhạt dần, hôm nay đậm nhất.
+    // Không phải trang trí — nó mã hoá đúng chiều đọc của biểu đồ.
+    grad('gNetChat', 'var(--ds1)', '.45', '1', 1)
+    grad('gNetVoice', 'var(--ds2)', '.45', '1', 1)
+    s.appendChild(defs)
+
+    // ① Dải của ngày đang xem — TRỌN MỘT Ô, cao đúng bằng lưới
+    s.appendChild(el('rect', { x: PL + dangXem * buoc, y: PT, width: buoc,
+      height: ih, fill: 'url(#gDai)' }))
+    s.appendChild(el('line', { x1: X[dangXem], x2: X[dangXem], y1: PT, y2: DAY,
+      stroke: 'var(--ds1)', 'stroke-width': '1.5', opacity: '.35' }))
+
+    // ② Lưới dọc — đi qua ĐÚNG tâm ô, tức đúng chỗ điểm dữ liệu đứng
+    X.forEach(x => s.appendChild(el('line', { x1: x, x2: x, y1: PT, y2: DAY,
+      stroke: 'var(--border-soft)', 'stroke-width': '1' })))
+
+    // ③ Lưới ngang — 5 mốc
+    const SO_MOC = 4
+    for (let i = 0; i <= SO_MOC; i++) {
+      const gv = dinh * i / SO_MOC, gy = Y(gv)
+      s.appendChild(el('line', { x1: PL, x2: W - PR, y1: gy, y2: gy,
+        stroke: i === 0 ? 'var(--border-strong)' : 'var(--border)', 'stroke-width': '1' }))
+      s.appendChild(el('text', { x: PL - 8, y: gy + 3.5, 'text-anchor': 'end',
+        fill: 'var(--muted-2)', 'font-size': '10', 'font-family': 'var(--mono)' },
+        [document.createTextNode(so(gv))]))
+    }
+
+    // ④ Vùng nền (gradient) — vẽ CẢ HAI trước, rồi mới tới hai đường
+    VE.forEach(c => {
+      const d = chuoi.map((r, i) => (i ? 'L' : 'M') + X[i].toFixed(1) + ' ' +
+        Y(r[c.khoa]).toFixed(1)).join(' ')
+      s.appendChild(el('path', { d: d + ' L' + X[NGAY - 1].toFixed(1) + ' ' + DAY +
+        ' L' + X[0].toFixed(1) + ' ' + DAY + ' Z', fill: 'url(#gVung' + c.hoa + ')' }))
+    })
+    // ⑤ Hai đường + điểm
+    VE.forEach(c => {
+      const d = chuoi.map((r, i) => (i ? 'L' : 'M') + X[i].toFixed(1) + ' ' +
+        Y(r[c.khoa]).toFixed(1)).join(' ')
+      s.appendChild(el('path', { d, fill: 'none', stroke: 'url(#gNet' + c.hoa + ')',
+        'stroke-width': '2.5', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }))
+      chuoi.forEach((r, i) => {
+        const ke = i === dangXem
+        // Quầng sáng sau điểm đang xem — hiệu ứng nổi, và cũng là thứ giữ
+        // cho điểm không chìm vào vùng gradient bên dưới nó.
+        if (ke) s.appendChild(el('circle', { cx: X[i], cy: Y(r[c.khoa]), r: 9,
+          fill: c.mau, opacity: '.15' }))
+        s.appendChild(el('circle', { cx: X[i], cy: Y(r[c.khoa]), r: ke ? 4.5 : 2.5,
+          fill: c.mau, opacity: ke ? 1 : .4,
+          stroke: ke ? 'var(--surface)' : 'none', 'stroke-width': ke ? 2 : 0 }))
+      })
+    })
+    boc.replaceChildren(s)
+  }
+
+  // Nhãn ngày dùng ĐÚNG lề trái/phải của vùng vẽ, rồi chia 7 ô đều — tâm mỗi
+  // ô khi đó trùng khít X[i]. Đây là toàn bộ phép "canh thẳng hàng": không có
+  // con số magic nào, hai bên cùng suy ra từ một lề.
+  document.getElementById('ht-ngay').style.padding = '0 ' + PR + 'px 0 ' + PL + 'px'
+  function veNhan() {
+    document.getElementById('ht-ngay').innerHTML = chuoi.map((r, i) =>
+      '<button type="button" class="ng' + (i === dangXem ? ' on' : '') +
+      (i === HOM_NAY ? ' nay' : '') + '" data-i="' + i + '">' +
+        '<span class="t">' + (i === HOM_NAY ? 'Hôm nay' : THU[r.d.getDay()]) + '</span>' +
+        '<span class="d">' + nhanNgay(r.d) + '</span>' +
+      '</button>').join('')
+  }
+
+  function tipCho(i, e) {
+    const r = chuoi[i]
+    moTip(e, '<div class="t">' + (i === HOM_NAY ? 'Hôm nay · ' : '') +
+      THU[r.d.getDay()] + ' ' + nhanNgay(r.d) + '</div>' +
+      VE.map(c => '<div class="r"><i style="background:' + c.mau + '"></i>' +
+        '<span>' + c.ten + '</span><b>' + so(r[c.khoa]) + '</b></div>').join('') +
+      '<div class="n">Zalo OA ' + so(r.zalo) + ' · Chưa rõ ' + so(r.khac) +
+      ' · tổng <b>' + so(r.n) + '</b></div>')
+  }
+
+  function chon(i, e) {
+    if (i !== dangXem) { dangXem = i; ve(); veNhan() }
+    if (e) tipCho(i, e)
+  }
+
+  // Rê chuột BẤT KỲ đâu trong khung thì bám vào ngày gần nhất. Vùng chạm là cả
+  // ô chứ không phải từng điểm — điểm bán kính 4px là mục tiêu quá nhỏ.
+  boc.addEventListener('mousemove', e => {
+    const r = boc.getBoundingClientRect()
+    const iw = r.width - PL - PR
+    // `floor` theo ô, KHÔNG `round` theo điểm: với thang băng thì mỗi ngày sở
+    // hữu trọn một ô, và con trỏ ở đâu trong ô cũng thuộc về ngày đó.
+    chon(Math.min(NGAY - 1, Math.max(0,
+      Math.floor((e.clientX - r.left - PL) / (iw / NGAY)))), e)
+  })
+  // Rời khung thì dải trả về HÔM NAY — trạng thái nghỉ của ô là "hôm nay",
+  // không phải "ngày cuối cùng con chuột vô tình đi qua".
+  boc.addEventListener('mouseleave', () => { dongTip(); chon(HOM_NAY) })
+
+  veNhan()
+  document.getElementById('ht-ngay').addEventListener('click', e => {
+    const b = e.target.closest('.ng'); if (b) chon(+b.dataset.i)
+  })
+
+  // Chú giải bắt buộc vì có 2 chuỗi, và mang luôn tổng kỳ của từng kênh
+  document.getElementById('ht-cg').innerHTML = VE.map(c => {
+    const t = chuoi.reduce((a, r) => a + r[c.khoa], 0)
+    return '<li><i style="background:' + c.mau + '"></i>' + c.ten + ' <b>' + so(t) + '</b></li>'
+  }).join('') + '<li class="phu">+ Zalo OA ' + so(KENH[2].n) +
+    ' · Chưa rõ ' + so(KENH[3].n) + '</li>'
+
+  ve()
+  new ResizeObserver(ve).observe(boc)
+
+  const sr = document.createElement('p'); sr.className = 'sr'
+  sr.textContent = 'Bảng số: ' + chuoi.map(r => nhanNgay(r.d) + ' — Chat ' + r.chat +
+    ', Voice ' + r.voice + ', Zalo OA ' + r.zalo + ', chưa rõ ' + r.khac).join('; ')
+  boc.parentElement.appendChild(sr)
+}
+
+/* ══ ② CHUYỂN SALE — GAUGE NỬA CUNG, không phải donut ═════════════════════
+   ① Vòng tròn KÍN nói "đây là cơ cấu chia phần" — hai mảng ngang hàng nhau.
+      Ô này không hỏi cơ cấu, nó hỏi MỘT tỉ lệ. Nửa cung có điểm đầu và điểm
+      cuối nên đọc là "một mức trên thang 0→100" — đúng thứ đang đo.
+   ② Lỗ donut là chỗ đặt số, và số luôn phải nhỏ đi để lọt vào — đã phải nới
+      lỗ một lần vì chữ 23,9% chạm vành. Miệng nửa cung rộng hơn.
+   MỘT sắc + một máng trung tính, KHÔNG hai sắc: phần còn lại (agent tự xử lý)
+   không phải chuỗi đối lập cần màu riêng — nó là phần chưa tới của cùng một
+   thang. Tô nó thành màu thứ hai là bịa ra một sự đối đầu. ═════════════════ */
+{
+  const TU = TONG - CHUYEN
+  const tl = CHUYEN / TONG
+  const W = 208, R = 84, DAY = 11, C = W / 2, H = R + DAY / 2 + 4
+  const s = el('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H, role: 'img',
+    'aria-label': 'Chuyển sale ' + so(tl * 100, 1) + ' phần trăm, ' + so(CHUYEN) +
+                  ' trên ' + so(TONG) + ' phiên' })
+  const diem = t => {
+    const a = Math.PI * (1 - t)
+    return (C + R * Math.cos(a)).toFixed(2) + ' ' + (R + DAY / 2 - R * Math.sin(a)).toFixed(2)
+  }
+  const cung = (t0, t1) => 'M' + diem(t0) + ' A' + R + ' ' + R + ' 0 0 1 ' + diem(t1)
+  s.appendChild(el('path', { d: cung(0, 1), fill: 'none', stroke: 'var(--fill-strong)',
+    'stroke-width': DAY, 'stroke-linecap': 'round' }))
+  // Sàn 1,2%: tỉ lệ rất nhỏ vẫn phải còn vệt thấy được — cung dài 0 đọc thành
+  // "chưa có dữ liệu", khác hẳn "gần như không có ca nào".
+  const to = el('path', { d: cung(0, Math.max(tl, .012)), fill: 'none',
+    stroke: 'var(--ds2)', 'stroke-width': DAY, 'stroke-linecap': 'round' })
+  s.appendChild(to)
+  gan(to, '<div class="t">Chuyển sale</div>' +
+    '<div class="r"><span>Phiên</span><b>' + so(CHUYEN) + '</b></div>' +
+    '<div class="r"><span>Tỉ lệ</span><b>' + so(tl * 100, 1) + '%</b></div>')
+
+  const b = document.getElementById('cs-vong')
+  const w = document.createElement('div'); w.className = 'gauge'
+  w.appendChild(s)
+  const t = document.createElement('div'); t.className = 'gauge-tam'
+  t.innerHTML = '<div class="p">' + so(tl * 100, 1) + '%</div>' +
+                '<div class="l">phiên cần người thật</div>'
+  w.appendChild(t); b.appendChild(w)
+  // Hai mốc 0%/100% ĐÃ BỎ: chúng nằm sát hai đầu vành nên chạm vào đúng thứ
+  // chúng chú thích, và với thang chỉ có MỘT mức thì hai đầu mút là hiển nhiên.
+
+  document.getElementById('cs-ct').innerHTML =
+    '<div><i style="background:var(--ds2)"></i>Chuyển sale<b>' + so(CHUYEN) + '</b></div>' +
+    '<div><i style="background:var(--fill-strong)"></i>Agent tự xử lý<b>' + so(TU) + '</b></div>'
+}
+
+/* ══ ③ KHÁCH ĐÁNH GIÁ — khuôn dùng lại từ FeedbackTongQuan.tsx của /quality ═ */
+
+/* Sao tô LẺ — bản nháp của `components/ui/Sao.tsx`, thuật toán giữ nguyên. Ở
+   màn thật thì IMPORT thẳng component đó, KHÔNG chép lại: nó đã dùng ở
+   `/quality` và `PhienKhach.tsx`, thêm bản thứ ba là ba chỗ phải sửa mỗi lần
+   đổi hình ngôi sao. */
+const SAO_PATH = 'M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.11a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z'
+
+/** Phần trăm bề rộng được tô của ngôi sao thứ `n`. Làm tròn về số nguyên:
+ *  99.6% và 0.4% mắt không phân biệt được với đầy/rỗng, nhưng lại rơi vào
+ *  nhánh "một phần" và vẽ thêm một lớp phủ thừa. */
+function phanTramCuaSao(n, gia) {
+  if (gia >= n) return 100
+  if (gia <= n - 1) return 0
+  return Math.round((gia - (n - 1)) * 100)
+}
+function veSao(gia, co = 17) {
+  const hinh = (mau, to) => '<svg width="' + co + '" height="' + co + '" viewBox="0 0 24 24" ' +
+    'fill="' + (to ? mau : 'none') + '" stroke="' + mau + '" stroke-width="1.92" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="' + SAO_PATH + '"/></svg>'
+  return '<span class="sao-hinh" role="img" aria-label="' + so(gia, 2) + ' trên 5 sao">' +
+    [1, 2, 3, 4, 5].map(n => {
+      const p = phanTramCuaSao(n, gia)
+      if (p === 100) return '<span class="s" data-sao="on">' + hinh('var(--ac)', 1) + '</span>'
+      if (p === 0) return '<span class="s" data-sao="off">' + hinh('var(--border-strong)', 0) + '</span>'
+      // Lớp phủ cắt theo bề rộng — sao rỗng bên dưới vẫn vẽ trọn nét viền, nên
+      // phần chưa đạt tới không bị mất đường bao.
+      return '<span class="s" data-sao="phan" data-phan="' + p + '" ' +
+        'style="width:' + co + 'px;height:' + co + 'px">' + hinh('var(--border-strong)', 0) +
+        '<span class="phu" style="width:' + p + '%">' + hinh('var(--ac)', 1) + '</span></span>'
+    }).join('') + '</span>'
+}
+
+{
+  const theoSao = { 5: 110, 4: 48, 3: 20, 2: 8, 1: 4 }
+  const T = Object.values(theoSao).reduce((a, b) => a + b, 0)
+  // Điểm trung bình TÍNH TỪ phân bố, không gõ tay: hai con số nói về cùng một
+  // tập mà khai rời nhau là hai chỗ có thể lệch.
+  const DIEM = Object.entries(theoSao).reduce((a, [k, v]) => a + k * v, 0) / T
+
+  document.getElementById('fb-diem').textContent = so(DIEM, 2)
+  document.getElementById('fb-luot').textContent = so(T)
+  document.getElementById('fb-sao-hinh').innerHTML = veSao(DIEM)
+
+  const b = document.getElementById('fb-sao')
+  b.innerHTML = [5, 4, 3, 2, 1].map(n => {
+    // T = 0 ⇒ 0/0 ra NaN; width:NaN% là CSS không hợp lệ, trình duyệt bỏ qua
+    // lặng lẽ. Chốt 0 tường minh thay vì dựa vào hành vi ngầm đó.
+    const t = T > 0 ? theoSao[n] / T * 100 : 0
+    return '<div class="sao-h" data-s="' + n + '">' +
+      '<span class="k">' + n + '★</span>' +
+      '<span class="m"><span style="width:' + t + '%"></span></span>' +
+      '<span class="v">' + so(theoSao[n]) + '</span></div>'
+  }).join('')
+  Array.from(b.children).forEach(n => { const k = n.dataset.s
+    gan(n, '<div class="t">' + k + ' sao</div>' +
+      '<div class="r"><span>Lượt</span><b>' + so(theoSao[k]) + '</b></div>' +
+      '<div class="r"><span>Tỉ lệ</span><b>' + so(theoSao[k] / T * 100, 1) + '%</b></div>') })
+}
+
+/* ══ ⑤ KIẾN THỨC ═════════════════════════════════════════════════════════
+   Sáu HÀNG, mỗi hàng một câu: agent đọc được bao nhiêu trên tổng có trong
+   kho. Phần hụt luôn được NÓI THÀNH LỜI trong viên nhãn bên phải («4 còn
+   nháp»), không để người xem tự trừ hai số — chỗ hụt mới là chỗ cần làm
+   gì đó. Dòng chú thích trên đầu cộng gộp cả sáu hàng để có một con số
+   duy nhất trả lời «kho này agent dùng được bao nhiêu phần». ═══════════ */
+{
+  const IC = {
+    duan: '<path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-5h6v5"/>',
+    phankhu: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+    can: '<path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M8 7h2M8 11h2M8 15h2"/>',
+    tailieu: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>',
+    kb: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+    hoso: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+  }
+  const O = [
+    { k: 'duan', n: 'Dự án', dk: 'đã phát hành', thay: 8, tong: 12, hut: '4 còn nháp',
+      tip: 'View `agent_api` lọc `published`. Dự án còn nháp thì agent trả lời «chưa có thông tin» khi khách hỏi đúng dự án đó.' },
+    { k: 'phankhu', n: 'Phân khu', dk: 'đã phát hành',
+      thay: 31, tong: 47, hut: '16 chưa phát hành' },
+    { k: 'can', n: 'Căn / sản phẩm', dk: 'còn mở bán',
+      thay: 964, tong: 1203, hut: '239 chưa phát hành' },
+    { k: 'tailieu', n: 'Tài liệu dự án', dk: 'đính kèm dự án',
+      thay: 189, tong: 214, hut: '25 còn nháp' },
+    { k: 'kb', n: 'Tệp tra cứu', dk: 'đã nhúng vector', thay: 38, tong: 38,
+      tip: 'Tệp phải bóc chữ → chia đoạn → nhúng vector xong thì kỹ năng «Tra tài liệu» mới đọc được. Cả 38 tệp đã nhúng xong.' },
+    { k: 'hoso', n: 'Hồ sơ đủ trường', dk: 'đủ mọi trường',
+      thay: 10, tong: 12, hut: '2 thiếu trường',
+      tip: 'Trường trống ⇒ agent trả lời «chưa có thông tin» đúng lúc khách hỏi.' },
+  ]
+  const ic = d => '<span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" ' +
+    'fill="none" stroke="var(--muted)" stroke-width="1.92" stroke-linecap="round" ' +
+    'stroke-linejoin="round">' + d + '</svg></span>'
+
+  const NAC = 14
+  /** Thước khắc vạch. Chỉ tô đủ NAC nấc khi thật sự 100% — làm tròn lên ở
+   *  13,6/14 sẽ vẽ ra một thước đầy cho một kho còn thiếu, đúng kiểu nói dối
+   *  mà cả ô này sinh ra để tránh. */
+  const thuoc = (ti, du) => {
+    const n = du ? NAC : Math.min(NAC - 1, Math.round(ti * NAC))
+    return '<span class="kt-th">' + Array.from({ length: NAC }, (_, i) =>
+      i < n
+        // Nhạt → đậm theo chiều đọc, cùng ngôn ngữ với nét đường ở ô ①.
+        ? '<i style="background:var(--ac);opacity:' +
+          (.4 + .6 * (n === 1 ? 1 : i / (n - 1))).toFixed(2) + '"></i>'
+        : '<i></i>').join('') + '</span>'
+  }
+
+  document.getElementById('kt-ds').innerHTML = O.map(x => {
+    const ti = x.thay / x.tong, du = x.thay === x.tong
+    return '<div class="kt-h">' + ic(IC[x.k]) +
+      '<span class="n">' + x.n + '</span>' +
+      '<span class="dk">' + x.dk + '</span>' +
+      '<span class="ty"><b>' + so(x.thay) + '</b> / ' + so(x.tong) + '</span>' +
+      thuoc(ti, du) +
+      '<span class="pc">' + Math.round(ti * 100) + '%</span>' +
+      '<span class="kt-tt ' + (du ? 'ok' : 'thieu') + '"><i></i>' +
+        (du ? 'Agent đọc đủ' : x.hut) + '</span>' +
+    '</div>'
+  }).join('')
+
+  // Một con số cho cả kho. Cộng theo MỤC chứ không lấy trung bình sáu tỉ lệ:
+  // trung bình tỉ lệ cho "dự án" (12 mục) cùng trọng số với "căn" (1.203 mục).
+  {
+    const a = O.reduce((s, x) => s + x.thay, 0), b = O.reduce((s, x) => s + x.tong, 0)
+    document.getElementById('kt-tong').innerHTML =
+      so(a) + ' <i>/ ' + so(b) + ' mục · ' + Math.round(a / b * 100) + '% agent đọc được</i>'
+  }
+
+  Array.from(document.querySelectorAll('#kt-ds .kt-h')).forEach((n, i) => {
+    const x = O[i]
+    gan(n, '<div class="t">' + x.n + '</div>' +
+      '<div class="r"><span>Agent đọc được</span><b>' + so(x.thay) + '</b></div>' +
+      '<div class="r"><span>Tổng trong kho</span><b>' + so(x.tong) + '</b></div>' +
+      (x.tip ? '<div class="n">' + x.tip + '</div>' : ''))
+  })
+}
+/* ══ ⑥ USAGE & BILLING — chỗ đã chừa ═════════════════════════════════════ */
+{
+  const ic = d => '<span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" ' +
+    'stroke="var(--muted-2)" stroke-width="1.92" stroke-linecap="round" stroke-linejoin="round">' +
+    d + '</svg></span>'
+  document.getElementById('ub-ds').innerHTML =
+    '<div class="cho-o">' + ic('<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>') +
+      '<div><div class="t">Lượng dùng</div><div class="d">Token · phút gọi · số phiên</div></div>' +
+      '<span class="b">Chưa có</span></div>' +
+    '<div class="cho-o">' + ic('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>') +
+      '<div><div class="t">Gói cước</div><div class="d">Hạn mức · hoá đơn kỳ này</div></div>' +
+      '<span class="b">Chưa có</span></div>' +
+    '<p style="font-size:11px;color:var(--muted-2);margin:2px 0 0;line-height:1.5">' +
+      'Hai màn đang <b>hoãn ngoài MVP</b> (<code style="font-family:var(--mono);font-size:10.5px">' +
+      '/usage</code>, <code style="font-family:var(--mono);font-size:10.5px">/billing</code>). ' +
+      'Ô này giữ đúng chỗ để ngày có dữ liệu thì thay tại chỗ, không phải xếp lại cả lưới.</p>'
+}
+
+document.querySelectorAll('.khoang button').forEach(b =>
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.khoang button').forEach(x => x.setAttribute('aria-pressed', 'false'))
+    b.setAttribute('aria-pressed', 'true')
+  }))
+</script>
+</body>
+</html>

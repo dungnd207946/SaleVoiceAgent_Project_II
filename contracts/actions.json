@@ -1,0 +1,21 @@
+{
+  "actions": [
+    "agent_config.publish",
+    "agent_config.read",
+    "agent_config.write",
+    "appts.read",
+    "appts.write",
+    "audit.read",
+    "billing.read",
+    "catalog.delete",
+    "catalog.read",
+    "catalog.write",
+    "convos.handle",
+    "convos.read",
+    "convos.transcript.read",
+    "kb_web.read",
+    "kb_web.write",
+    "overview.read",
+    "workspace.admin"
+  ]
+}

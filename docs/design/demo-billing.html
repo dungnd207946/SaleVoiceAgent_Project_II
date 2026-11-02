@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Demo — Billing (chi phí) · Odyssey Portal</title>
+<!--
+  ══════════════════════════════════════════════════════════════════════════
+   DEMO — màn `/billing` SAU KHI TÁCH  ·  2026-08-21
+  ══════════════════════════════════════════════════════════════════════════
+  Spec: `docs/superpowers/specs/2026-08-21-tach-usage-billing-design.md`
+  Màn còn lại: `demo-usage.html`
+
+  ĐÂY GẦN NHƯ LÀ MÀN `/usage` HIỆN TẠI, ĐÚNG PHẦN CỦA NÓ. Route `/billing`
+  đang là `ScreenStub`; mọi thứ dưới đây đã tồn tại trong `UsageScreen.tsx`
+  hôm nay, chỉ chuyển sang đúng chỗ và bỏ những gì thuộc chiều LƯỢNG.
+
+  BỐN ĐIỂM KHÁC:
+
+  ① DẢI CẢNH BÁO VỀ ĐÚNG CHỖ. `canh_bao` là cảnh báo ĐỊNH GIÁ («3 tổ hợp có
+     usage nhưng chưa có dòng giá» = đang mất doanh thu NGAY LÚC NÀY). Nó vô
+     nghĩa trên một màn không nói về tiền. Hợp đồng BE §5: không phải chip
+     trang trí, hiện như lỗi.
+
+  ② MỤC ① CHỈ CÒN TIỀN — 1 thẻ nhấn 32px + 3 thẻ DẪN XUẤT (TB/ngày · ngày cao
+     nhất · chi phí mỗi phiên), tính ở FE từ `summary` + `theo_ngay`. KHÔNG cần
+     endpoint mới: tiền được phép cộng chéo component (§3 — mỗi (event, metric)
+     sinh đúng một dòng `rated_usage`, không có phép đo trùng). Đừng làm phép
+     tương tự với giây/token.
+
+  ③ MỤC ② GIỮ NGUYÊN 100% `PhanTichChiPhi` hiện có — chart tiền theo ngày
+     (`BieuDoChiPhi`) + thẻ theo component (`TheComponent`). Không sửa gì.
+
+  ④ BẢNG ③ ĐỔI BỘ CỘT SANG TIỀN + có hàng Tổng và cột Tỷ trọng. Cùng
+     `BangLuotDung`, prop `cot="tien"` — không tách component.
+
+  KHÔNG CÓ LINK SANG `/pricing`. `pricingNav` đã xoá 2026-08-21 (portal cho user
+  ngoài, họ không đặt giá) và route đó gác bằng `X-Platform-Admin-Token`. Dải đỏ
+  là thông tin để user BÁO LẠI NobleX, không phải nút để họ tự sửa.
+
+  VAD ĐANG 0 ĐỒNG VÀ MÀU XÁM — cố ý, đó là hệ quả của «3 tổ hợp chưa có giá» ở
+  dải đỏ: nó CÓ 21.600 giây usage (xem `demo-usage.html`) nhưng chưa định giá
+  được. Hai màn kể cùng một câu chuyện từ hai phía.
+-->
+<style>
+/* ── Token: chép nguyên `src/styles/theme.css` ───────────────────────────── */
+:root{
+  --n0:#fcfbf7;--n1:#fffefc;--n2:#fbfaf5;--n3:#f3f1ea;--n4:#edebe5;
+  --n5:#ded9d0;--n6:#948e81;--n7:#666c76;--n8:#5f656e;--n9:#4a5058;
+  --n10:#2a2e35;--n11:#14161a;
+  --ac:#0d7a5f;--acs:#e7f2ee;--acd:#0a5e49;
+  --bg:var(--n0);--fg:var(--n11);--surface:var(--n1);
+  --border:var(--n4);--border-strong:var(--n5);--border-field:var(--n6);
+  --fill:var(--n2);--fill-strong:var(--n3);--rule:var(--n4);
+  --muted:var(--n8);--muted-2:var(--n7);--nav:var(--n9);
+  --chrome-1:#f1eee7;--chrome-2:#f8f6f1;
+  --alert-bg:#fdeceb;--alert-fg:#b3402e;
+  --warn-bg:#fdf3e0;--warn-fg:#8a5c0d;
+  --neu-bg:#f0efec;--neu-fg:var(--n8);
+  --ok-bg:#e7f2ee;--ok-fg:#0a5e49;
+  --chat-bg:#e8f0fb;--chat-fg:#1f5aa8;--chat-vien:#4d84d0;
+  --voice-bg:#f0ecfa;--voice-fg:#5b45a8;--voice-vien:#8f78d9;
+  --sans:'Be Vietnam Pro',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --r-sm:6px;--r-md:8px;--r-lg:12px;
+  --noi-nhe:0 2px 10px rgba(20,22,26,.1);
+  --c-llm:#0d7a5f;--c-tts:#3f9a80;--c-stt:#74b7a4;
+  --c-embed:#a6d2c6;--c-sv:#cde5de;--c-vad:var(--n5);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 13.5px/1.5 var(--sans);
+     -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px;border-radius:4px}
+.num,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+.t-nhan{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2)}
+.t-phu{font-size:12.5px;color:var(--muted)}
+.t-kpi{font-family:var(--mono);font-size:26px;font-weight:500;letter-spacing:-.02em;line-height:1.1}
+.t-kpi-vnd{font-family:var(--mono);font-size:32px;font-weight:600;letter-spacing:-.025em;line-height:1.06}
+
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100dvh}
+.navpanel{border-right:1px solid var(--border);background:var(--chrome-2);
+          padding:18px 12px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100dvh}
+.nav-logo{display:flex;align-items:center;gap:9px;padding:0 8px 18px;font-weight:600;letter-spacing:-.01em}
+.nav-logo .dau{width:22px;height:22px;border-radius:6px;background:var(--ac);display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700}
+.nav-khoi{border-top:1px solid var(--n4);margin:6px 0;padding-top:8px}
+.nav-khoiten{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2);padding:2px 8px 6px}
+.nav-muc{display:flex;align-items:center;gap:9px;height:34px;padding:0 9px;border-radius:var(--r-sm);
+         color:var(--nav);font-size:13.5px;text-decoration:none}
+.nav-muc:hover{background:var(--fill-strong);color:var(--fg)}
+.nav-muc.hoat{background:var(--acs);color:var(--acd);font-weight:500}
+.nav-muc .ic{width:15px;text-align:center;opacity:.75}
+.nav-muc .cb{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--alert-fg)}
+.nav-ghi{margin-top:auto;font-size:10.5px;color:var(--muted-2);line-height:1.55;
+         border-top:1px dashed var(--border-strong);padding-top:10px}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{height:58px;display:flex;align-items:center;gap:12px;padding:0 26px;
+        border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;
+        background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px)}
+.topbar h1{font-size:19px;font-weight:600;letter-spacing:-.015em;margin:0}
+.demo-tag{margin-left:auto;font-size:10.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+          color:var(--muted-2);border:1px dashed var(--border-strong);border-radius:999px;padding:3px 9px}
+.trang{padding:24px 26px 60px;display:flex;flex-direction:column;gap:16px;max-width:1320px}
+
+.hangky{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.nutky{display:flex;gap:8px}
+.nutky button{border:1px solid var(--border-field);border-radius:var(--r-sm);padding:7px 14px;
+              font-size:13.5px;font-weight:500;color:var(--muted);background:var(--surface)}
+.nutky button:hover{color:var(--fg)}
+.nutky button[aria-pressed=true]{border-color:var(--ac);background:var(--acs);color:var(--acd)}
+.khoang{font-family:var(--mono);font-size:12.5px;color:var(--muted-2)}
+
+/* ── Dải cảnh báo — hợp đồng §5 ──────────────────────────────────────────── */
+.dai{display:flex;align-items:flex-start;gap:10px;padding:10px 13px;border-radius:var(--r-md);font-size:13.5px}
+.dai-do{background:var(--alert-bg);color:var(--alert-fg)}
+.dai-vang{background:var(--warn-bg);color:var(--warn-fg)}
+.dai .ic{font-weight:700;line-height:1.5}
+.dai strong{font-weight:600}
+.dai p{margin:0;line-height:1.55}
+.dai .em{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+.tdmuc{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:8px}
+.tdmuc .so{width:19px;height:19px;border-radius:5px;background:var(--fill-strong);color:var(--muted);
+           font-family:var(--mono);font-size:11px;display:grid;place-items:center;flex:none;position:relative;top:2px}
+.tdmuc h2{margin:0;font-size:16px;font-weight:600;letter-spacing:-.012em}
+.tdmuc p{margin:0;font-size:12.5px;color:var(--muted)}
+
+.the{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
+.luoi-kpi{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr))}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+     padding:14px 15px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.kpi-chinh{background:linear-gradient(180deg,#f6fbf9,var(--surface) 62%);border-color:#d9e8e2}
+.kpi .chan{display:flex;flex-wrap:wrap;gap:2px 10px;font-family:var(--mono);font-size:11px;color:var(--muted);min-height:17px}
+.kpi .dvi{font-size:12.5px;color:var(--muted);font-family:var(--sans)}
+
+.luoi-tien{display:grid;gap:14px;grid-template-columns:minmax(0,1fr) 336px}
+@media (max-width:1080px){.luoi-tien{grid-template-columns:minmax(0,1fr)}.luoi-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.the-chart{position:relative;min-height:268px;display:flex;flex-direction:column}
+.chart-dau{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px 0;flex-wrap:wrap}
+.chart-ten{font-size:13.5px;font-weight:500;color:var(--n10)}
+.chart-hop{position:relative;flex:1;min-height:216px}
+.chart-hop svg{position:absolute;inset:0}
+.tip{position:absolute;pointer-events:none;background:var(--n11);color:#fff;border-radius:var(--r-sm);
+     padding:7px 9px;font-size:11px;line-height:1.5;opacity:0;transition:opacity .1s;white-space:nowrap;z-index:5}
+.tip .d{display:flex;justify-content:space-between;gap:14px;font-family:var(--mono)}
+.tip .d i{width:7px;height:7px;border-radius:2px;display:inline-block;margin-right:5px}
+.tip b{font-weight:600;font-family:var(--sans);font-size:11px}
+
+.the-comp{padding:13px 14px 14px;display:flex;flex-direction:column;gap:10px}
+.comp-hang{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;align-items:baseline}
+.comp-ten{font-size:12.5px;color:var(--n10);display:flex;align-items:center;gap:6px;min-width:0}
+.comp-ten i{width:8px;height:8px;border-radius:2px;flex:none}
+.comp-so{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+.comp-thanh{grid-column:1/-1;height:6px;border-radius:3px;background:var(--fill-strong);overflow:hidden}
+.comp-thanh span{display:block;height:100%;border-radius:3px}
+.comp-phu{grid-column:1/-1;font-family:var(--mono);font-size:10.5px;color:var(--muted-2)}
+.comp-tong{display:flex;justify-content:space-between;align-items:baseline;
+           border-top:1px solid var(--border-strong);padding-top:9px;margin-top:2px}
+.comp-tong b{font-weight:600;font-family:var(--mono);font-size:14px}
+.ghi-canh{font-size:11px;line-height:1.55;color:var(--muted-2);border-top:1px dashed var(--border-strong);padding-top:9px}
+.ghi-canh b{font-weight:500;color:var(--n10)}
+
+.nhomtab{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tabpill{display:flex;gap:2px;background:var(--fill-strong);border-radius:var(--r-sm);padding:2px}
+.tabpill button{font-size:12.5px;padding:5px 11px;border-radius:4px;color:var(--muted)}
+.tabpill button[aria-pressed=true]{background:var(--surface);color:var(--fg);box-shadow:var(--noi-nhe)}
+.bang-cuon{overflow-x:auto;border-radius:0 0 var(--r-lg) var(--r-lg)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead th{background:var(--fill);font-size:10.5px;font-weight:600;letter-spacing:.06em;
+         text-transform:uppercase;color:var(--muted-2);text-align:left;padding:9px 15px;
+         border-bottom:1px solid var(--border);white-space:nowrap}
+thead th.p{text-align:right}
+tbody td{padding:10px 15px;border-bottom:1px solid var(--rule);vertical-align:middle}
+tbody td.p{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody td.p.tien{font-weight:600}
+tbody tr:last-child td{border-bottom:0}
+tbody tr.bam{cursor:pointer}
+tbody tr.bam:hover{background:var(--fill)}
+tfoot td{padding:10px 15px;border-top:1px solid var(--border-strong);background:var(--fill);font-size:12.5px}
+tfoot td.p{text-align:right;font-family:var(--mono);font-weight:600}
+.khoa-ten{display:flex;flex-direction:column;gap:1px;min-width:0}
+.khoa-ten b{font-weight:500;font-size:13.5px}
+.khoa-ten span{font-family:var(--mono);font-size:11px;color:var(--muted-2)}
+.pill{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 8px;border-radius:var(--r-sm);font-size:11px;font-weight:500}
+.pill-neu{background:var(--neu-bg);color:var(--neu-fg)}
+.pill-do{background:var(--alert-bg);color:var(--alert-fg)}
+.pill-warn{background:var(--warn-bg);color:var(--warn-fg)}
+.nd{color:var(--muted-2)}
+.ty{display:inline-flex;align-items:center;gap:7px;justify-content:flex-end}
+.ty .th{width:46px;height:5px;border-radius:3px;background:var(--fill-strong);overflow:hidden}
+.ty .th span{display:block;height:100%;background:var(--ac);border-radius:3px}
+.can-be{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;
+        background:var(--warn-bg);color:var(--warn-fg);font-size:9.5px;font-weight:700;
+        font-family:var(--sans);vertical-align:middle;margin-left:5px;cursor:help}
+.phantrang{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:10px 15px;
+           border-top:1px solid var(--rule);font-size:12.5px;color:var(--muted)}
+.phantrang button{border:1px solid var(--border-field);border-radius:var(--r-sm);padding:5px 11px;font-size:12.5px}
+.phantrang button[disabled]{opacity:.45;cursor:default}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="navpanel">
+    <div class="nav-logo"><span class="dau">NX</span> Odyssey <span style="color:var(--muted-2);font-weight:400">Portal</span></div>
+    <a class="nav-muc" href="#"><span class="ic">◇</span> Tổng quan</a>
+    <a class="nav-muc" href="#"><span class="ic">◇</span> Hội thoại</a>
+    <a class="nav-muc" href="#"><span class="ic">◇</span> Agent</a>
+    <div class="nav-khoi">
+      <div class="nav-khoiten">Chi phí</div>
+      <a class="nav-muc" href="demo-usage.html"><span class="ic">▤</span> Usage</a>
+      <a class="nav-muc hoat" href="demo-billing.html"><span class="ic">₫</span> Billing <span class="cb">3</span></a>
+    </div>
+    <div class="nav-ghi">
+      Số <b>3</b> cạnh mục Billing = <code>canh_bao.thieu_gia</code>. Nó thuộc
+      màn tiền, nên nó đậu ở mục tiền — mục Usage không mang badge nào.
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <h1>Billing</h1>
+      <span class="demo-tag">Demo · chi phí</span>
+    </header>
+
+    <div class="trang">
+
+      <div class="hangky">
+        <div class="nutky" role="group" aria-label="Chọn kỳ">
+          <button aria-pressed="true">Tháng này</button>
+          <button aria-pressed="false">Tháng trước</button>
+          <button aria-pressed="false">7 ngày</button>
+          <button aria-pressed="false">30 ngày</button>
+        </div>
+        <span class="khoang">01/08 – 21/08/2026</span>
+      </div>
+
+      <!-- ── Dải cảnh báo — §5: KHÔNG phải chip trang trí ──────────────── -->
+      <div class="dai dai-do">
+        <span class="ic">●</span>
+        <p><strong>3 tổ hợp (component, metric) có usage nhưng chưa có dòng giá</strong> —
+           đang mất doanh thu ngay lúc này. Nặng nhất: <span class="em">vad · audio_sec</span>
+           (<span class="em">21.600</span> giây trong kỳ, tính ra <span class="em">0 ₫</span>).
+           Báo lại NobleX để bổ sung bảng giá.</p>
+      </div>
+      <div class="dai dai-vang">
+        <span class="ic">▲</span>
+        <p><span class="em">37</span> event <code>llm</code> có <code>exact=false</code> — đo
+           <b>thiếu</b> token, nên chi phí phần đó là <b>ước dưới</b>, không phải 0.
+           Kèm <span class="em">14</span> event không có số đo nào và
+           <span class="em">2</span> nhãn <code>purpose</code> chưa xác nhận tính tiền.</p>
+      </div>
+
+      <!-- ── ① Tổng quan chi phí ──────────────────────────────────────── -->
+      <div class="tdmuc">
+        <span class="so">1</span>
+        <h2>Tổng quan chi phí</h2>
+        <p>Usage của kỳ đã quy đổi theo bảng giá đang hiệu lực</p>
+      </div>
+      <div class="luoi-kpi" id="kpi"></div>
+
+      <!-- ── ② Tiền đi đâu ────────────────────────────────────────────── -->
+      <div class="tdmuc">
+        <span class="so">2</span>
+        <h2>Tiền đi đâu</h2>
+        <p>Cùng kỳ, cùng tổng với mục ①, khác chiều gộp</p>
+      </div>
+      <div class="luoi-tien">
+        <section class="the the-chart">
+          <div class="chart-dau">
+            <span class="chart-ten">Chi phí theo ngày</span>
+            <span class="t-phu" id="chart-phu"></span>
+          </div>
+          <div class="chart-hop" id="hop"><div class="tip" id="tip"></div></div>
+        </section>
+
+        <section class="the the-comp">
+          <span class="t-nhan">Theo component</span>
+          <div id="comp"></div>
+          <div class="comp-tong"><span class="t-phu">Tổng</span><b id="ctong"></b></div>
+          <p class="ghi-canh">
+            <b>VAD xám và 0 ₫</b> — không phải nó miễn phí, mà là chưa có dòng giá
+            (chính mục thứ nhất của dải đỏ). Nó vẫn có 21.600 giây (6h) usage thật:
+            xem màn <a href="demo-usage.html" style="color:var(--acd)">Usage</a>.
+          </p>
+        </section>
+      </div>
+
+      <!-- ── ③ Chi phí chi tiết ───────────────────────────────────────── -->
+      <div class="tdmuc">
+        <span class="so">3</span>
+        <h2>Chi phí chi tiết</h2>
+        <p>Gộp theo khoá, người tạo, hoặc từng phiên — cùng bảng của màn Usage, bộ cột tiền</p>
+      </div>
+      <div class="nhomtab" style="margin-bottom:-4px">
+        <span class="t-phu">Gộp theo</span>
+        <div class="tabpill" role="group" aria-label="Chiều gộp">
+          <button data-gop="khoa" aria-pressed="true">Khoá</button>
+          <button data-gop="nguoi" aria-pressed="false">Người tạo</button>
+          <button data-gop="phien" aria-pressed="false">Phiên</button>
+        </div>
+      </div>
+      <section class="the" style="overflow:hidden">
+        <div class="bang-cuon"><table>
+          <thead id="bhead"></thead><tbody id="bbody"></tbody><tfoot id="bfoot"></tfoot>
+        </table></div>
+        <div class="phantrang" id="ptr" hidden>
+          <span>1–50 / 342 phiên</span>
+          <button disabled>← Trang trước</button><button>Trang sau →</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+/* ══ DỮ LIỆU GIẢ — TIỀN, một nguồn duy nhất ═══════════════════════════════
+   `theo_ngay` của BE có ĐỦ mọi ngày kể cả ngày 0 đồng (09/08 và 16/08 là chủ
+   nhật không chạy). Ngày 0 là ngày THẬT không phát sinh — lọc bỏ nó là vẽ ra
+   một mức tiền dương cho ngày agent không chạy. */
+const NGAY = [
+  ['2026-08-01',384000],['2026-08-02',121000],['2026-08-03',528000],['2026-08-04',614000],
+  ['2026-08-05',589000],['2026-08-06',642000],['2026-08-07',573000],['2026-08-08',216000],
+  ['2026-08-09',     0],['2026-08-10',497000],['2026-08-11',668000],['2026-08-12',712000],
+  ['2026-08-13',684000],['2026-08-14',591000],['2026-08-15',243000],['2026-08-16',     0],
+  ['2026-08-17',635000],['2026-08-18',746000],['2026-08-19',813000],['2026-08-20',769000],
+  ['2026-08-21',701000],
+].map(([ngay,tien])=>({ngay,tien}));
+
+const TONG   = NGAY.reduce((s,d)=>s+d.tien,0);
+const SO_NGAY = NGAY.length;
+const SO_PHIEN = 342;
+
+/* Theo component. Tỷ lệ cố định, `llm` lấy PHẦN CÒN LẠI để tổng luôn khớp —
+   cùng lý lẽ BE: `chi_phi_tong` và tổng các hàng lấy từ cùng một nguồn. */
+const PHU = [
+  {ma:'call',           nhan:'Cuộc gọi',       ty:.175, event:342,  luong:'4h 59m'},
+  {ma:'tts',            nhan:'TTS',            ty:.057, event:1720, luong:'22m 15s'},
+  {ma:'stt',            nhan:'STT',            ty:.036, event:1860, luong:'38m 10s'},
+  {ma:'embed',          nhan:'Embed',          ty:.016, event:226,  luong:'85k token'},
+  {ma:'speaker_verify', nhan:'Xác thực giọng', ty:.004, event:148,  luong:'14m 50s'},
+];
+let COMP = PHU.map(c=>({...c, tien:Math.round(TONG*c.ty)}));
+COMP.unshift({ma:'llm', nhan:'LLM', event:8412, luong:'1,36M token',
+              tien:TONG - COMP.reduce((s,c)=>s+c.tien,0)});
+/* Đo được nhưng KHÔNG định giá được — xám, cố ý NGOÀI thang accent
+   (`MAU_KHONG_TINH_TIEN`). */
+COMP.push({ma:'vad', nhan:'VAD', event:1206, luong:'6h 00m', tien:0, khongTinh:true});
+
+/* Thang đơn sắc phát theo THỨ HẠNG, không theo danh tính — `bangMau()`. */
+const THANG=['var(--c-llm)','var(--c-tts)','var(--c-stt)','var(--c-embed)','var(--c-sv)'];
+COMP.forEach((c,i)=>c.mau = c.khongTinh ? 'var(--c-vad)' : THANG[Math.min(i,4)]);
+const MAU = Object.fromEntries(COMP.map(c=>[c.ma,c.mau]));
+
+/* Tách theo component của TỪNG ngày — nguồn của tooltip. Tỷ lệ cả kỳ áp cho
+   mỗi ngày (demo); BE trả `phan[]` thật, đã xếp theo tiền giảm dần. */
+NGAY.forEach(d=>{
+  d.phan = d.tien===0 ? [] : COMP.filter(c=>c.tien>0)
+    .map(c=>({ma:c.ma, nhan:c.nhan, tien:Math.round(d.tien*c.tien/TONG)}));
+});
+
+/* Bảng ③ — cùng bộ hàng của màn Usage, cột tiền. Hàng cuối lấy phần còn lại. */
+const _K = [
+  {ten:'Bot bán hàng Vinhomes', pre:'sk_live_a1b2…', nguoi:'Nguyễn Văn A', phien:148, ty:.468},
+  {ten:'Bot CSKH',              pre:'sk_live_c3d4…', nguoi:'Trần Thị B',   phien: 96, ty:.257},
+  {ten:'Bot lead form',         pre:'sk_live_e5f6…', nguoi:'Nguyễn Văn A', phien: 58, ty:.169},
+  {ten:'Test nội bộ',           pre:'sk_live_g7h8…', nguoi:'Lê C', thuhoi:true, phien:28, ty:.079},
+];
+const KHOA = _K.map(k=>({...k, tien:Math.round(TONG*k.ty)}));
+/* «Chưa phân loại (không có khoá)» — usage KHÔNG gắn được với khoá nào. Vẫn
+   được tính tiền và vẫn cộng vào tổng: ẩn nó đi là tổng dòng < tổng hiển thị
+   (hợp đồng §2). */
+KHOA.push({ten:null, pre:null, nguoi:null, phien:12,
+           tien:TONG - KHOA.reduce((s,k)=>s+k.tien,0)});
+
+const NGUOI = [
+  {ten:'Nguyễn Văn A', mail:'a@vinhomes.vn', key:2, phien:206, tien:KHOA[0].tien+KHOA[2].tien},
+  {ten:'Trần Thị B',   mail:'b@vinhomes.vn', key:1, phien: 96, tien:KHOA[1].tien},
+  {ten:'Lê C',         mail:'c@noblex.vn',   key:1, phien: 28, tien:KHOA[3].tien},
+  {ten:null,           mail:null,            key:0, phien: 12, tien:KHOA[4].tien},
+];
+
+const PHIEN_DS = [
+  {id:'s_9f3c…', khach:'Phạm Minh', kenh:'voice', batdau:'21/08 14:22', turn:18, tien: 62400, exact:true},
+  {id:'s_7a11…', khach:'Đỗ Lan',    kenh:'chat',  batdau:'21/08 13:58', turn:24, tien: 48900, exact:true},
+  {id:'s_4b8e…', khach:'—',         kenh:'voice', batdau:'21/08 13:05', turn: 9, tien: 21600, exact:false},
+  {id:'s_2c60…', khach:'Vũ Hải',    kenh:'chat',  batdau:'21/08 11:41', turn:31, tien: 57300, exact:true},
+  {id:'s_e5d2…', khach:'Ngô Thu',   kenh:'voice', batdau:'21/08 10:17', turn:14, tien: 43800, exact:true},
+];
+
+/* ══ ĐỊNH DẠNG — tiền là chuỗi, `Number()` chỉ để tính TOẠ ĐỘ ═════════════ */
+const SO   = n => n.toLocaleString('vi-VN');
+const tien = n => SO(Math.round(n))+' ₫';
+const tienK= n => n>=1e6 ? (n/1e6).toFixed(1).replace('.',',')+'tr'
+                : n>=1e3 ? Math.round(n/1e3)+'k' : SO(n);
+const pct  = n => (n*100).toFixed(1).replace('.',',')+'%';
+
+/* ══ ① KPI — 1 thẻ nhấn + 3 thẻ DẪN XUẤT ════════════════════════════════ */
+const CAO = NGAY.reduce((a,b)=>b.tien>a.tien?b:a);
+document.getElementById('kpi').innerHTML =
+  `<article class="kpi kpi-chinh">
+     <h3 class="t-nhan">Chi phí trong kỳ</h3>
+     <p class="t-kpi-vnd">${SO(TONG)}</p>
+     <div class="chan"><span class="dvi">VND · 21 ngày</span></div>
+   </article>`
++ [
+  {nhan:'Trung bình mỗi ngày', so:tien(TONG/SO_NGAY), chan:'gồm cả 2 ngày 0 đồng'},
+  {nhan:'Ngày cao nhất',       so:tien(CAO.tien),     chan:CAO.ngay.split('-').reverse().join('/')+' · '+pct(CAO.tien/TONG)+' cả kỳ'},
+  {nhan:'Chi phí mỗi phiên',   so:tien(TONG/SO_PHIEN),chan:SO(SO_PHIEN)+' phiên trong kỳ'},
+].map(k=>`<article class="kpi">
+     <h3 class="t-nhan">${k.nhan}</h3>
+     <p class="t-kpi">${k.so}</p>
+     <div class="chan"><span>${k.chan}</span></div>
+   </article>`).join('');
+
+document.getElementById('chart-phu').textContent =
+  `TB ${tienK(TONG/SO_NGAY)}/ngày · đỉnh ${tienK(CAO.tien)}`;
+
+/* ══ ② CHART — MỘT ĐƯỜNG + VÙNG TÔ, không cột chồng ═══════════════════════
+   Thẻ «Theo component» ngay bên phải đã mã hoá chiều component và làm tốt hơn
+   (có số, có %, sắp được). Chart lo chiều THỜI GIAN. Tách component vẫn còn —
+   trong tooltip. Đo container bằng ResizeObserver, KHÔNG `viewBox` cố định. */
+const PT=18, PR=20, PB=28, PL=62, SO_MOC=4;
+const hop=document.getElementById('hop'), tip=document.getElementById('tip');
+
+function buocLuoi(dinh){
+  if(dinh<=0) return 1;
+  const tho=dinh/SO_MOC, bac=10**Math.floor(Math.log10(tho)), ty=tho/bac;
+  return (ty<=1?1:ty<=2?2:ty<=2.5?2.5:ty<=5?5:10)*bac;
+}
+const cuoiTuan = iso => [0,6].includes(new Date(iso+'T00:00:00Z').getUTCDay());
+
+function ve(){
+  const W=hop.clientWidth, H=Math.max(hop.clientHeight,216);
+  if(!W) return;
+  const gt=NGAY.map(d=>d.tien), dinh=Math.max(...gt,1), buoc=buocLuoi(dinh);
+  const tran=Math.ceil(dinh/buoc)*buoc || buoc;
+  const vw=W-PL-PR, vh=H-PT-PB;
+  const x=i=>PL+i*vw/(NGAY.length-1), y=v=>PT+vh-(v/tran)*vh;
+  const tb=TONG/NGAY.length;
+
+  let s='';
+  NGAY.forEach((d,i)=>{ if(cuoiTuan(d.ngay)){
+    const a=i===0?PL:(x(i-1)+x(i))/2, b=i===NGAY.length-1?PL+vw:(x(i)+x(i+1))/2;
+    s+=`<rect x="${a}" y="${PT}" width="${b-a}" height="${vh}" fill="var(--fill)"/>`;
+  }});
+  for(let m=0;m<=SO_MOC;m++){
+    const v=tran*m/SO_MOC, yy=y(v);
+    s+=`<line x1="${PL}" y1="${yy}" x2="${PL+vw}" y2="${yy}" stroke="var(--rule)"/>`
+      +`<text x="${PL-9}" y="${yy+3.5}" text-anchor="end" font-family="var(--mono)" font-size="10.5"
+             fill="var(--muted-2)">${tienK(v)}</text>`;
+  }
+  const d=NGAY.map((n,i)=>`${i?'L':'M'}${x(i)},${y(n.tien)}`).join('');
+  s+=`<path d="${d}L${x(NGAY.length-1)},${PT+vh}L${PL},${PT+vh}Z" fill="var(--acs)" opacity=".72"/>`
+    +`<path d="${d}" fill="none" stroke="var(--ac)" stroke-width="1.9" stroke-linejoin="round"/>`
+    +`<line x1="${PL}" y1="${y(tb)}" x2="${PL+vw}" y2="${y(tb)}" stroke="var(--n6)"
+         stroke-width="1" stroke-dasharray="4 3"/>`
+    +`<text x="${PL+vw}" y="${y(tb)-6}" text-anchor="end" font-size="10" fill="var(--muted-2)">
+         TB ${tienK(tb)}/ngày</text>`;
+  NGAY.forEach((n,i)=>{
+    const ng=+n.ngay.slice(-2);
+    if([1,5,10,15,20].includes(ng))
+      s+=`<text x="${x(i)}" y="${PT+vh+17}" text-anchor="middle" font-family="var(--mono)"
+              font-size="10.5" fill="var(--muted-2)">${ng}</text>`;
+    s+=`<circle cx="${x(i)}" cy="${y(n.tien)}" r="9" fill="transparent" data-i="${i}" style="cursor:crosshair"/>`;
+  });
+  hop.querySelector('svg')?.remove();
+  hop.insertAdjacentHTML('afterbegin',
+    `<svg width="${W}" height="${H}" role="img" aria-label="Chi phí theo ngày">${s}</svg>`);
+
+  hop.querySelectorAll('circle[data-i]').forEach(c=>{
+    c.onmouseenter=()=>{
+      const n=NGAY[+c.dataset.i];
+      tip.innerHTML=`<b>${n.ngay.split('-').reverse().join('/')} · ${tien(n.tien)}</b>`
+        + (n.phan.length
+            ? n.phan.map(p=>`<div class="d"><span><i style="background:${MAU[p.ma]}"></i>${p.nhan}</span><span>${tienK(p.tien)}</span></div>`).join('')
+            : `<div class="d"><span>không phát sinh</span></div>`);
+      const cx=+c.getAttribute('cx'), cy=+c.getAttribute('cy');
+      tip.style.opacity=1;
+      tip.style.left=Math.min(Math.max(cx-tip.offsetWidth/2,4),hop.clientWidth-tip.offsetWidth-4)+'px';
+      tip.style.top=Math.max(cy-tip.offsetHeight-12,4)+'px';
+    };
+    c.onmouseleave=()=>tip.style.opacity=0;
+  });
+}
+new ResizeObserver(ve).observe(hop);
+
+/* ══ ② THẺ THEO COMPONENT — tiền + tỷ trọng + số đo lượng ở dòng phụ ══════ */
+document.getElementById('comp').innerHTML = COMP.map(c=>`
+  <div class="comp-hang">
+    <span class="comp-ten"><i style="background:${c.mau}"></i>${c.nhan}${
+      c.khongTinh?' <span class="pill pill-warn" style="height:17px;font-size:10px">chưa có giá</span>':''}</span>
+    <span class="comp-so"${c.khongTinh?' style="color:var(--muted-2)"':''}>${tienK(c.tien)}</span>
+    <span class="comp-thanh"><span style="width:${Math.max(c.tien/TONG*100,c.khongTinh?0:1.5)}%;background:${c.mau}"></span></span>
+    <span class="comp-phu">${c.luong} · ${SO(c.event)} event · ${c.tien?pct(c.tien/TONG):'—'}</span>
+  </div>`).join('');
+document.getElementById('ctong').textContent = tien(TONG);
+
+/* ══ ③ BẢNG — ba chiều gộp, BỘ CỘT TIỀN ═════════════════════════════════ */
+const TH=(t,p)=>`<th${p?' class="p"':''}>${t}</th>`;
+const TD=(t,p,tn)=>`<td${p?' class="p'+(tn?' tien':'')+'"':''}>${t}</td>`;
+const CHUA = `<span class="nd">Chưa phân loại (không có khoá)</span>`;
+const TY = n => `<span class="ty"><span class="th"><span style="width:${n*100}%"></span></span>${pct(n)}</span>`;
+
+const BANG = {
+  khoa: () => ({
+    head:'<tr>'+TH('Khoá')+TH('Người tạo')+TH('Phiên',1)+TH('Chi phí',1)+TH('Tỷ trọng',1)+'</tr>',
+    body:KHOA.map(k=>'<tr>'
+      +TD(k.ten?`<span class="khoa-ten"><b>${k.ten}${k.thuhoi?' <span class="pill pill-do">đã thu hồi</span>':''}</b><span>${k.pre}</span></span>`:CHUA)
+      +TD(k.nguoi??'<span class="nd">—</span>')
+      +TD(SO(k.phien),1)+TD(tien(k.tien),1,1)+TD(TY(k.tien/TONG),1)+'</tr>').join(''),
+    foot:'<tr>'+TD('<b>Tổng</b>')+TD('')+TD(SO(SO_PHIEN),1)+TD(tien(TONG),1)+TD('100,0%',1)+'</tr>',
+    ptr:false,
+  }),
+  nguoi: () => ({
+    head:'<tr>'+TH('Người tạo')+TH('Khoá',1)+TH('Phiên',1)+TH('Chi phí',1)+TH('Tỷ trọng',1)+'</tr>',
+    body:NGUOI.map(n=>'<tr>'
+      +TD(n.ten?`<span class="khoa-ten"><b>${n.ten}</b><span>${n.mail}</span></span>`:CHUA)
+      +TD(SO(n.key),1)+TD(SO(n.phien),1)+TD(tien(n.tien),1,1)+TD(TY(n.tien/TONG),1)+'</tr>').join(''),
+    foot:'<tr>'+TD('<b>Tổng</b>')+TD(SO(4),1)+TD(SO(SO_PHIEN),1)+TD(tien(TONG),1)+TD('100,0%',1)+'</tr>',
+    ptr:false,
+  }),
+  phien: () => ({
+    head:'<tr>'+TH('Phiên')+TH('Khách')+TH('Kênh')+TH('Bắt đầu')+TH('Turn',1)+TH('Chi phí',1)+'</tr>',
+    body:PHIEN_DS.map(p=>'<tr class="bam">'
+      +TD(`<span class="mono" style="font-size:12px">${p.id}</span>`)
+      +TD(p.khach)
+      +TD(`<span class="pill ${p.kenh==='chat'?'pill-neu':'pill-warn'}">${p.kenh==='chat'?'Chat':'Voice'}</span>`)
+      +TD(`<span class="mono" style="font-size:12px;color:var(--muted)">${p.batdau}</span>`)
+      +TD(SO(p.turn),1)
+      +TD(tien(p.tien)+(p.exact?'':'<span class="can-be" title="exact=false — token đo THIẾU, chi phí này là ước DƯỚI">!</span>'),1,1)
+      +'</tr>').join(''),
+    foot:'',
+    ptr:true,
+  }),
+};
+function veBang(gop){
+  const b=BANG[gop]();
+  document.getElementById('bhead').innerHTML=b.head;
+  document.getElementById('bbody').innerHTML=b.body;
+  document.getElementById('bfoot').innerHTML=b.foot;
+  document.getElementById('ptr').hidden=!b.ptr;
+}
+veBang('khoa');
+document.querySelectorAll('.tabpill button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabpill button').forEach(o=>o.setAttribute('aria-pressed',o===b));
+  veBang(b.dataset.gop);
+});
+
+/* ══ TỰ KIỂM: ba chiều gộp phải cùng một tổng ═══════════════════════════ */
+[['component',COMP],['khoá',KHOA],['người',NGUOI]].forEach(([ten,ds])=>{
+  const s=ds.reduce((a,r)=>a+r.tien,0);
+  if(s!==TONG) console.warn(`LỆCH tổng theo ${ten}: ${s} ≠ ${TONG}`);
+});
+</script>
+</body>
+</html>
