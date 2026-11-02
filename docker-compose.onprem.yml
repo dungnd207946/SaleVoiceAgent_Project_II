@@ -1,0 +1,87 @@
+# odyssey-models — override DEPLOY cho server on-prem, chồng lên `docker-compose.yml`
+# (port, profile, env, GPU, volume đều lấy từ file đó). Job deploy khai sẵn
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.onprem.yml
+#
+# File này chỉ đổi đúng các chỗ sau:
+#   1. image kéo từ ECR theo ${IMAGE_TAG}, `build: !reset` — máy deploy không build.
+#      (`!reset` cần docker compose ≥ 2.24.4.)
+#   2. network dùng chung `odyssey-network` (external), để odyssey-agent gọi được
+#      `stt:8012` / `embed:8013` / `speaker:8014` / `tts-omnivoice:8016` bằng TÊN SERVICE.
+#   3. ODYSSEY_MODELS_TOKEN đổi từ `${VAR}` sang `${VAR:?}` — xem khối ⚠️ dưới.
+#   4. stt có healthcheck — xem chú thích ở service đó.
+#   5. tts-omnivoice: HF_TOKEN bắt buộc, giọng mount ro, start_period 600s.
+#
+#   docker network create odyssey-network         # một lần mỗi máy, tạo tay
+#   ./fetch_secrets.sh                            # sinh .env từ GitLab CI/CD Variables
+#   export COMPOSE_FILE=docker-compose.yml:docker-compose.onprem.yml
+#   IMAGE_TAG=<sha> docker compose pull
+#   IMAGE_TAG=<sha> COMPOSE_PROFILES=gpu docker compose up -d --no-build --wait
+#
+# Không có COMPOSE_PROFILES=gpu thì CHỈ stt + speaker chạy. Máy deploy không có GPU
+# thì bỏ biến đó đi; máy có GPU phải cài `nvidia-container-toolkit`.
+#
+# ⚠️ ODYSSEY_MODELS_TOKEN dùng `:?` chứ không `:-`: `embed/auth.py::require_token`
+#    trả về ngay khi token rỗng (`if not token: return`) — tức KHÔNG kiểm gì cả — mà
+#    mọi service đều bind 0.0.0.0. Token rỗng vì thế không phải "chưa cấu hình", nó
+#    là các service mở toang cho toàn mạng nội bộ, và dấu hiệu duy nhất là chữ
+#    `auth=off` trong một dòng log lúc khởi động. Thà `up` chết ngay ở đây.
+#    (`fetch_secrets.sh` cũng chặn cùng điều kiện — hai lớp, cố ý.)
+name: odyssey-models
+
+services:
+  embed:
+    image: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-embed:${IMAGE_TAG:-dev-latest}
+    build: !reset null
+    environment:
+      - ODYSSEY_MODELS_TOKEN=${ODYSSEY_MODELS_TOKEN:?thiếu trong .env — token rỗng là TẮT auth trên 0.0.0.0}
+
+  stt:
+    image: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-stt:${IMAGE_TAG:-dev-latest}
+    build: !reset null
+    environment:
+      - ODYSSEY_MODELS_TOKEN=${ODYSSEY_MODELS_TOKEN:?thiếu trong .env — token rỗng là TẮT auth trên 0.0.0.0}
+    # Không phải check giả: `main()` gọi `_build_recognizer()` XONG mới `websockets.serve`,
+    # nên cổng 8012 mở ⟺ Zipformer đã nạp. Service thuần WebSocket, không có endpoint
+    # HTTP để kiểm sâu hơn, và mở một WS thật mỗi 15s là sinh phiên rác trong log.
+    # Thiếu healthcheck thì `--wait` của job deploy coi stt là xanh ngay khi container
+    # chạy — kể cả khi nó đang chết vì tải model hỏng.
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket,sys; s=socket.create_connection(('127.0.0.1',8012),3); s.close()\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      # 300s (was 120s): lần đầu trên máy trống còn phải kéo ~104MB Zipformer từ HF.
+      start_period: 300s
+
+  speaker:
+    image: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-speaker:${IMAGE_TAG:-dev-latest}
+    build: !reset null
+    environment:
+      - ODYSSEY_MODELS_TOKEN=${ODYSSEY_MODELS_TOKEN:?thiếu trong .env — token rỗng là TẮT auth trên 0.0.0.0}
+
+  tts-omnivoice:
+    image: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-tts-omnivoice:${IMAGE_TAG:-dev-latest}
+    build: !reset null
+    environment:
+      - HF_TOKEN=${HF_TOKEN:?thiếu trong .env — santa-tts-omnivoice là repo HF private}
+      - ODYSSEY_MODELS_TOKEN=${ODYSSEY_MODELS_TOKEN:?thiếu trong .env — token rỗng là TẮT auth trên 0.0.0.0}
+    volumes:
+      # ro: repo là nguồn sự thật cho giọng — server KHÔNG được tạo giọng, mọi giọng phải
+      # qua repo để có review và có phiên bản. `enroll_voice` trên server trả lỗi (sạch,
+      # không crash) — đó là chủ ý, không phải thiếu sót.
+      - ./voices/omnivoice:/app/voices:ro
+    # Lần đầu phải kéo ~2.5GB weights từ HF về volume cache, giống embed.
+    healthcheck:
+      start_period: 600s
+
+  lipsync-musetalk:
+    image: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-lipsync-musetalk:${IMAGE_TAG:-dev-latest}
+    build: !reset null
+    environment:
+      - ODYSSEY_MODELS_TOKEN=${ODYSSEY_MODELS_TOKEN:?thiếu trong .env — token rỗng là TẮT auth trên 0.0.0.0}
+
+# `external: true` = compose KHÔNG tạo network, phải `docker network create odyssey-network`.
+networks:
+  default:
+    name: odyssey-network
+    external: true

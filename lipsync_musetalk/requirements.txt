@@ -1,0 +1,26 @@
+# lipsync_musetalk — phiên bản ĐÃ CHẠY THẬT trên RTX 5060 Ti (Blackwell, sm_120), 2026-10-06.
+# torch phải là bản cu128: các bản cu11x/cu12.1 không có kernel cho sm_120.
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.8.0+cu128
+torchvision==0.23.0+cu128
+# MuseTalk 1.5 viết cho đúng các bản này (diffusers/transformers mới hơn đổi API UNet/Whisper).
+diffusers==0.30.2
+transformers==4.39.2
+accelerate==0.28.0
+huggingface_hub==0.30.2
+safetensors
+numpy==1.23.5
+# rtmlib đòi CẢ HAI gói opencv; cv2 thực tế nạp là bản contrib 4.11 — đúng tổ hợp đã chạy
+# thật. Ghim tường minh để mọi lần build ra cùng một cv2. Cả hai cần libgl1 (xem Dockerfile).
+opencv-python==4.9.0.80
+opencv-contrib-python==4.11.0.86
+librosa==0.11.0
+soundfile==0.12.1
+einops==0.8.1
+scipy
+Pillow
+tqdm
+# DWPose bản ONNX thay cho mmpose/mmcv (không có build cho torch cu128) — xem musetalk/VENDORED.md.
+rtmlib==0.0.16
+onnxruntime==1.23.2
+websockets>=14,<17
