@@ -1,0 +1,41 @@
+# Dockerfile dùng `COPY . .`, nên file này là thứ DUY NHẤT quyết định cái gì
+# không lên build context. Ba dòng đầu là quan trọng nhất:
+#
+#   node_modules — của máy dev, có binary biên dịch cho HĐH khác; copy vào rồi
+#                  đè lên kết quả `npm ci` là build hỏng theo cách rất khó đọc.
+#   dist         — bản build cũ, nằm đè lên bản mới sắp build.
+#   .env         — biến của máy dev đi lạc vào bundle production.
+node_modules
+dist
+.env
+.env.*
+!.env.example
+
+# Kho npm mà stage `quality` của CI ghi ra. Job `quality` và job `build` DÙNG
+# CHUNG workspace của runner (shell executor, một thư mục mỗi project), nên lúc
+# `docker build` chạy thì thư mục này đã nằm sẵn ở đó.
+.npm-cache
+
+# Worktree tạm của agent — mỗi cái là một BẢN SAO đầy đủ của repo, nên để lọt
+# vào build context là nhân đôi (hoặc hơn) lượng dữ liệu gửi cho docker daemon.
+# Cùng họ với dòng `.worktrees` trong eslint.config.js, cùng một lý do.
+.worktrees
+
+.git
+.gitignore
+.gitlab-ci.yml
+Dockerfile
+.dockerignore
+docker-compose.yml
+coverage
+
+# ⚠️ KHÔNG loại `tests/`, `vitest.setup.ts`, `eslint.config.js`.
+# `npm run build` là `tsc -b && vite build`, và tsconfig.app.json include
+# ["src", "tests", "vitest.setup.ts"] còn tsconfig.node.json include
+# eslint.config.js. Thiếu bất kỳ cái nào thì `tsc -b` đỏ ở bước build image —
+# dù chúng không có mặt trong bundle cuối. Chỉ loại được thứ TypeScript không
+# nhìn tới:
+docs
+README.md
+CLAUDE.md
+Makefile

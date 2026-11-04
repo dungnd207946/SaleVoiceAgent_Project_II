@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Demo — Lead trên /convos</title>
+<style>
+  @font-face { font-family: 'Be Vietnam Pro'; font-weight: 400; src: url(fonts/be-vietnam-pro-400-vietnamese.woff2) format('woff2'); }
+  @font-face { font-family: 'Be Vietnam Pro'; font-weight: 500; src: url(fonts/be-vietnam-pro-500-vietnamese.woff2) format('woff2'); }
+  @font-face { font-family: 'Be Vietnam Pro'; font-weight: 600; src: url(fonts/be-vietnam-pro-600-vietnamese.woff2) format('woff2'); }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 400; src: url(fonts/jetbrains-mono-400-latin.woff2) format('woff2'); }
+
+  /* Token CHÉP từ src/styles/theme.css — bản vẽ phải nói đúng màu của portal. */
+  :root {
+    --bg: #fcfbf7; --surface: #fffefc; --sunk: #fbfaf5; --fill: #f3f1ea;
+    --border: #edebe5; --border-strong: #ded9d0; --border-soft: #f3f1ea; --field: #948e81;
+    --fg: #14161a; --muted: #5f656e; --muted-2: #666c76; --nav: #4a5058;
+    --ac: #0d7a5f; --acs: #e7f2ee; --acd: #0a5e49;
+    --chat-bg: #e8f0fb; --chat-fg: #1f5aa8; --chat-vien: #4d84d0;
+    --voice-bg: #f0ecfa; --voice-fg: #5b45a8; --voice-vien: #8f78d9;
+
+    /* MỚI — bốn bậc phễu, ẤM DẦN: đá → cát → mơ → đất nung đặc.
+       Chữ/nền ≥ 5.1 · viền/surface ≥ 3.6 · viền/acs ≥ 3.2 (hàng đang chọn). */
+    --lead-1-bg: #f0efec; --lead-1-fg: #5f656e; --lead-1-vien: #8a857b;
+    --lead-2-bg: #fbf1dc; --lead-2-fg: #7a5410; --lead-2-vien: #a57c2c;
+    --lead-3-bg: #fde6d4; --lead-3-fg: #9a3f0c; --lead-3-vien: #c46a33;
+    --lead-4-bg: #b4501a; --lead-4-fg: #ffffff; --lead-4-vien: #b4501a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 'Be Vietnam Pro', system-ui, sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 28px 64px; }
+  h1.demo { font-size: 13px; font-weight: 600; color: var(--muted-2); margin: 0 0 10px; letter-spacing: .02em; }
+  .note { font-size: 12.5px; color: var(--muted); margin: 8px 0 36px; }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border-soft); }
+  .o { height: 36px; border: 1px solid var(--field); border-radius: 8px; background: var(--bg); padding: 0 12px; font: inherit; font-size: 13.5px; color: var(--muted-2); display: flex; align-items: center; }
+  .seg { height: 36px; display: flex; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; background: var(--bg); font-size: 13.5px; }
+  .seg button { all: unset; cursor: pointer; padding: 0 12px; display: flex; align-items: center; gap: 7px; color: var(--muted); border-left: 1px solid var(--border-strong); }
+  .seg button:first-child { border-left: 0; }
+  .seg button.on { background: var(--acs); color: var(--acd); font-weight: 600; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); }
+  .dem { margin-left: auto; font-size: 12.5px; color: var(--muted-2); }
+
+  /* ── Chip stage: chỉ nhãn + màu. Nhãn tự nói bậc, màu ấm dần củng cố. ── */
+  .stage { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px;
+           border: 1px solid; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  .s1 { background: var(--lead-1-bg); color: var(--lead-1-fg); border-color: var(--lead-1-vien); }
+  .s2 { background: var(--lead-2-bg); color: var(--lead-2-fg); border-color: var(--lead-2-vien); }
+  .s3 { background: var(--lead-3-bg); color: var(--lead-3-fg); border-color: var(--lead-3-vien); }
+  .s4 { background: var(--lead-4-bg); color: var(--lead-4-fg); border-color: var(--lead-4-vien); }
+
+  /* ── Bộ lọc stage: MỘT ô 36px, bấm mới mở menu. ── */
+  .loc { position: relative; }
+  .loc > button { all: unset; box-sizing: border-box; cursor: pointer; height: 36px; min-width: 176px; display: flex; align-items: center; gap: 8px;
+                  padding: 0 10px 0 12px; border: 1px solid var(--field); border-radius: 8px; background: var(--bg); font-size: 13.5px; color: var(--muted); }
+  .loc > button .k { color: var(--muted-2); }
+  .loc > button .gt { color: var(--fg); font-weight: 500; }
+  .loc > button .mui-xuong { margin-left: auto; color: var(--muted-2); transition: transform .15s; }
+  .loc.mo > button { border-color: var(--ac); box-shadow: 0 0 0 3px var(--acs); }
+  .loc.mo > button .mui-xuong { transform: rotate(180deg); }
+  .loc.co > button { border-color: var(--ac); background: var(--surface); }
+  .menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 10; width: 220px; padding: 6px;
+          background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px;
+          box-shadow: 0 10px 30px -10px rgba(20,22,26,.22), 0 2px 6px rgba(20,22,26,.06); display: none; }
+  .loc.mo .menu { display: block; }
+  .menu button { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: flex; align-items: center; gap: 10px;
+                 padding: 7px 10px; border-radius: 6px; font-size: 13.5px; color: var(--fg); }
+  .menu button:hover { background: var(--sunk); }
+  .menu button[aria-checked="true"] { background: var(--acs); }
+  .menu .tick { margin-left: auto; color: var(--ac); visibility: hidden; font-size: 13px; }
+  .menu button[aria-checked="true"] .tick { visibility: visible; }
+  .menu hr { border: 0; border-top: 1px solid var(--border-soft); margin: 5px 4px; }
+  .menu .mo-ta { color: var(--muted); }
+
+  .diem { font-size: 12.5px; color: var(--fg); }
+  .diem small { font-family: 'Be Vietnam Pro', sans-serif; font-size: 11.5px; color: var(--muted-2); margin-left: 3px; }
+  .dt { font-size: 12px; color: var(--muted); }
+  .chua { font-size: 12px; color: var(--muted-2); }
+
+  /* ── Hàng khách: thêm CỘT Lead giữa tóm tắt và thời gian — dò dọc được. ── */
+  .row { display: flex; align-items: flex-start; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--border-soft); position: relative; }
+  .row:last-child { border-bottom: 0; }
+  .row:hover { background: var(--bg); }
+  .av { width: 42px; height: 42px; border-radius: 50%; flex: none; display: grid; place-items: center; font-weight: 600; font-size: 15.5px; }
+  .ten { width: 186px; flex: none; }
+  .ten b { display: block; font-size: 15px; font-weight: 600; }
+  .ten span { display: block; margin-top: 3px; font-size: 12.5px; color: var(--muted-2); }
+  .tt { flex: 1; min-width: 0; align-self: stretch; border-left: 1px solid var(--border-soft); padding: 0 6px 0 16px; }
+  .tt p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .chips { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { border-radius: 999px; padding: 3px 8px; font-size: 11.5px; font-weight: 500; background: var(--border-soft); color: var(--muted); }
+  .pill.ac { background: var(--acs); color: var(--acd); }
+  .lead { width: 158px; flex: none; align-self: stretch; border-left: 1px solid var(--border-soft); padding: 1px 0 0 16px; }
+  .lead .meta { margin-top: 6px; display: flex; align-items: baseline; gap: 6px; }
+  .gio { width: 112px; flex: none; align-self: stretch; border-left: 1px solid var(--border-soft); padding: 2px 0 0 16px; text-align: right; }
+  .gio b { display: block; font-weight: 400; font-size: 13.5px; }
+  .gio span { display: block; margin-top: 4px; font-size: 12px; color: var(--muted-2); }
+  .mui { align-self: center; color: #666c76; font-size: 16px; }
+
+  /* ── Chi tiết khách ── */
+  .hd { display: flex; align-items: center; gap: 24px; padding: 16px 20px; border-bottom: 1px solid var(--border-soft); }
+  .ve { font-size: 13px; color: var(--muted); }
+  .hien-tai { margin-left: auto; display: flex; align-items: flex-start; gap: 14px; padding: 10px 14px 10px 16px;
+              border: 1px solid var(--border); border-radius: 12px; background: var(--sunk); }
+  .hien-tai .nhan { font-size: 12px; color: var(--muted-2); }
+  .hien-tai .so { font-size: 20px; line-height: 22px; letter-spacing: -.01em; font-weight: 500; }
+  .hien-tai .vach { width: 1px; align-self: stretch; background: var(--border); }
+  .body { display: flex; height: 470px; }
+  .cot { width: 300px; flex: none; border-right: 1px solid var(--border-soft); display: flex; flex-direction: column; }
+  .tabs { padding: 8px; border-bottom: 1px solid var(--border-soft); }
+  .tabs div { display: flex; background: var(--fill); border-radius: 8px; padding: 3px; font-size: 13px; }
+  .tabs span { flex: 1; text-align: center; padding: 5px 0; border-radius: 6px; color: var(--muted); }
+  .tabs span.on { background: var(--surface); color: var(--fg); font-weight: 600; box-shadow: 0 1px 2px rgba(20,22,26,.08); }
+  .ph { padding: 12px 14px; border-bottom: 1px solid var(--border-soft); }
+  .ph.on { background: var(--acs); border-left: 3px solid var(--ac); padding-left: 11px; }
+  .ph .l1 { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .ph .l1 b { font-size: 13.5px; font-weight: 600; }
+  .ph .l2 { margin-top: 2px; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ph .l3 { margin-top: 6px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .ph .l3 .mono { font-size: 11.5px; color: var(--muted-2); }
+  .kenh { border: 1px solid; border-radius: 999px; padding: 1px 7px; font-size: 11px; font-weight: 600; }
+  .kenh.chat { background: var(--chat-bg); color: var(--chat-fg); border-color: var(--chat-vien); }
+  .kenh.voice { background: var(--voice-bg); color: var(--voice-fg); border-color: var(--voice-vien); }
+  .nd { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .dong { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--border-soft); font-size: 12.5px; color: var(--muted-2); }
+  .dong .gach { width: 1px; height: 16px; background: var(--border); }
+  .khay { padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+  .bb { max-width: 70%; padding: 9px 13px; border-radius: 12px; font-size: 13.5px; }
+  .bb.k { align-self: flex-start; background: var(--bg); border: 1px solid var(--border); }
+  .bb.a { align-self: flex-end; background: var(--acs); }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1 class="demo">Bốn bậc phễu — chip dùng chung cho mọi chỗ</h1>
+  <div class="legend">
+    <span class="stage s1">Lead</span>
+    <span class="stage s2">MQL</span>
+    <span class="stage s3">SQL</span>
+    <span class="stage s4">Hẹn gặp</span>
+  </div>
+  <p class="note">Chỉ nhãn — nhãn tự nói bậc, màu ấm dần theo độ «nóng» của khách để củng cố. Họ màu ấm cố ý tránh teal («Đã chuyển sales»), xanh dương (Chat) và tím (Voice) đang có trên cùng màn.</p>
+
+  <h1 class="demo">① /convos — danh sách khách</h1>
+  <div class="panel">
+    <div class="bar">
+      <span class="o" style="width:250px">Tìm tên hoặc số điện thoại…</span>
+      <div class="seg"><button>Hôm nay</button><button>7 ngày</button><button class="on">30 ngày</button><button>Tất cả</button></div>
+      <div class="loc" id="loc">
+        <button type="button" aria-haspopup="menu" aria-expanded="false">
+          <span class="k">Stage</span><span class="gt" id="gt">Tất cả</span>
+          <svg class="mui-xuong" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.92" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="menu" role="menu">
+          <button role="menuitemradio" aria-checked="true" data-v=""><span class="mo-ta">Tất cả</span><span class="tick">✓</span></button>
+          <hr />
+          <button role="menuitemradio" aria-checked="false" data-v="s1"><span class="stage s1">Lead</span><span class="tick">✓</span></button>
+          <button role="menuitemradio" aria-checked="false" data-v="s2"><span class="stage s2">MQL</span><span class="tick">✓</span></button>
+          <button role="menuitemradio" aria-checked="false" data-v="s3"><span class="stage s3">SQL</span><span class="tick">✓</span></button>
+          <button role="menuitemradio" aria-checked="false" data-v="s4"><span class="stage s4">Hẹn gặp</span><span class="tick">✓</span></button>
+          <hr />
+          <button role="menuitemradio" aria-checked="false" data-v="none"><span class="mo-ta">Chưa phân loại</span><span class="tick">✓</span></button>
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" /> Chỉ khách đã được chuyển sales</label>
+      <span class="dem mono">128 khách · 412 phiên</span>
+    </div>
+
+    <div class="row">
+      <span class="av" style="background:#e6f2f4;color:#1f6b7a">NA</span>
+      <span class="ten"><b>Nguyễn Minh Anh</b><span class="mono">0912 345 678</span></span>
+      <span class="tt"><p>Khách hỏi giá căn 2PN view hồ tại Green Park, muốn xem nhà mẫu cuối tuần và hỏi chính sách thanh toán giãn 24 tháng.</p>
+        <span class="chips"><span class="pill">Green Park</span><span class="pill ac">Đã chuyển sales</span></span></span>
+      <span class="lead">
+        <span class="stage s4">Hẹn gặp</span>
+        <span class="meta"><span class="diem mono">90<small>điểm</small></span><span class="dt">· Khách mua</span></span>
+      </span>
+      <span class="gio"><b class="mono">14:32</b><span class="mono">12 phiên</span></span>
+      <span class="mui">›</span>
+    </div>
+
+    <div class="row">
+      <span class="av" style="background:#f0ecfa;color:#5b45a8">TH</span>
+      <span class="ten"><b>Trần Quốc Huy</b><span class="mono">0987 112 233</span></span>
+      <span class="tt"><p>Môi giới hỏi giỏ hàng tầng trung, cần bảng giá cập nhật và chính sách hoa hồng cho đại lý F1.</p>
+        <span class="chips"><span class="pill">Eco Green</span><span class="pill ac">Đã chuyển sales</span></span></span>
+      <span class="lead">
+        <span class="stage s3">SQL</span>
+        <span class="meta"><span class="diem mono">120<small>điểm</small></span><span class="dt">· Môi giới</span></span>
+      </span>
+      <span class="gio"><b class="mono">Hôm qua</b><span class="mono">5 phiên</span></span>
+      <span class="mui">›</span>
+    </div>
+
+    <div class="row">
+      <span class="av" style="background:#fdf3e0;color:#8a5c0d">LT</span>
+      <span class="ten"><b>Lê Thu Trang</b><span class="mono">0903 998 877</span></span>
+      <span class="tt"><p>Hỏi vị trí dự án, tiện ích nội khu và khoảng cách tới trường quốc tế.</p>
+        <span class="chips"><span class="pill">Green Park</span></span></span>
+      <span class="lead">
+        <span class="stage s2">MQL</span>
+        <span class="meta"><span class="diem mono">65<small>điểm</small></span></span>
+      </span>
+      <span class="gio"><b class="mono">28/09</b><span class="mono">2 phiên</span></span>
+      <span class="mui">›</span>
+    </div>
+
+    <div class="row">
+      <span class="av" style="background:#e8f0fb;color:#1f5aa8">PK</span>
+      <span class="ten"><b>Phạm Khánh</b><span class="mono">0938 456 111</span></span>
+      <span class="tt"><p>Hỏi có căn studio dưới 2 tỷ không.</p>
+        <span class="chips"><span class="pill">Chưa rõ dự án</span></span></span>
+      <span class="lead">
+        <span class="stage s1">Lead</span>
+        <span class="meta"><span class="diem mono">30<small>điểm</small></span><span class="dt">· Khách mua</span></span>
+      </span>
+      <span class="gio"><b class="mono">27/09</b><span class="mono">1 phiên</span></span>
+      <span class="mui">›</span>
+    </div>
+
+    <div class="row">
+      <span class="av" style="background:#f0efec;color:#5f656e">ĐV</span>
+      <span class="ten"><b>Đỗ Văn Vinh</b><span class="mono">0977 000 321</span></span>
+      <span class="tt"><p>Chào hỏi, chưa để lại nhu cầu cụ thể.</p>
+        <span class="chips"><span class="pill">Chưa rõ dự án</span></span></span>
+      <span class="lead"><span class="chua">Chưa phân loại</span></span>
+      <span class="gio"><b class="mono">25/09</b><span class="mono">1 phiên</span></span>
+      <span class="mui">›</span>
+    </div>
+  </div>
+  <p class="note">Cột Lead ĐỨNG RIÊNG thay vì chen vào hàng chip: dò mắt dọc một cột là trả lời được «ai đang nóng» mà không phải đọc từng tóm tắt. Khách chưa có lead chỉ ghi chữ mờ «Chưa phân loại», không có chip. Bộ lọc stage là MỘT ô 36px (bấm thử): đang lọc thì ô viền xanh và hiện luôn chip của stage đã chọn, nên nhìn thanh lọc là biết danh sách đang bị lọc.</p>
+
+  <h1 class="demo">② /convos/$phone — chi tiết khách</h1>
+  <div class="panel">
+    <div class="hd">
+      <div>
+        <div class="ve">‹ Tất cả khách</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+          <span class="av" style="width:46px;height:46px;font-size:17px;background:#e6f2f4;color:#1f6b7a">NA</span>
+          <div><div style="font-size:18px;font-weight:600">Nguyễn Minh Anh</div><div class="mono" style="font-size:13px;color:var(--muted-2)">0912 345 678 · 12 phiên</div></div>
+        </div>
+      </div>
+      <div class="hien-tai">
+        <div>
+          <div class="nhan">Lead hiện tại</div>
+          <div style="margin-top:6px"><span class="stage s4">Hẹn gặp</span></div>
+        </div>
+        <span class="vach"></span>
+        <div><div class="nhan">Điểm</div><div class="so mono" style="margin-top:6px">90</div></div>
+        <span class="vach"></span>
+        <div><div class="nhan">Đối tượng</div><div style="margin-top:6px;font-size:13.5px;font-weight:500">Khách mua</div></div>
+      </div>
+    </div>
+    <div class="body">
+      <div class="cot">
+        <div class="tabs"><div><span class="on">Tất cả 12</span><span>Chat 9</span><span>Voice 3</span></div></div>
+        <div class="ph on">
+          <div class="l1"><b>30/09 · 14:32</b><span class="kenh voice">Voice</span></div>
+          <div class="l2">Em muốn đặt lịch xem nhà mẫu thứ bảy này</div>
+          <div class="l3"><span class="mono">14 lượt · 6m 12s</span><span class="stage s4">Hẹn gặp</span></div>
+        </div>
+        <div class="ph">
+          <div class="l1"><b>29/09 · 09:10</b><span class="kenh chat">Chat</span></div>
+          <div class="l2">Cho em hỏi chính sách thanh toán giãn</div>
+          <div class="l3"><span class="mono">9 lượt · Green Park</span><span class="stage s3">SQL</span></div>
+        </div>
+        <div class="ph">
+          <div class="l1"><b>27/09 · 20:41</b><span class="kenh chat">Chat</span></div>
+          <div class="l2">Giá căn 2PN view hồ bao nhiêu ạ</div>
+          <div class="l3"><span class="mono">6 lượt · Green Park</span><span class="stage s1">Lead</span></div>
+        </div>
+        <div class="ph">
+          <div class="l1"><b>25/09 · 11:02</b><span class="kenh chat">Chat</span></div>
+          <div class="l2">Xin chào</div>
+          <div class="l3"><span class="mono">2 lượt</span></div>
+        </div>
+      </div>
+      <div class="nd">
+        <div class="dong">
+          <span>30/09 · 14:32</span><span style="font-weight:600;color:var(--fg)">6m 12s</span><span>14 lượt</span>
+          <span class="gach"></span>
+          <span class="stage s4">Hẹn gặp</span>
+          <span class="diem mono">90<small>điểm</small></span>
+          <span class="dt">Khách mua</span>
+        </div>
+        <div class="khay">
+          <div class="bb k">Em muốn đặt lịch xem nhà mẫu thứ bảy này được không ạ?</div>
+          <div class="bb a">Dạ được ạ. Anh/chị muốn xem khung giờ sáng hay chiều để em giữ lịch với chuyên viên?</div>
+          <div class="bb k">Sáng 9h nhé em.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="note">Header mang một ô «Lead hiện tại», là bản mới nhất, khớp đúng hàng ở danh sách. Từng phiên mang stage của CHÍNH phiên đó ở góc phải dưới, nên đọc cột phiên từ dưới lên là thấy khách đi Lead → SQL → Hẹn gặp. Phiên không chuyển sale thì không có chip. Dòng thông tin phiên có thêm một vạch ngăn rồi mới tới stage · điểm · đối tượng của phiên đang xem.</p>
+</div>
+<script>
+  const loc = document.getElementById('loc'), nut = loc.querySelector(':scope > button'), gt = document.getElementById('gt')
+  const dong = () => { loc.classList.remove('mo'); nut.setAttribute('aria-expanded', 'false') }
+  nut.addEventListener('click', (e) => { e.stopPropagation(); const mo = loc.classList.toggle('mo'); nut.setAttribute('aria-expanded', String(mo)) })
+  loc.querySelectorAll('.menu button').forEach((b) => b.addEventListener('click', () => {
+    loc.querySelectorAll('.menu button').forEach((x) => x.setAttribute('aria-checked', String(x === b)))
+    const v = b.dataset.v
+    gt.innerHTML = v === '' ? 'Tất cả' : v === 'none' ? 'Chưa phân loại' : b.querySelector('.stage').outerHTML
+    loc.classList.toggle('co', v !== '')
+    dong()
+  }))
+  document.addEventListener('click', (e) => { if (!loc.contains(e.target)) dong() })
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') dong() })
+  if (location.hash === '#mo') { loc.querySelector('[data-v="s3"]').click(); nut.click() }
+</script>
+</body>
+</html>

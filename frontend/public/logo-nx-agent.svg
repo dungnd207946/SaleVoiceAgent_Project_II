@@ -1,0 +1,39 @@
+<!--
+  NX Agent — LOCKUP ĐỦ: chữ NX + dòng AGENT.
+
+  Dùng từ 64px trở lên (màn đăng nhập, tài liệu, chữ ký email, ảnh chia sẻ link).
+  Dưới cỡ đó thì dùng `favicon.svg` — dòng AGENT ở 36px đã là một vệt.
+
+  Chữ AGENT đã VẼ THÀNH HÌNH, không phải `<text>`: một tệp logo phụ thuộc vào font
+  của máy đang mở nó là tệp sẽ hiện khác nhau ở mỗi chỗ.
+
+  Mã màu #0d7a5f = token `color-ac` của `src/styles/theme.css` (tệp tĩnh, ngoài
+  Tailwind, nên phải viết thẳng). Đổi accent thì sửa cả hai chỗ.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#0d7a5f" />
+
+  <!-- NX, thu nhỏ và đẩy lên để nhường chỗ cho dòng chữ -->
+  <g transform="translate(14 13) scale(0.56)">
+    <g fill="#fff">
+      <path d="M0 0h10l24 40H24zM0 0h9v40H0zM25 0h9v40h-9z" />
+      <path d="M30 0h10l24 40H54zM54 0h10L40 40H30z" />
+    </g>
+    <path fill="#0d7a5f" d="M27.4 0h3v40h-3z" />
+    <path fill="#0d7a5f" d="M46 12.8l1.6 2.6-14 22.8-1.6-2.6z" />
+  </g>
+
+  <!-- AGENT — chữ hình học vẽ tay, cao 7, nét 1.5, giãn chữ 2.4, baseline y=50 -->
+  <g fill="#fff" transform="translate(14.6 43)">
+    <!-- A -->
+    <path d="M2.6 0 5.2 7H3.7l-.42-1.3H1.92L1.5 7H0L2.6 0Zm0 2.7-.33 1.7h.66L2.6 2.7Z" />
+    <!-- G -->
+    <path d="M12.9 0v1.5H9.5v4h1.9V4.2h1.5V7H8V0h4.9Z" />
+    <!-- E -->
+    <path d="M20.7 0v1.5h-3.2v1.2h2.9v1.4h-2.9v1.4h3.2V7H16V0h4.7Z" />
+    <!-- N -->
+    <path d="M24 0h1.5l2.2 3.6V0h1.5v7h-1.5l-2.2-3.6V7H24V0Z" />
+    <!-- T -->
+    <path d="M37.4 0v1.5h-1.7V7h-1.5V1.5h-1.7V0h4.9Z" />
+  </g>
+</svg>

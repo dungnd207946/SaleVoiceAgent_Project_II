@@ -1,0 +1,54 @@
+# File của MÁY DEV — build image tại chỗ, không kéo ECR. File deploy là
+# docker-compose.dev.yml. Cần `docker network create odyssey-network` trước.
+#
+# KHÔNG phải đường đi của dev thường ngày (`make dev` — vite 5273, MSW, hot-reload).
+# File này để thử ĐÚNG thứ chạy ở production: nginx thật, bundle thật, MSW đã bị
+# gate loại khỏi bundle. Bug chỉ xuất hiện ở bản build (đường dẫn asset, SPA
+# fallback, cache header) không lộ ra dưới vite dev.
+#
+#   docker compose -f docker-compose.local.yml up -d --build
+name: odyssey-portal-frontend
+
+services:
+  frontend:
+    image: odyssey-portal-frontend:dev
+    build: .
+    container_name: odyssey-portal-frontend
+
+    environment:
+      # Biến RUNTIME (nginx envsubst lúc khởi động), KHÔNG phải biến `VITE_*` —
+      # biến đó nhúng cứng vào bundle lúc build. ⚠️ KHÔNG có `/` ở cuối: dấu `/`
+      # làm nginx cắt mất tiền tố `/api/` và mọi lời gọi API thành 404.
+      #
+      #   http://odyssey-portal-backend:8100   backend trong container
+      #   http://172.17.0.1:8100               backend trên host (`make api`) — IP của
+      #                                        host gateway, KHÔNG dùng tên
+      #                                        `host.docker.internal`: nginx phân giải
+      #                                        upstream qua `resolver`, mà resolver
+      #                                        KHÔNG đọc /etc/hosts nên tên do
+      #                                        `extra_hosts` sinh ra không tra được.
+      #                                        Lấy IP: `docker network inspect
+      #                                        odyssey-network -f '{{(index .IPAM.Config 0).Gateway}}'`
+      ODYSSEY_PORTAL_API_UPSTREAM: ${ODYSSEY_PORTAL_API_UPSTREAM:-http://odyssey-portal-backend:8100}
+      # Lip sync (khối /lipsync/): nginx gắn token này khi chuyển tiếp tới service
+      # lipsync-musetalk của odyssey-models — CÙNG giá trị ODYSSEY_MODELS_TOKEN bên đó
+      # (thêm vào ODYSSEY_SECRET_FRONTEND_ENV). Thiếu ⇒ portal chạy, không có lip sync.
+      ODYSSEY_PORTAL_MODELS_TOKEN: ${ODYSSEY_MODELS_TOKEN:-}
+      ODYSSEY_PORTAL_LIPSYNC_UPSTREAM: ${ODYSSEY_PORTAL_LIPSYNC_UPSTREAM:-http://lipsync-musetalk:8020}
+
+    ports:
+      # 5274 chứ không 5273 (vite dev server) — hai đường phải chạy được đồng thời.
+      - "${PORTAL_FE_PORT:-5274}:80"
+
+    # Giữ cho các công cụ khác trong container tra được tên host (curl/wget lúc soi
+    # lỗi). KHÔNG còn dùng được cho `ODYSSEY_PORTAL_API_UPSTREAM` — xem chú thích ở
+    # biến đó: nginx tra upstream bằng `resolver`, không qua /etc/hosts.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    restart: unless-stopped
+
+networks:
+  default:
+    name: ${PORTAL_DOCKER_NETWORK:-odyssey-network}
+    external: true

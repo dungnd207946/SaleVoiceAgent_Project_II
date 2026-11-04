@@ -1,0 +1,64 @@
+# File DEPLOY cho SERVER ON-PREM. Máy dev dùng docker-compose.local.yml (build tại chỗ).
+#
+# ⚠️ Khác `docker-compose.dev.yml` (bản AWS, GIỮ LẠI) gần như KHÔNG GÌ, và đó là sự
+# thật chứ không phải thiếu sót: repo này là SPA tĩnh + nginx, không chạm Aurora,
+# không chạm S3, không có kho nào để thay. Việc chuyển on-prem của nó gói gọn trong
+# một điều — `ODYSSEY_PORTAL_API_UPSTREAM` phải trỏ đúng backend, mà backend vẫn
+# mang container_name `odyssey-portal-backend` trên cùng `odyssey-network`, nên giá
+# trị cũng không đổi. File riêng tồn tại để hai môi trường tách nhau được về sau,
+# và để mọi repo cùng deploy bằng một tên file.
+#
+#   docker network create odyssey-network      # một lần mỗi máy, tạo tay
+#   IMAGE_TAG=<sha> docker compose -f docker-compose.onprem.yml pull
+#   IMAGE_TAG=<sha> docker compose -f docker-compose.onprem.yml up -d --wait
+#
+# ⚠️ Repo odyssey-portal-backend phải `up` TRƯỚC: nginx phân giải tên
+# `odyssey-portal-backend` lúc KHỞI ĐỘNG, nên backend vắng mặt là container này TỪ
+# CHỐI CHẠY, không phải trả 502.
+name: odyssey-portal-frontend
+
+services:
+  frontend:
+    # KHÔNG có `build:` — file này chỉ kéo image đã qua cổng MSW của Dockerfile.
+    # Default `dev-latest` chỉ để gõ tay; đừng deploy bằng nó.
+    image: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-portal-frontend:${IMAGE_TAG:-dev-latest}
+    container_name: odyssey-portal-frontend
+
+    environment:
+      # Biến RUNTIME (nginx envsubst lúc khởi động), KHÔNG phải `VITE_*` — biến đó
+      # nhúng cứng vào bundle lúc build nên đổi ở đây không có tác dụng.
+      # ⚠️ KHÔNG có `/` ở cuối: dấu `/` làm nginx cắt mất tiền tố `/api/` và MỌI lời
+      # gọi API thành 404.
+      #
+      #   http://odyssey-portal-backend:8100   backend trong container (đường on-prem)
+      #   http://172.17.0.1:8100               backend chạy trên host — dùng IP gateway,
+      #                                        KHÔNG dùng `host.docker.internal`: nginx
+      #                                        tra upstream qua `resolver`, mà resolver
+      #                                        không đọc /etc/hosts nên tên do
+      #                                        extra_hosts sinh ra không phân giải được.
+      ODYSSEY_PORTAL_API_UPSTREAM: ${ODYSSEY_PORTAL_API_UPSTREAM:-http://odyssey-portal-backend:8100}
+      ODYSSEY_PORTAL_AGENT_GATEWAY_UPSTREAM: ${ODYSSEY_PORTAL_AGENT_GATEWAY_UPSTREAM:-http://odyssey-agent-gateway-1:9200}
+      # Lip sync (khối /lipsync/): nginx gắn token này khi chuyển tiếp tới service
+      # lipsync-musetalk của odyssey-models — CÙNG giá trị ODYSSEY_MODELS_TOKEN bên đó
+      # (thêm vào ODYSSEY_SECRET_FRONTEND_ENV). Thiếu ⇒ portal chạy, không có lip sync.
+      ODYSSEY_PORTAL_MODELS_TOKEN: ${ODYSSEY_MODELS_TOKEN:-}
+      ODYSSEY_PORTAL_LIPSYNC_UPSTREAM: ${ODYSSEY_PORTAL_LIPSYNC_UPSTREAM:-http://lipsync-musetalk:8020}
+
+    ports:
+      # Mở ra mọi interface có chủ ý — reverse proxy TLS của máy on-prem forward vào
+      # đây. Khác postgres/minio bên repo backend (bind 127.0.0.1): những cái đó là
+      # kho nội bộ, còn đây là thứ người dùng phải với tới.
+      - "${PORTAL_FE_PORT:-5274}:80"
+
+    # Cho công cụ trong container tra được tên host lúc soi lỗi (curl/wget). KHÔNG
+    # dùng được cho ODYSSEY_PORTAL_API_UPSTREAM — xem chú thích ở biến đó.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    restart: unless-stopped
+
+# Dùng CHUNG `odyssey-network` với backend, models, agent, tester.
+networks:
+  default:
+    name: odyssey-network
+    external: true

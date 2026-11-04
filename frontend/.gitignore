@@ -1,0 +1,26 @@
+node_modules/
+dist/
+
+# Kho tải về của npm, do stage `quality` của CI dựng trong workspace
+# (`npm_config_cache=/app/.npm-cache`) để ba job dùng chung một lượt tải.
+.npm-cache/
+.vite/
+tsconfig.tsbuildinfo
+.env
+.DS_Store
+.idea/
+.superpowers/
+
+# Log console + snapshot trang do Playwright MCP sinh ra khi soi UI — tên có dấu
+# thời gian nên mỗi lần chạy là một tệp mới, và không ai đọc lại chúng.
+.playwright-mcp/
+
+# Tệp tạm của trình sinh route TanStack Router. Nó ghi routeTree.gen.ts ra đây
+# rồi mới `rename` đè lên tệp thật (để không có lúc tệp thật ghi dở). Giết dev
+# server giữa chừng thì bước rename không chạy và tệp tạm ở lại — tên là UUID
+# nên không lần nào trùng lần nào, và không có gì tự dọn chúng.
+.tanstack/
+
+# Bảng so sánh phương án logo, đã xong việc: bản chốt nằm ở public/favicon.svg
+# và public/logo-nx-agent.svg. Giữ trên đĩa, không đưa vào repo.
+/nx4.png

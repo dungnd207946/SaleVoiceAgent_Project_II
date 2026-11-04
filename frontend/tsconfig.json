@@ -1,0 +1,9 @@
+{
+  /* Chia hai project: `app` là code chạy trên trình duyệt, `node` là file cấu
+     hình chạy trên node. Vì sao phải chia: `exactOptionalPropertyTypes` bắt
+     được lỗi thật trong code app, nhưng kiểu plugin của Vite không tương thích
+     với nó. Tắt cả repo thì mất một cờ tốt; chia thì chỉ file cấu hình được
+     miễn. */
+  "files": [],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }]
+}

@@ -1,0 +1,54 @@
+{
+  "name": "@odyssey/frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "routes": "tsr generate",
+    "typecheck": "tsc --build --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write src tests",
+    "format:check": "prettier --check src tests",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.62.7",
+    "@tanstack/react-router": "^1.87.6",
+    "lucide-react": "^1.30.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "@tanstack/router-cli": "^1.87.6",
+    "@tanstack/router-plugin": "^1.87.6",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^26.1.2",
+    "@types/react": "^18.3.17",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.17.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "jsdom": "^25.0.1",
+    "msw": "^2.7.0",
+    "prettier": "^3.4.2",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1",
+    "vite": "^6.0.5",
+    "vitest": "^3.2.7"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  }
+}

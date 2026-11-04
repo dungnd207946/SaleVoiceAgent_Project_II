@@ -1,0 +1,1064 @@
+@import 'tailwindcss';
+@import './fonts.css';
+
+/* ─── Design token — hệ "Instrument" ────────────────────────────────────────
+   Trước: giá trị lấy nguyên từ prototype (`design/Tenant Portal.dc.html`) —
+   11 sắc xám ĐIỂM, không thành thang, và bốn mã màu lạc ngoài tệp này
+   (`#ecebe7`/`#fafaf8`/`#f2f1ee` trong `components/ui/Bang.tsx`, `#9a9ea6`
+   trong `Sidebar.tsx`). Chính `Bang.tsx` đã ghi "chưa có token trong
+   styles/theme.css" — đây là chỗ trả nợ đó.
+
+   VÌ SAO ĐỔI, ĐO ĐƯỢC (WCAG AA, đo trên đúng cặp màu component render ra):
+   bảng token cũ TRƯỢT 9/18 cặp. Nặng nhất:
+     · nhãn nhóm sidebar (10px) `#a0a4ab` trên trắng ......... 2.50  cần 4.5
+     · dấu `⏸` màn hoãn ....................................... 2.50  cần 4.5
+     · chữ "Agent" cạnh logo `#9a9ea6` ....................... 2.69  cần 4.5
+     · đầu bảng (10.5px) `#8a8f98` trên `#fafaf8` ............ 3.11  cần 4.5
+     · badge warn `#b57a12` trên `#fdf3e0` ................... 3.31  cần 4.5
+     · badge neutral ......................................... 4.03  cần 4.5
+     · chữ mờ trên nền trang ................................. 4.25  cần 4.5
+     · viền ô nhập `#d9d7d1` trên trắng (WCAG 1.4.11) ........ 1.44  cần 3.0
+   Thang dưới đây qua ĐỦ 35/35 cặp (đo lại 2026-08-09 sau đợt đẩy sáng, gồm cả
+   badge và 4 cặp avatar). Ai đổi một giá trị: ĐO LẠI, đừng đoán.
+
+   GIỮ ĐỘ ẤM CỦA BẢN CŨ — «giấy ấm, mực lạnh». Bản prototype không phải ấm
+   đều: NỀN và VIỀN ngả ấm (`#f6f5f2` R−B=+4, `#e7e5e0` +7) còn CHỮ ngả lạnh
+   (`#4a5058` −14, `#6f7580` −17). Chính cặp tương phản đó làm portal trông
+   ấm mà chữ vẫn sắc. Một vòng trước tệp này đổi cả hai sang xám lạnh, làm
+   mất đúng cái chất ấy — đã trả lại. Sửa AA và đổi tông màu là HAI việc rời
+   nhau; chỉ việc thứ nhất là bắt buộc.
+
+   Vì thế nhiều bậc dưới đây là SỐ GỐC của prototype, không phải số mới:
+   `n9` `n11`, cả ba token accent, và badge alert. Chỉ những giá trị THẬT SỰ
+   trượt AA mới đổi — xem chú thích `was …` ở từng dòng.
+
+   ⚠️ ĐỢT ĐẨY SÁNG 2026-08-09 (người dùng chốt "chỉnh màu sáng hơn") đụng vào
+   7 bậc: `n0`–`n5` + cả hai bậc chrome + `n8`. Đó là đổi TÔNG, không phải sửa
+   AA — hai việc rời nhau (xem đoạn trên). Điều buộc phải giữ khi đẩy sáng là
+   THỨ TỰ các bậc: chrome-1 < chrome-2 < n0 < n1, và mỗi nền chìm còn tách được
+   khỏi mặt nổi nằm trên nó. `n6` và `n7` KHÔNG đi theo — lý do ở ngay chỗ khai.
+
+   ⚠️ TÊN TOKEN CŨ GIỮ NGUYÊN HẾT (`bg`,`fg`,`surface`,`muted`,`nav`,…). Chúng
+   giờ là BÍ DANH trỏ vào thang `n*`. Nhờ vậy đổi diện mạo cả portal mà không
+   phải sửa class trong từng màn — và vẫn còn đúng MỘT chỗ để sửa. */
+@theme {
+  /* ── Giấy ấm: nền và viền (R > B, đúng hướng của prototype) ──────────── */
+  --color-n0: #fcfbf7; /* nền trang — was #faf9f6, trước nữa #f6f5f2 (số gốc
+                          prototype). Hai lần đẩy sáng, cùng một lý do: nền trang
+                          phải tách hẳn khỏi panel. */
+  --color-n1: #fffefc; /* mặt nổi: sidebar, thẻ, bảng — trắng ngà ấm, không #fff */
+  --color-n2: #fbfaf5; /* nền chìm: hàng rê vào (was #f8f7f3) */
+  --color-n3: #f3f1ea; /* nền chìm đậm: máng tab pill, đầu bảng (was #eeece6) */
+  --color-n4: #edebe5; /* viền thường (was #e7e5e0 — số gốc prototype) */
+  --color-n5: #ded9d0; /* viền đậm (was #d5d1c8) */
+  /* HAI BẬC DƯỚI ĐÂY KHÔNG ĐI THEO ĐỢT ĐẨY SÁNG 2026-08-09 — chúng đang đứng
+     ngay trên sàn AA, sáng thêm một nấc là trượt:
+       n6 trên `n1` = 3.23, cần 3.0 → nấc kế (#9a9488) còn 2.99
+       n7 trên `chrome-1` = 4.56, cần 4.5 → nấc kế (#6b7179) còn 4.25
+     Nền sáng lên đã tự cộng cho chúng một chút (3.20→3.23 · 4.28→4.56); đó là
+     toàn bộ phần "sáng hơn" mà hai bậc này có. */
+  --color-n6: #948e81; /* viền ô bấm được — was #e2e0da: 1.44, trượt 1.4.11 */
+  /* ── Mực lạnh: chữ (B > R, đúng hướng của prototype) ─────────────────── */
+  --color-n7: #666c76; /* chữ nhỏ mờ 10-11px — was #a0a4ab: 2.50, trượt xa */
+  --color-n8: #5f656e; /* chữ mờ thân bài — was #565b65 (6.48 trên nền trang),
+                          trước nữa #6f7580 (4.25, trượt). Giờ 5.68 — bậc DUY
+                          NHẤT trong nhóm chữ còn dư trần để sáng thêm. */
+  --color-n9: #4a5058; /* chữ mục nav — SỐ GỐC prototype */
+  --color-n10: #2a2e35; /* chữ phụ đậm */
+  --color-n11: #14161a; /* chữ chính — SỐ GỐC prototype, đen ngà không #000 */
+
+  /* ── Accent: NGUYÊN BẢN NobleX, cả ba đều đã đủ AA, không cần hạ ─────── */
+  --color-ac: #0d7a5f; /* accent */
+  --color-acs: #e7f2ee; /* accent soft — nền mục nav đang active */
+  --color-acd: #0a5e49; /* accent deep — hover link */
+
+  /* ── Bí danh ngữ nghĩa (tên cũ, giá trị mới) ─────────────────────────── */
+  --color-bg: var(--color-n0);
+  --color-fg: var(--color-n11);
+  --color-surface: var(--color-n1);
+
+  --color-border: var(--color-n4);
+  --color-border-strong: var(--color-n5);
+  --color-border-soft: var(--color-n3); /* đường kẻ trong sidebar */
+  --color-border-field: var(--color-n6); /* viền ô bấm được */
+
+  --color-muted: var(--color-n8);
+  --color-muted-2: var(--color-n7);
+  /* `muted-3` TRƯỚC LÀ SẮC MỜ NHẤT và bị dùng cho chữ 10px (nhãn nhóm nav, dấu
+     ⏸) — 2.50, trượt xa. Giờ trỏ vào `n7`, cùng giá trị với `muted-2`: hai
+     tên một giá trị, CỐ Ý. Sắc "mờ hơn nữa" không tồn tại trong hệ này vì ở
+     cỡ chữ đang dùng nó không đọc được. Giữ tên để các chỗ dùng khỏi phải sửa. */
+  --color-muted-3: var(--color-n7);
+  /* Chữ VÍ DỤ trong ô rỗng (placeholder). Nhạt hơn `muted-3` một bậc theo yêu
+     cầu sản phẩm 2026-08-25: ví dụ chỉ hiện khi đang SỬA và ô còn rỗng, nên nó
+     là gợi ý tạm thời chứ không phải nội dung — đọc nhầm nó thành dữ liệu đã gõ
+     hại hơn là đọc nó khó. Ở chế độ XEM thì không render placeholder nào cả. */
+  --color-placeholder: var(--color-n6);
+  --color-nav: var(--color-n9);
+
+  /* Bốn mã màu trước viết thẳng trong component — kéo về đây, có tên. */
+  --color-fill: var(--color-n2); /* was #fafaf8 — hàng rê vào */
+  --color-fill-strong: var(--color-n3); /* was #ecebe7 — máng tab pill, đầu bảng */
+  --color-rule: var(--color-n4); /* was #f2f1ee — kẻ giữa hàng bảng */
+  /* ── Thang CHROME: đậm → nhạt từ trái sang phải ──────────────────────────
+     rail (68px) → panel (240px) → nền trang. Ba mặt này KHÔNG chứa nội dung,
+     chúng là khung; nội dung nằm trên thẻ `surface`, bậc sáng nhất.
+
+     Đây là HAI GIÁ TRỊ RIÊNG, không phải bí danh trỏ vào thang `n*`: thang n*
+     phục vụ viền và nền chìm trong nội dung, các bậc của nó rơi vào chỗ hoặc
+     quá gần `n0` (n2/n3 — cạnh nhau trông như cùng màu) hoặc quá nặng (n5).
+     Đổi diện mạo khung là đổi đúng hai dòng này.
+
+     Độ sáng đo được sau đợt đẩy sáng: 0.856 · 0.922 · 0.964 (`n1` 0.992) — bốn
+     mặt vẫn tăng dần và không mặt nào trùng mặt kế. Khoảng cách rail↔panel hẹp
+     lại (0.096 → 0.066) vì rail đi lên nhiều nhất; đẩy rail sáng thêm nữa là
+     nó dính vào panel, và `n7` trên rail đã ở sàn AA. Chữ `nav` (n9) trên
+     chrome-1 = 7.03, trên chrome-2 = 7.54 — đổi giá trị thì đo lại. */
+  --color-chrome-1: #f1eee7; /* rail — đậm nhất (was #eae7e0) */
+  --color-chrome-2: #f8f6f1; /* panel — bậc giữa (was #f5f3ed) */
+  --color-brand-sub: var(--color-n7); /* was #9a9ea6 — chữ "Agent" cạnh logo */
+
+  /* ── Badge — nền GIỮ NGUYÊN số prototype, chỉ chữ nào trượt AA mới đổi ── */
+  --color-badge-alert-bg: #fdeceb;
+  --color-badge-alert-fg: #b3402e; /* SỐ GỐC — 4.98, vốn đã đủ */
+  --color-badge-warn-bg: #fdf3e0;
+  --color-badge-warn-fg: #8a5c0d; /* was #b57a12 — 3.31, trượt. Giờ 5.27 */
+  --color-badge-neutral-bg: #f0efec;
+  --color-badge-neutral-fg: var(--color-n8); /* was #6f7580 — 4.03, trượt */
+
+  /* Badge PHÂN LOẠI tài liệu — tách khỏi ba cặp badge TRẠNG THÁI ở trên: đỏ đọc
+     thành "lỗi", hổ phách thành "đang chờ", và accent dành cho hành động chính.
+     Số sau mỗi cặp là tỉ lệ tương phản WCAG của fg trên bg. */
+  --color-badge-doc-csbh-bg: #e8f0fb;
+  --color-badge-doc-csbh-fg: #1f5aa8; /* 5.93 */
+  --color-badge-doc-phaply-bg: #f0ecfa;
+  --color-badge-doc-phaply-fg: #5b45a8; /* 6.32 */
+  --color-badge-doc-huongdan-bg: #e6f2f4;
+  --color-badge-doc-huongdan-fg: #1f6b7a; /* 5.34 */
+
+  /* Badge KÊNH của một phiên (`conversations.source`) — hiện ở card feedback
+     `/quality` và danh sách phiên `/convos/$phone`, qua `components/ui/ChipKenh`.
+
+     Tách khỏi cả badge TRẠNG THÁI lẫn badge PHÂN LOẠI TÀI LIỆU dù trùng giá trị
+     với hai cặp doc: kênh và loại tài liệu là hai trục nghĩa độc lập, không bao
+     giờ đứng cạnh nhau trên một màn, và gộp token nghĩa là ngày đổi màu badge
+     tài liệu thì chip kênh đổi theo mà không ai định thế.
+
+     KHÔNG dùng `ac`/`acs` cho kênh nào: accent dành cho hành động chính và mục
+     nav đang mở — một chip tô accent đọc thành "đang chọn".
+
+     NỀN NHẠT + VIỀN CÙNG TÔNG. Ba lượt mới ra hình dạng này, đừng quay về hai
+     lượt đầu:
+
+     ① nhạt, KHÔNG viền — chữ trên chip đo đúng (5.93/6.32, đạt AA) nhưng nền
+       chip vs nền hàng đang chọn ở `/convos` (`acs` #e7f2ee) ra **1.00**: hai
+       màu sáng bằng nhau, chip tàng hình. Lỗi ở chỗ chỉ đo chữ-trên-chip mà
+       không đo chip-trên-nền-nó-đứng-lên.
+     ② đặc, chữ trắng — nổi thật (5.94/6.41 vs `acs`) nhưng người dùng chốt
+       "đậm quá, màu cũ đẹp hơn".
+     ③ HIỆN TẠI: giữ nguyên nền + chữ của ①, thêm VIỀN. Viền mới là thứ tách
+       chip khỏi nền, và đó cũng đúng là chủ thể của WCAG 1.4.11 (ranh giới của
+       một thành phần giao diện, không phải mảng nền). Chọn sắc viền NHẠT NHẤT
+       còn qua ngưỡng 3.0 trên CẢ `acs` lẫn trắng — nhạt hơn nữa là quay về ①.
+
+     Ba badge tint nhạt còn lại (alert/warn/neutral, doc-*) không cần viền vì
+     chúng chỉ đứng trên nền trắng/`surface`. Chip kênh đứng trên CẢ HAI.
+
+     Cổng `tests/chip-kenh-mau.test.ts` neo lại bốn ngưỡng. Đổi giá trị ở đây
+     thì chạy lại cổng đó, đừng đoán. */
+  --color-badge-kenh-chat-bg: #e8f0fb;
+  --color-badge-kenh-chat-fg: #1f5aa8; /* 5.93 trên nền chip */
+  --color-badge-kenh-chat-vien: #4d84d0; /* vs acs 3.32 · vs trắng 3.80 · vs nền chip 3.31 */
+  --color-badge-kenh-voice-bg: #f0ecfa;
+  --color-badge-kenh-voice-fg: #5b45a8; /* 6.32 trên nền chip */
+  --color-badge-kenh-voice-vien: #8f78d9; /* vs acs 3.13 · vs trắng 3.59 · vs nền chip 3.09 */
+
+  /* Chip STAGE của lead (`features/ops/components/ChipStage.tsx`) — bốn bậc phễu
+     lead → mql → sql → hen_gap, ẤM DẦN: đá → cát → mơ → đất nung đặc. Họ ấm có chủ ý:
+     trên cùng màn teal đã là «Đã chuyển sales», xanh dương là Chat, tím là Voice.
+     Đo (cổng `tests/chip-stage-mau.test.ts`): chữ/nền ≥ 5.11 · viền/acs ≥ 3.20 ·
+     viền/surface ≥ 3.64 · viền/nền chip ≥ 3.19. Bậc 4 là chip ĐẶC: nền chính là ranh giới. */
+  --color-lead-1-bg: #f0efec;
+  --color-lead-1-fg: #5f656e;
+  --color-lead-1-vien: #8a857b;
+  --color-lead-2-bg: #fbf1dc;
+  --color-lead-2-fg: #7a5410;
+  --color-lead-2-vien: #a57c2c;
+  --color-lead-3-bg: #fde6d4;
+  --color-lead-3-fg: #9a3f0c;
+  --color-lead-3-vien: #c46a33;
+  --color-lead-4-bg: #b4501a;
+  --color-lead-4-fg: #ffffff;
+  --color-lead-4-vien: #b4501a;
+
+  /* Panel tối — khối Thử ngay. Nền nhích khỏi `fg` một nấc (`#14161a` →
+     `#1a1c20`): comment cũ dặn panel và chữ thân trang phải tách được nhau,
+     nhưng lại đặt CÙNG một giá trị nên lời dặn chỉ nằm ở cái tên. Giờ tách
+     thật, và vẫn là đen ngả ấm chứ không phải xám lạnh. */
+  --color-panel: #1a1c20;
+  --color-panel-line: #2b2e34; /* viền trong panel tối — SỐ GỐC */
+  --color-panel-muted: #9aa0a8; /* nhãn mờ trên nền tối — SỐ GỐC, 6.47 */
+  --color-live: #3ddc84; /* chấm đang sống — chỉ dùng cho trạng thái sẵn sàng */
+
+  /* ── Mặt NỔI trên nền tối — thêm 2026-08-10 cho trang giới thiệu ────────
+     `panel` là mặt tối DUY NHẤT của bộ cũ, vì chỗ duy nhất dùng nó (khối «Thử
+     ngay») không có thẻ nào nằm đè lên. Trang `/` thì có: thẻ bản ghi cuộc gọi
+     nổi trên hero tối, và không có bậc này thì nó chìm nghỉm vào nền.
+
+     `panel-muted-2` KHÔNG phải bí danh của `panel-muted`: nền dưới nó sáng hơn
+     (`panel-raised` chứ không `panel`) nên mọi sắc mờ mất một nấc. Đo trên
+     `panel-raised`: bậc này 4.88 — bản nháp đầu dùng #7a828c (3.95) và #6c7580
+     (3.29) cho nhãn người nói và chữ phụ trong chip, cả hai TRƯỢT AA. */
+  --color-panel-raised: #22252a; /* thẻ nổi trên `panel` */
+  --color-panel-raised-2: #2a2e34; /* viền chip trong thẻ nổi */
+  --color-panel-muted-2: #8a929c; /* chữ mờ TRÊN `panel-raised` */
+
+  /* Chữ sáng + chip của trang giới thiệu (`components/landing/`) — chuyển từ
+     hex viết thẳng trong component về đây 2026-08-21 (luật 1: không mã màu
+     ngoài theme.css). GIỮ NGUYÊN giá trị: đây là dọn chỗ ở, không đổi diện
+     mạo. Ba bậc chữ sáng là ba vai trên các nền tối khác nhau, đừng gộp —
+     cùng lý do `panel-muted` ≠ `panel-muted-2` ngay trên. */
+  --color-panel-chu: #d6dae0; /* lời KHÁCH trong bản ghi cuộc gọi (thẻ nổi) */
+  --color-panel-chu-2: #cfd4da; /* tên agent ở hàng meta của thẻ nổi */
+  --color-panel-chu-3: #c3c8ce; /* đoạn dẫn + chip kênh trên hero tối */
+  --color-panel-mint: #9fd9c5; /* chữ chip việc-agent-làm trong thẻ nổi */
+  --color-panel-mint-2: #7fcfb4; /* chữ chip lĩnh vực trên nền `ac/20` */
+  --color-panel-hophach: #e8b98a; /* chip bàn-giao-người-thật (hổ phách) */
+  --color-panel-hophach-vien: #3a3128; /* viền của chip hổ phách */
+  --color-badge-warn-nhat-bg: #fdf7ee; /* chip «chuyển người thật» trên nền SÁNG
+                                          của trang giới thiệu — dịu hơn
+                                          `badge-warn-bg` một nấc, chữ vẫn là
+                                          `badge-warn-fg` */
+  --color-badge-warn-nhat-vien: #e8d6bd;
+
+  /* Avatar khách của màn Hội thoại — bốn cặp nền/chữ, chọn tất định từ số điện
+     thoại (M7 §5.1). Ở ĐÂY chứ không phải trong JSX: mọi mã màu của portal sống
+     trong tệp này, và một bảng màu nằm rải trong component là chỗ không ai tìm ra
+     vào ngày đổi nhận diện. Cặp 1 trùng giá trị với `acs`/`ac` là cố ý — chúng có
+     thể tách nhau ngày mai mà không kéo theo màu nav.
+     Đo cả bốn cặp: chỉ cặp 2 trượt (4.29), ba cặp còn lại giữ SỐ GỐC. */
+  --color-av1-bg: #e7f2ee;
+  --color-av1-fg: #0d7a5f;
+  --color-av2-bg: #f3ecdf;
+  --color-av2-fg: #7d5f18; /* was #8a6a1f — 4.29, trượt. Giờ 5.02 */
+  --color-av3-bg: #e9eef3;
+  --color-av3-fg: #4a6480;
+  --color-av4-bg: #f2e9ee;
+  --color-av4-fg: #8a4a68;
+
+  /* ── Thang bo góc — KHOÁ 3 bậc + pill ────────────────────────────────────
+     Trước rải rác 4 · 7 · 9 · 10 · 11 · 12 · 16px, không luật nào — đếm được
+     26 chỗ viết bo góc tuỳ ý (`rounded-[9px]`, `rounded-[10px]`, …) trong 14
+     tệp. Luật giờ: nút nhỏ trong hàng = `sm` · ô nhập/nút/tab = `md` · thẻ,
+     bảng, hộp thoại = `lg` · badge và pill = `full`.
+
+     BA TÊN CUỐI LÀ ĐỂ HÚT LỚP CŨ VỀ THANG, không phải bậc thứ tư: `rounded` ·
+     `rounded-xl` · `rounded-2xl` còn nằm rải ~40 chỗ trong `features/`. Trỏ
+     chúng vào đúng ba bậc trên thì những tệp đó vào khuôn mà KHÔNG phải sửa
+     dòng nào — và không ai vô tình đẻ thêm một bậc mới. */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius: var(--radius-sm); /* `rounded` trần: chip, ảnh thumb, thanh skeleton */
+  --radius-xl: var(--radius-lg); /* thẻ / section */
+  --radius-2xl: var(--radius-lg); /* hộp thoại, bong bóng hội thoại */
+
+  --font-sans: 'Be Vietnam Pro', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace; /* MỌI con số dùng font này */
+
+  /* ── Thang cỡ chữ THEO VAI (2026-10-05, `/impeccable typeset`) ────────────
+     Trước đó portal có 26 cỡ px (8–32, bước 0,5) viết tay ~880 lần, không token
+     nào. Người dùng chốt: khai thang + nâng sàn 11px + chuyển các primitive dùng
+     chung; cỡ riêng của từng màn chuyển DẦN khi đụng tới. Tên theo VAI, không
+     theo con số — `text-than` chứ không `text-13`, để đổi cỡ một vai là sửa một dòng.
+       nhan 11    nhãn nhỏ, meta, đầu cột bảng, trục biểu đồ — SÀN, không có cỡ nào nhỏ hơn
+       phu  12.5  chữ phụ, dòng phụ, nút nhỏ trong hàng, chip lọc
+       than 13.5  thân giao diện: ô lọc, nút, bảng, mục nav, tab
+       noi  14.5  chữ nội dung nổi: giá trị ô form, câu thông báo
+       the  15    tiêu đề thẻ (luật «thẻ nhóm form 15px»)
+       muc  16    đầu mục khối/bảng (luật «DauMuc 16px»)
+       trang 22   tiêu đề trang (h1 của Topbar)
+       so / so-lon 26 / 32   con số lớn (KPI)
+     Chữ dưới 11px có cổng `tests/san-co-chu.test.ts`. */
+  --text-nhan: 11px;
+  --text-phu: 12.5px;
+  --text-than: 13.5px;
+  --text-noi: 14.5px;
+  --text-the: 15px;
+  --text-muc: 16px;
+  --text-trang: 22px;
+  --text-so: 26px;
+  --text-so-lon: 32px;
+
+  /* ── Màu CHUỖI DỮ LIỆU (biểu đồ) ─────────────────────────────────────────
+     Đã chạy validator của skill `dataviz` trên đúng nền `surface` #fffefc.
+     Bộ ĐẦU TIÊN không còn cảnh báo: cặp kề xấu nhất ΔE 12.0 deutan (mọi vòng
+     trước đều rơi vào dải cảnh báo 6–8). Cặp ds1+ds2 — hai đường Chat/Voice và
+     gauge Chuyển sale — đo riêng ở chế độ all-pairs: ΔE 24.4 protan · 35.2 mắt
+     thường.
+
+     ⚠ BA BỘ ĐÃ BỎ, đừng quay lại:
+       ① Neo vào ChipKenh (chat #1f5aa8 + voice #5b45a8) — ΔE 0.6 deutan, gần
+          như một màu. Chip kênh tối ưu cho việc đứng cạnh CHỮ, không phải cho
+          hai đường cắt nhau trên cùng một lưới.
+       ② #1f5aa8 lam + #a05a00 hổ phách — #a05a00 chroma sát sàn, trên nền giấy
+          ấm ra nâu bùn chứ không phải một sắc.
+       ③ #3a5fa8 chàm + #c2593f đất nung — đạt cổng nhưng trầm và bão hoà thấp,
+          đọc ra cũ.
+     Đổi bộ này thì chạy lại validator, đừng ước lượng bằng mắt. */
+  /* ⚠ `ds3` và `ds4` là SLOT DỰ TRỮ, chưa component nào dùng — GIỮ NGUYÊN,
+     đừng xoá. Chúng là hai bậc đã qua validator CÙNG LƯỢT với ds1/ds2 ở chế
+     độ `adjacent`: bỏ đi rồi thêm lại một sắc thứ ba vào ngày biểu đồ tách
+     Zalo OA thì phải chạy lại cả bộ (và ba vòng đã bỏ ở trên cho thấy giá
+     của một lượt chạy lại). `ds3` được spec gán sẵn cho Zalo OA; tooltip của
+     ô ① KHÔNG dùng nó vì `NgayOut` gộp Zalo vào `khac` theo ngày — tô teal
+     cho một con số đã gộp là hứa một phép tách không có. */
+  --color-ds1: #4361ee; /* indigo  — Chat */
+  --color-ds2: #ef4d5a; /* san hô  — Voice · Chuyển sale */
+  --color-ds3: #0ea5a4; /* teal    — Zalo OA (dự trữ) */
+  --color-ds4: #8b5cf6; /* tím oải — slot 4 (dự trữ) */
+  --color-ds-khac: var(--color-n6); /* xám — dòng «Khác» của tooltip ô ① */
+  /* Dải crosshair — ds1 pha rất nhạt, chỉ để phân nền, không mang dữ liệu. */
+  --color-ds1-mo: #eef1fd;
+
+  /* `acs` đậm hơn một nấc — nền hàng lúc rê chuột. Cần bậc riêng vì `acs` đang
+     là nền mục nav đang mở: dùng lại đúng nó cho hover thì hàng rê vào trông y
+     hệt hàng đang được chọn. */
+  --color-acs-manh: #dcece6;
+
+  /* ── Thang sắc component (thẻ «Theo component», mục ② `/billing`) ───────────
+     KHÔNG dùng bộ chuỗi dữ liệu `ds1..ds4`: các component không phải những
+     hạng NGANG NHAU cần phân biệt bằng sắc, chúng là các lát của MỘT tổng đã
+     xếp theo độ lớn — một thang đơn sắc nói đúng thứ tự đó, và không tiêu mất
+     một sắc categorical nào (bộ `ds*` chỉ có 4 bậc đã qua validator, xem chú
+     thích ở trên). Chép nguyên từ `docs/design/demo-usage-billing.html` §`--c-*`.
+     `comp-1` CHÍNH LÀ `ac` — bậc đậm nhất của thang là accent của portal. */
+  --color-comp-1: var(--color-ac);
+  --color-comp-2: #3f9a80;
+  --color-comp-3: #74b7a4;
+  --color-comp-4: #a6d2c6;
+  --color-comp-5: #cde5de;
+  /* Component ĐO ĐƯỢC nhưng KHÔNG tính tiền — xám, cố ý NGOÀI thang accent:
+     mắt phải tách được «tốn tiền» khỏi «chỉ đo» trước khi đọc con số. */
+  --color-comp-0: var(--color-n5);
+
+  /* Bo góc của MARK biểu đồ — KHÔNG phải bậc thứ tư của thang UI. Thang 6/8/12
+     đo cho nút · ô nhập · thẻ; một nấc thước cao 16px rộng 3px bo 6px thì thành
+     viên thuốc. Khai có tên để không ai rải `rounded-[3px]` trong component. */
+  --radius-mark: 3px;
+
+  /* ── Bóng đổ — CHỨA MÀU, nên sống ở file này —————————————————————————————
+     Bóng là giá trị hay bao gồm màu (rgba), nên nó cũng chỉ sống ở file này.
+     `--shadow-noi` là bóng đầu tiên của repo nên đặt tên theo khái niệm
+     ("nổi trên mặt phẳng"), không phải con số dùng một lần (`0 8px 24px`). */
+  --shadow-noi: 0 8px 24px rgba(20, 22, 26, 0.24);
+
+  /* Hai bậc cho hai việc: `noi` cho thứ NỔI HẲN khỏi mặt phẳng (tooltip,
+     popover) — bóng sâu, tách khỏi trang. `noi-nhe` cho thứ VẪN NẰM TRONG
+     mặt phẳng nhưng được NHẤC LÊN (ô bento rê chuột vào) — bóng nông hơn hẳn,
+     nói "ô này sắp được bấm" chứ không nói "ô này đang bay lên khỏi trang". */
+  --shadow-noi-nhe: 0 2px 10px rgba(20, 22, 26, 0.1);
+
+  /* Bóng của hộp thoại giữa màn (`HopThoai`). Trước 2026-10-05 nó là
+     `shadow-[0_18px_50px_rgba(20,22,26,.22)]` chép tay ở 13 dialog. */
+  --shadow-hop-thoai: 0 18px 50px rgba(20, 22, 26, 0.22);
+
+  /* Các bóng dưới đây trước 2026-10-05 là `shadow-[…rgba]` chép tay trong 18 chỗ
+     TSX, mỗi chỗ một con số hơi khác (menu có bốn bản: .12 · .14 · .16 · hai lớp). */
+  /* Mục đang chọn NỔI trên rãnh (`NhomTab`, `ChonMot`, chip lọc, mục nav, rail). */
+  --shadow-chon: 0 1px 2px rgba(20, 22, 26, 0.08);
+  /* Menu thả xuống / popover neo vào một nút (switcher, bộ lọc stage, menu role). */
+  --shadow-menu: 0 10px 28px rgba(20, 22, 26, 0.14);
+  /* Menu MỞ LÊN (menu người dùng ở đáy panel) — bóng đổ về phía trên. */
+  --shadow-menu-len: 0 -4px 28px rgba(20, 22, 26, 0.14);
+  /* Nút tròn nổi trên ẢNH (đóng/trước/sau của lightbox): phải tách khỏi ảnh bất kỳ. */
+  --shadow-nut-noi: 0 6px 18px rgba(20, 22, 26, 0.3);
+  /* Núm công tắc minh hoạ ở trang giới thiệu. (`the-lon`/`the-toi` — bóng 48–60px
+     của ba khung minh hoạ — bỏ 2026-10-05: viền mảnh + bóng loang rộng là hai cách
+     nổi cho cùng một khung; khung giữ viền, như mọi thẻ của portal.) */
+  --shadow-num: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BẢY HỆ MÀU GRADIENT CỦA `/usage` — KHAI Ở `:root`, KHÔNG Ở `@theme`
+   ══════════════════════════════════════════════════════════════════════════
+   ⚠️ ĐỪNG CHUYỂN VÀO `@theme`. Tailwind v4 chỉ phát ra biến `@theme` nào mà
+   SCANNER NHÌN THẤY được trong mã nguồn; ở đây chúng chỉ được tham chiếu bằng
+   template string động (`var(--color-u-${ma})` trong `truc-usage.ts`), nên
+   scanner không thấy và Tailwind CẮT SẠCH. Đo được: sau `vite build`, bundle
+   CSS có `--color-comp-1` (được một class nhắc tới) nhưng **0 lần** xuất hiện
+   `--color-u-llm`. Hệ quả không phải "mất màu" mà là `var(--a)` thành vô nghĩa
+   ⇒ `stop-color` hỏng ⇒ SVG rơi về mặc định: **mọi đường kẻ ĐEN**, không lỗi
+   nào phát ra. Đây là lớp lỗi mà `theme.css` phải cảnh báo, không phải nơi để
+   một quy ước đẹp mắt thắng một phép đo.
+   Khai ở `:root` thì chúng được phát nguyên văn, và vẫn giữ luật 1 (không mã
+   màu nào ngoài tệp này).
+
+   `--color-u-*`   sắc ĐẶC — chữ, chấm định danh, con số rail. Bậc DUY NHẤT chở
+                   chữ ⇒ phải đo ≥ 4.5 trên `--color-surface`.
+   `--color-ua-*`  stop TRÁI của nét vẽ. Nét là «graphical object» của WCAG
+                   1.4.11 ⇒ ≥ 3.0. Gradient nét chạy `u` → `ua`, tức CẢ HAI đầu
+                   đều đạt ngưỡng; bản đầu chạy `ua` → `ub` và đầu phải rơi
+                   xuống 1.5–1.8, tức nửa cuối mỗi đường không đủ tương phản.
+   `--color-ub-*`  CHỈ dùng cho VÙNG TÔ (opacity ≤ 0.3) — trang trí, không chở
+                   thông tin nào nên không có ngưỡng.
+
+   TÔNG: trung tính, xoay quanh xanh của hệ thống (`--color-ac` #0d7a5f). Bảy
+   hue tách nhau đủ để nhận ra trên rail nhưng không cái nào rực — bản đầu dùng
+   indigo/fuchsia/rose bão hoà và nó chỏi với cả portal.
+
+   Đo 2026-08-25 trên `--color-surface` (#fffefc), cả 14 số đều đạt:
+     u  5.43 · 5.26 · 5.86 · 5.24 · 4.60 · 5.71 · 5.49   (ngưỡng 4.5)
+     ua 3.35 · 3.74 · 3.85 · 3.47 · 3.25 · 3.63 · 3.65   (ngưỡng 3.0)
+   Đổi một giá trị thì ĐO LẠI, đừng đoán. */
+:root {
+  --color-u-llm: #0f766e;
+  --color-ua-llm: #279c8b;
+  --color-ub-llm: #8fded0;
+  --color-u-stt: #3b6ea5;
+  --color-ua-stt: #5885c4;
+  --color-ub-stt: #a8c8ee;
+  --color-u-tts: #6b5b95;
+  --color-ua-tts: #8778b8;
+  --color-ub-tts: #c8bce8;
+  --color-u-vad: #52707d;
+  --color-ua-vad: #6d8e9c;
+  --color-ub-vad: #b3ccd6;
+  --color-u-call: #9a6b34;
+  --color-ua-call: #b8843f;
+  --color-ub-call: #eccb9a;
+  --color-u-embed: #46703f;
+  --color-ua-embed: #5f9257;
+  --color-ub-embed: #b3d4ac;
+  --color-u-speaker_verify: #96565f;
+  --color-ua-speaker_verify: #b5737c;
+  --color-ub-speaker_verify: #e2b4ba;
+  /* Tra Google (dữ liệu ngoài): ΔE ≥ 22,6 tới mọi tab, u 4.60 · ua 3.38 trên surface. */
+  --color-u-search: #787830;
+  --color-ua-search: #8f8f3c;
+  --color-ub-search: #dcdca8;
+
+  /* ĐƯỜNG THỨ HAI của một tab — hậu tố `2`, đọc qua `bienMauPhu()`.
+     Chỉ `stt` có (xem `so-tab-usage.ts` §`DuongPhu`).
+
+     ⚠️ KHÔNG mượn hue của tab nào. Bảy hue trên là ĐỊNH DANH của bảy tab, và
+     rail bày đủ bảy chấm ngay bên trái biểu đồ. Đây là token RIÊNG: tab nào
+     đổi màu thì đường này không đi theo.
+
+     CHỌN BẰNG ĐO, và số quyết định là CHROMA. Bản đầu dùng đỏ gạch #b04f2c:
+     nó xa mọi tab nhất (ΔE 24,6) nhưng **chroma 54** trong khi bảy tab nằm ở
+     13–40 — tức nó là thứ bão hoà nhất trên màn, chỏi đúng như bộ
+     indigo/fuchsia đã bị bỏ ở vòng bảng màu trước. Người dùng chê, đúng.
+
+     Mận khói #8d4f7d: **chroma 36**, bằng `tts` (36) và `stt` (35) — nằm gọn
+     trong dải của bảng. Và nó là màu LẠNH-ấm cạnh một màu lạnh: mận với lam là
+     cặp hài hoà, khác hẳn đỏ gạch vốn là bù màu đối đầu.
+
+     ⚠️ ΔE tới tab gần nhất là **19,7** (`tts` #6b5b95) — thấp hơn ngưỡng 20 mà
+     bản đỏ gạch đạt, và đó là ĐÁNH ĐỔI CÓ Ý THỨC: 19,7 xấp xỉ đúng khoảng cách
+     20,0 giữa hai tab THẬT đang sống cạnh nhau trên rail (`stt`↔`tts`), tức nó
+     không tệ hơn chính bảng hiện hành. Con số phải lớn là ΔE tới ĐƯỜNG KIA
+     trong cùng biểu đồ: **37,9** so với `stt` — đó mới là phép phân biệt người
+     đọc thực sự cần, và hai hue cách nhau 104° (211° ↔ 315°).
+
+     KHÔNG có bậc `ub`: vùng tô của đường 2 chạy `--d2` ở cả ba stop, vì stop
+     cuối có `stop-opacity: 0` nên hue ở đó vô hình — thêm một token thứ ba là
+     thêm một giá trị không ai nhìn thấy được mà vẫn phải bảo trì.
+
+     Đo 2026-08-25 trên `--color-surface` (#fffefc): u 5.87 (ngưỡng 4.5) ·
+     ua 4.00 (ngưỡng 3.0). Đổi giá trị thì ĐO LẠI CẢ chroma. */
+  --color-u-stt2: #8d4f7d;
+  --color-ua-stt2: #a96a99;
+
+  /* ── Phông studio sân khấu Voice (`phong-san-khau`, `quang-nguoi-dan`) ──
+     ẤM, cố ý KHÔNG thuộc thang xám lạnh: người dẫn được chiếu sáng ấm, phông
+     lạnh làm cô ấy trông như dán vào. Ở `:root` vì chỉ CSS dưới đây đọc chúng
+     (cùng lý do bảy hệ màu `/usage` ở trên). Chữ trắng trên phông (đo
+     2026-10-07, chưa tính lớp phủ): mép/đáy 6,7–11,3:1, giữa 3,8:1, quầng 2,0:1
+     — nên chữ trên sân khấu luôn có nền riêng (`bg-panel/55`, dải `from-panel`). */
+  --color-phong-tren: #7f7971;
+  --color-phong-duoi: #57524c;
+  --color-phong-quang: #c6bfb3;
+  --color-phong-vien: #1c1a17;
+}
+
+@layer base {
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  a {
+    color: var(--color-ac);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--color-acd);
+  }
+  /* Vòng focus MỘT KIỂU cho cả portal. Trước mỗi component tự lo, nên có chỗ
+     đặt `outline-none` mà không thay bằng gì (ô lọc của `Bang.tsx`) — bàn phím
+     đi tới đó là mất dấu. `:focus-visible` chứ không `:focus`: bấm chuột vào
+     nút thì không hiện vòng, chỉ bàn phím mới hiện. */
+  :focus-visible {
+    outline: 2px solid var(--color-ac);
+    outline-offset: 2px;
+  }
+  /* Placeholder MỘT sắc cho cả portal. Trước 2026-10-05 chỉ `O_CHUNG` dùng
+     `--color-placeholder`, hơn 20 ô còn lại ăn mặc định 50% `currentColor` của
+     Tailwind — đo ra 4 sắc khác nhau, 2,12–5,25:1. Ở `@layer base` nên một ô
+     cần khác thì `placeholder:` của nó vẫn thắng. */
+  ::placeholder {
+    color: var(--color-placeholder);
+  }
+  /* Bôi đen chữ và con trỏ nhập — hai thứ trình duyệt tự vẽ bằng màu hệ thống
+     (xanh dương của macOS) nếu không ai nói gì. */
+  ::selection {
+    background: var(--color-acs);
+    color: var(--color-fg);
+  }
+  input,
+  textarea {
+    caret-color: var(--color-ac);
+  }
+}
+
+@layer utilities {
+  /* ── `o-chon` — MỌI `<select>` của portal phải mang class này ──────────────
+     `appearance: none` là điều kiện để `<select>` cao bằng `<input>` đứng cạnh
+     nó. Để mặc định (`auto`) thì mỗi engine tự vẽ một control khác nhau, và
+     hai kết quả lệch nhau tới mức đọc thành hai thiết kế:
+
+       · Chromium/macOS — tôn trọng `padding` ⇒ 35px, ô nhập cạnh nó 36px
+       · WebKit/macOS  — BỎ QUA `padding`, ép metric riêng ⇒ ~23px, kèm nút
+                          mũi tên hai chevron của hệ thống
+
+     Nên bug này VÔ HÌNH với người dev dùng Chrome và lộ ra ngay khi ai đó mở
+     portal bằng Safari — đúng cách nó được phát hiện (2026-08-10, màn Thử
+     agent: bốn ô một hàng, hai ô nhập cao gấp rưỡi hai ô chọn).
+
+     `-webkit-appearance` viết kèm vì Safari < 15.4 chưa nhận bản không tiền tố.
+
+     ⚠️ MÃ MÀU TRONG DATA-URI LÀ BẢN SAO CỦA `--color-muted-2` (`n7`), không
+     phải một mã lạc: data-URI là một tài liệu SVG RIÊNG nên `currentColor` và
+     `var(--…)` của trang không với tới được. Đổi bậc `n7` thì đổi cả ở đây.
+     `stroke-width` 1.92 trên lưới 24 — cùng con số `icons.tsx` ép cho Lucide,
+     để mũi tên này không đậm hơn mọi chevron khác của portal.
+
+     `padding-right` đặt ở đây (không để call site tự lo) vì nó là hệ quả trực
+     tiếp của việc chiếm chỗ vẽ mũi tên: 30px = 10px lề + 14px icon + 6px thở. */
+  .o-chon {
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666c76' stroke-width='1.92' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 14px 14px;
+    padding-right: 30px;
+  }
+
+  /* Đổi mảng trên rail thì danh sách màn của panel mờ dần vào — 120ms, chỉ
+     opacity, không trượt.
+
+     ĐÂY LÀ CHUYỂN ĐỘNG DUY NHẤT của shell mới, và nó có mặt vì đổi mảng thay
+     TOÀN BỘ nội dung panel: không có nó thì ba, bốn dòng chữ đột ngột thành ba,
+     bốn dòng chữ khác và mắt không bắt được là mình vừa đi đâu. Một stagger
+     từng dòng thì bắt người dùng chờ hết cả chuỗi mới đọc được mục cuối — đắt
+     hơn thứ nó nói. */
+  @keyframes nav-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  .nav-in {
+    animation: nav-in 120ms ease-out;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-in {
+      animation: none;
+    }
+  }
+
+  /* ── Chuyển tab role ở `/agent` (`KhoiVaiTro.tsx`) ─────────────────────────
+     Thân khối TRƯỢT VÀO theo hướng tab vừa chọn (tab bên phải ⇒ vào từ phải) + mờ dần,
+     220ms. Hướng là thông tin chứ không phải trang trí: mười tab đổi nội dung giống hệt
+     nhau về hình (cùng ba thẻ), nên thứ duy nhất cho mắt biết «mình vừa sang tab nào»
+     là chiều nội dung đi. Trượt 14px, không hơn — trượt xa là bắt mắt đuổi theo form.
+     Gạch chân tab trượt bằng `transition` ở chính component, không ở đây. */
+  @keyframes tab-vao-phai {
+    from {
+      opacity: 0;
+      transform: translateX(14px);
+    }
+  }
+  @keyframes tab-vao-trai {
+    from {
+      opacity: 0;
+      transform: translateX(-14px);
+    }
+  }
+  @keyframes menu-vao {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+  }
+  .tab-vao-phai {
+    animation: tab-vao-phai 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .tab-vao-trai {
+    animation: tab-vao-trai 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .menu-vao {
+    animation: menu-vao 140ms ease-out;
+    transform-origin: top right;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tab-vao-phai,
+    .tab-vao-trai,
+    .menu-vao {
+      animation: none;
+    }
+  }
+
+  /* ── Agent ngủ / thức ở màn Thử agent ────────────────────────────────────
+     Chưa thiết lập đủ thì agent NGỦ: icon mờ, thở chậm, ba chữ z bay lên so le.
+     Áp dụng xong thì nó THỨC: sáng màu `live`, hết chuyển động.
+
+     Nhịp 3.2s là CỐ Ý CHẬM. Một animation nhanh ở trạng thái chờ đọc thành
+     "đang xử lý" và giục người dùng; thở chậm đọc đúng thứ nó là — đứng yên,
+     chờ bạn. Ba chữ z lệch pha nhau 0.9s để thành một chuỗi, không phải ba
+     thứ nhấp nháy cùng lúc. */
+  @keyframes agent-tho {
+    0%,
+    100% {
+      opacity: 0.42;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.72;
+      transform: scale(1.05);
+    }
+  }
+  @keyframes agent-zzz {
+    0% {
+      opacity: 0;
+      transform: translate(0, 0) scale(0.75);
+    }
+    30% {
+      opacity: 0.85;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(11px, -18px) scale(1.15);
+    }
+  }
+  .agent-ngu {
+    animation: agent-tho 3.2s ease-in-out infinite;
+  }
+  .agent-zzz {
+    animation: agent-zzz 3.2s ease-out infinite;
+  }
+
+  /* Ai bật «giảm chuyển động» thì agent ĐỨNG YÊN nhưng vẫn NGỦ: giữ độ mờ và
+     giữ ba chữ z hiện sẵn. Tắt animation mà không ghim lại trạng thái thì z
+     biến mất (khung hình 0% có `opacity: 0`) và mất luôn thông tin "chưa sẵn
+     sàng" — đúng thứ animation này tồn tại để nói. */
+  @media (prefers-reduced-motion: reduce) {
+    .agent-ngu {
+      animation: none;
+      opacity: 0.55;
+    }
+    .agent-zzz {
+      animation: none;
+      opacity: 0.6;
+    }
+  }
+
+  /* ── Sân khấu tab Voice (`SanKhauAgent`) — thêm 2026-09-30 ───────────────
+     `nguoi-dan-tho`: người dẫn đứng ở khung nghỉ vẫn «thở» — video dừng mà
+     không có gì nhúc nhích thì đọc ra ảnh chết. Biên độ 0.6% là CỐ Ý nhỏ: thấy
+     được bằng khoé mắt, không đọc thành nhún nhảy. Neo `bottom` để chân không
+     trượt khỏi sàn. `nen-vao`: ảnh nền đổi (sau này theo hội thoại) thì mờ dần
+     vào thay vì nháy. */
+  @keyframes nguoi-dan-tho {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.006);
+    }
+  }
+  @keyframes nen-vao {
+    from {
+      opacity: 0;
+    }
+  }
+  .nguoi-dan-tho {
+    animation: nguoi-dan-tho 4.2s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+  .nen-vao {
+    /* 900ms: nền đổi cảnh (vòng 20s) cần mờ chéo êm, không phải một cú nháy. */
+    animation: nen-vao 900ms ease-out;
+  }
+  /* Nền mặc định (không album): phông studio — gradient dọc + mép tối (mép
+     tối là chỗ phụ đề trắng đứng). Quầng sáng KHÔNG nằm ở đây mà theo khung
+     người dẫn (`quang-nguoi-dan`): vẽ chung vào nền thì lệch khi sân khấu đổi
+     tỉ lệ. */
+  .phong-san-khau {
+    background:
+      radial-gradient(
+        ellipse at 62% 50%,
+        transparent 50%,
+        color-mix(in srgb, var(--color-phong-vien) 55%, transparent)
+      ),
+      linear-gradient(var(--color-phong-tren), var(--color-phong-duoi));
+  }
+  /* Tràn khung người dẫn (0,9 bề ngang mỗi bên, 0,35 chiều cao phía trên),
+     tâm ngang vai — `closest-side` nên mờ hết trước khi chạm mép, không có
+     đường cắt. */
+  .quang-nguoi-dan::before {
+    content: '';
+    position: absolute;
+    inset: -35% -90% 0;
+    background: radial-gradient(
+      closest-side at 50% 47%,
+      color-mix(in srgb, var(--color-phong-quang) 90%, transparent),
+      color-mix(in srgb, var(--color-phong-quang) 40%, transparent) 50%,
+      transparent
+    );
+  }
+  /* Lớp phủ sân khấu (`LopPhuSanKhau`): chấm «Trực tiếp» toả vòng như đèn
+     ghi hình, và bốn vạch sóng nhảy khi agent đang nói. Vạch co giãn bằng
+     `scaleY` neo đáy, KHÔNG bằng `height`: nó chạy suốt lúc agent nói, mà
+     `height` thì bắt trình duyệt dựng lại bố cục mỗi khung hình. */
+  @keyframes san-khau-truc-tiep {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-ac) 60%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 6px transparent;
+    }
+  }
+  @keyframes san-khau-song {
+    0%,
+    100% {
+      transform: scaleY(0.3);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+  .san-khau-truc-tiep {
+    animation: san-khau-truc-tiep 1.6s ease-out infinite;
+  }
+  .san-khau-song {
+    height: 100%;
+    transform: scaleY(0.3);
+    transform-origin: bottom;
+    animation: san-khau-song 0.9s ease-in-out infinite;
+  }
+  /* Album ảnh trên sân khấu (`SanKhauAgent` › `AlbumAnh`). Vị trí từng thẻ do
+     JS ghi thẳng vào `style`; ở đây chỉ là CÁCH nó đi tới đó: ease-out hơi vượt
+     (1.08) cho cảm giác lò xo. Đang kéo (`data-keo`) hoặc thẻ nhảy vòng
+     (`data-nhay`) thì tắt chuyển động — thẻ phải dính tay / không bay ngang. */
+  .album-deck {
+    perspective: 1100px;
+  }
+  .album-the {
+    transform-origin: 50% 50%;
+    will-change: transform, opacity, filter;
+    transition:
+      transform 620ms cubic-bezier(0.2, 0.9, 0.25, 1.08),
+      opacity 500ms ease-out,
+      filter 500ms ease-out;
+  }
+  .album-the img {
+    opacity: 0;
+    transition: opacity 400ms ease-out;
+  }
+  .album-the img[data-tai] {
+    opacity: 1;
+  }
+  .album-deck[data-keo] .album-the,
+  .album-the[data-nhay] {
+    transition: none;
+  }
+  /* Thanh tiến độ ảnh: `scaleX` neo trái chứ không `width` — cùng lý do vạch
+     sóng ở trên, nó chạy liên tục suốt lúc album mở. */
+  @keyframes album-tien-do {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+  .album-tien-do {
+    width: 100%;
+    transform: scaleX(0);
+    transform-origin: left;
+    animation: album-tien-do linear forwards;
+  }
+  .album-deck[data-keo] .album-tien-do {
+    animation-play-state: paused;
+  }
+  @keyframes album-vao {
+    from {
+      opacity: 0;
+      transform: scale(0.94);
+    }
+  }
+  @keyframes album-ra {
+    to {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+  .album-vao {
+    animation: album-vao 520ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  }
+  .album-ra {
+    animation: album-ra 450ms ease-in forwards;
+    pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nguoi-dan-tho,
+    .nen-vao,
+    .san-khau-truc-tiep,
+    .san-khau-song,
+    .album-vao,
+    .album-ra {
+      animation: none;
+    }
+    .album-the {
+      transition: opacity 200ms;
+    }
+  }
+
+  /* Máy KHÔNG có chuột thì mốc giờ hiện sẵn: ở đó không tồn tại trạng thái "rê
+     vào", nên ẩn đi là giấu mất dữ liệu vĩnh viễn. `transform: none` ghim luôn
+     vị trí cuối — không có hover/focus nào để kích hoạt group-hover:translate,
+     nên nếu không ghim thì chữ nằm lệch 3px so với vị trí đúng suốt đời trên
+     máy chạm. */
+  @media (hover: none) {
+    .moc-gio {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  /* Ai bật «giảm chuyển động» thì bỏ ĐÚNG phần nhích 3px (transform), giữ
+     nguyên mờ dần: `transition: none` xoá luôn transition của `opacity`, làm
+     mờ dần biến thành một cú nhảy — không phải điều spec muốn ("giữ mờ dần").
+     Ghim `transform: none` thay vì tắt cả transition: vị trí luôn đứng yên,
+     opacity vẫn chuyển động êm. */
+  @media (prefers-reduced-motion: reduce) {
+    .moc-gio {
+      transform: none !important;
+    }
+  }
+
+  /* ── Trang giới thiệu `/` — thêm 2026-08-10 ─────────────────────────────
+     Bốn chuyển động, tất cả chỉ đụng `opacity` và `transform`. Chúng sống ở
+     ĐÂY chứ không trong component vì cùng lý do đã ghi cho `agent-ngu`: mọi
+     keyframe của portal ở một chỗ, và `prefers-reduced-motion` cũng vậy —
+     rải ra thì lần sau có người thêm animation mà quên cửa giảm chuyển động.
+
+     Cuộc gọi ở hero TỰ DIỄN rồi lặp. Nó không phải trang trí: sản phẩm bán là
+     một cuộc gọi, nên để nó diễn ra là cách rẻ nhất để nói agent làm gì mà
+     không tốn một đoạn văn nào. */
+  @keyframes song-tieng {
+    0%,
+    100% {
+      transform: scaleY(0.22);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+  @keyframes dang-nghi {
+    0%,
+    60%,
+    100% {
+      opacity: 0.28;
+      transform: translateY(0);
+    }
+    30% {
+      opacity: 1;
+      transform: translateY(-3px);
+    }
+  }
+  @keyframes luot-vao {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+  }
+  @keyframes chip-vao {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+  }
+  @keyframes tho-nhe {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.45;
+      transform: scale(0.8);
+    }
+  }
+  @keyframes nhan-manh {
+    0%,
+    100% {
+      opacity: 0.45;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  .song-tieng {
+    animation: song-tieng 1.05s ease-in-out infinite;
+  }
+  .dang-nghi {
+    animation: dang-nghi 1.15s ease-in-out infinite;
+  }
+  .luot-vao {
+    animation: luot-vao 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  /* `animation` chứ không `transition`: cha vừa đổi từ `display:none` sang
+     `grid`, không có trạng thái đầu để transition chạy từ đó. */
+  .chip-vao {
+    animation: chip-vao 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .tho-nhe {
+    animation: tho-nhe 2.6s ease-in-out infinite;
+  }
+  .nhan-manh {
+    animation: nhan-manh 2.8s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* GHIM trạng thái cuối, đừng để thứ gì biến mất cùng animation — cùng lời
+       dặn đã viết cho `agent-zzz` ở trên. `luot-vao`/`chip-vao` dùng `both` nên
+       tắt animation là chúng đứng ở trạng thái cuối (hiện đủ), đúng ý. */
+    .song-tieng,
+    .dang-nghi,
+    .luot-vao,
+    .chip-vao,
+    .tho-nhe,
+    .nhan-manh {
+      animation: none;
+    }
+    .song-tieng {
+      transform: scaleY(0.55);
+    }
+  }
+
+  /* ── Mâu thuẫn dữ liệu: đang kiểm tra ──────────────────────────────────────
+     `vien-kiem`: viền icon nhấp nháy màu nhấn. `cham-kiem`: chấm trong chip
+     «Đang kiểm tra» của popup, cùng nhịp. Giảm chuyển động thì viền đứng ở màu nhấn. */
+  @keyframes vien-kiem {
+    0%,
+    100% {
+      border-color: var(--color-ac);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-ac) 30%, transparent);
+    }
+    50% {
+      border-color: var(--color-border-field);
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+  @keyframes cham-kiem {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.25;
+    }
+  }
+  .vien-kiem {
+    animation: vien-kiem 1.4s ease-in-out infinite;
+  }
+  .cham-kiem {
+    animation: cham-kiem 1.4s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .vien-kiem {
+      animation: none;
+      border-color: var(--color-ac);
+    }
+    .cham-kiem {
+      animation: none;
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   iOS KHÔNG PHÓNG TO KHI FOCUS Ô NHẬP — NGOÀI MỌI `@layer`, CỐ Ý
+   Safari iOS tự phóng trang khi focus một ô có chữ dưới 16px, và không thu lại
+   khi rời ô: màn đăng nhập, ô chat Thử agent, ô lọc… đều lệch sau một lần chạm
+   (audit 05/10: ~30 ô). `max-md:text-base` chỉ có ở `O_CHUNG`/`O_LOC`; mọi ô
+   khác tự khai cỡ chữ. Rule này đứng ngoài layer nên THẮNG mọi utility
+   `text-[Npx]` của Tailwind (utility nằm trong `@layer utilities`) — đúng việc
+   cần: một chỗ thay cho ba mươi.
+   Chỉ dưới `md` (48rem) — khớp tầng mobile của `useKhoManHinh`. Desktop không
+   đổi chữ nào (luật «desktop không đổi một class»).
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 47.98rem) {
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='color']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BẢNG TRÊN ĐIỆN THOẠI — cột định danh và cột thao tác DÍNH khi cuộn ngang
+   `Bang` ép `min-w-[720px]` (14 màn). Ở 390px, cuộn ngang là cột định danh
+   (tên, mã) trôi mất còn nút sửa/xoá/⋯ nằm ngoài màn — đọc một hàng phải nhớ
+   nó là hàng nào (audit 05/10). Cột đầu dính trái; cột cuối dính phải KHI
+   `DauBang` đánh dấu nó là cột thao tác (`data-cot-thao-tac`, cột không nhãn).
+   CSS thô thay vì biến thể Tailwind: `:has(thead[data-…])` lồng ngoặc vuông
+   trong một biến thể tuỳ ý là chỗ parser của Tailwind hiểu sai. Ngoài layer để
+   `z-index` thắng `z-[1]` của `<th>` (dính trên-cùng-trái phải nổi trên cả hàng
+   đầu lẫn cột đầu).
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 47.98rem) {
+  /* `width: 1%` = co cột về bề rộng NHỎ NHẤT nội dung cho phép (chữ dài nhất không bẻ
+     được). `max-width` không có tác dụng trên ô bảng, và cột đầu thường khai `w-2/5`
+     của bảng 720px ⇒ 288px dính trái + cột thao tác dính phải = khung xem cột giữa còn
+     ~14px (đo ở `/users`, 390px). */
+  table[data-bang] tr > :first-child {
+    position: sticky;
+    left: 0;
+    width: 1%;
+    box-shadow: inset -1px 0 0 var(--color-border-soft);
+  }
+  table[data-bang]:has(> thead[data-cot-thao-tac]) tr > :last-child {
+    position: sticky;
+    right: 0;
+    box-shadow: inset 1px 0 0 var(--color-border-soft);
+  }
+  table[data-bang] td:first-child,
+  table[data-bang]:has(> thead[data-cot-thao-tac]) td:last-child {
+    z-index: 1;
+    background-color: var(--color-surface);
+  }
+  table[data-bang] th:first-child,
+  table[data-bang]:has(> thead[data-cot-thao-tac]) th:last-child {
+    z-index: 2;
+  }
+}

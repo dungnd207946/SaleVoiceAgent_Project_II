@@ -1,0 +1,1769 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Demo — Chi phí (Lượt dùng · Hoá đơn) · Odyssey Portal</title>
+<!--
+  ══════════════════════════════════════════════════════════════════════════
+   DEMO — nhóm nav «Chi phí»  ·  vòng 3 (2026-08-20)
+  ══════════════════════════════════════════════════════════════════════════
+  Spec: `docs/product/2026-08-20-usage-billing-fe-spec.md`
+
+  BỐN VIỆC SỬA SO VỚI VÒNG 2 — theo phản hồi:
+
+  ① BẢNG GIÁ RA KHỎI TRANG, THÀNH MỤC NAV NGANG HÀNG.
+     Vòng 2 để `/pricing` là route ẩn (`inNav:false`). Sai về mặt tìm thấy:
+     dải cảnh báo đỏ nói «3 tổ hợp chưa có giá» rồi trỏ tới một màn không có
+     đường vào từ giao diện. Nay: khối nav «Chi phí» có 3 mục —
+     Lượt dùng · Hoá đơn · Bảng giá. Khung nav giả ở bên trái để thấy chỗ đó.
+
+  ② TAB TRANG: «Lượt dùng» | «Hoá đơn».
+     Đây KHÔNG phải quay lại 4 tab của bản demo đầu. Khác biệt: 4 tab cũ chẻ
+     MỘT câu hỏi (kỳ này tốn ở đâu) thành bốn chỗ. Hai tab này là HAI loại
+     tài liệu khác nhau — số đo đang chạy vs chứng từ đã chốt — người dùng
+     tới vì hai lý do khác nhau, và gần như không bao giờ cần cả hai cùng lúc.
+     Trong tab «Lượt dùng» vẫn là MỘT trang cuộn, không tab con.
+
+  ③ CHART ĐỔI DẠNG: cột chồng → ĐƯỜNG + VÙNG TÔ.
+     Cột chồng mã hoá component LẦN THỨ HAI, trong khi thẻ «Theo component»
+     ngay bên phải đã làm việc đó rồi và làm tốt hơn (có số, có %, sắp được).
+     Phân công lại cho rõ: chart trả lời «khi nào», thẻ phải trả lời «cái gì».
+     Nhờ vậy chart về đúng một sắc, thêm được đường trung bình và mốc cuối
+     tuần mà không rối. Tách component vẫn còn — trong tooltip.
+
+  ④ LỖI BỐ CỤC: «chart nằm giữa card, chừa một khoảng».
+     Nguyên nhân thật: `<svg viewBox="0 0 720 236">` + `height:auto` là tỷ lệ
+     KHOÁ. Hai thẻ cùng hàng grid luôn cao bằng nhau, thẻ «Theo component»
+     cao hơn ⇒ hàng bị kéo cao ⇒ chart giữ tỷ lệ nên không giãn theo ⇒ hở
+     một khoảng dưới. `height:100%` cũng không xong: `preserveAspectRatio`
+     sẽ letterbox. Cách đúng (thư viện chart nào cũng làm): ĐO container rồi
+     vẽ theo pixel thật, vẽ lại khi kích thước đổi (`ResizeObserver`).
+     Xem `veChart()` — không có `viewBox` cố định nào.
+
+  ⑤ «Lượt dùng chi tiết» ở dưới mà không ai kéo xuống.
+     Nguyên nhân: vòng 2 để tiêu đề NẰM TRONG thẻ, nên trang đọc như «một
+     dàn thẻ rồi hết». Nay tiêu đề mục nằm NGOÀI thẻ, ba mục cùng một cấp
+     (nhãn số ① ② ③ + tiêu đề + một dòng phụ), nên trang đọc như một danh
+     sách còn tiếp. Thêm: băng ② thấp lại để mép bảng ③ nhô lên trên nếp gấp.
+
+  Số liệu: giả lập nhưng TỰ NHẤT QUÁN — mọi tổng tính ra từ CÙNG chuỗi
+  `DL.llmNgay`. Kể cả dòng hoá đơn ở tab 2 cũng cộng đúng về tổng đó.
+-->
+<style>
+/* ── Font tự host (đường dẫn tương đối: file ở `public/`) ─────────────────── */
+@font-face{font-family:'Be Vietnam Pro';font-weight:400;font-display:swap;src:url('fonts/be-vietnam-pro-400-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Be Vietnam Pro';font-weight:400;font-display:swap;src:url('fonts/be-vietnam-pro-400-latin.woff2') format('woff2')}
+@font-face{font-family:'Be Vietnam Pro';font-weight:500;font-display:swap;src:url('fonts/be-vietnam-pro-500-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Be Vietnam Pro';font-weight:500;font-display:swap;src:url('fonts/be-vietnam-pro-500-latin.woff2') format('woff2')}
+@font-face{font-family:'Be Vietnam Pro';font-weight:600;font-display:swap;src:url('fonts/be-vietnam-pro-600-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Be Vietnam Pro';font-weight:600;font-display:swap;src:url('fonts/be-vietnam-pro-600-latin.woff2') format('woff2')}
+@font-face{font-family:'Be Vietnam Pro';font-weight:700;font-display:swap;src:url('fonts/be-vietnam-pro-700-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Be Vietnam Pro';font-weight:700;font-display:swap;src:url('fonts/be-vietnam-pro-700-latin.woff2') format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-weight:400;font-display:swap;src:url('fonts/jetbrains-mono-400-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'JetBrains Mono';font-weight:400;font-display:swap;src:url('fonts/jetbrains-mono-400-latin.woff2') format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-weight:500;font-display:swap;src:url('fonts/jetbrains-mono-500-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'JetBrains Mono';font-weight:500;font-display:swap;src:url('fonts/jetbrains-mono-500-latin.woff2') format('woff2')}
+
+/* ── Token: chép nguyên `src/styles/theme.css` ───────────────────────────── */
+:root{
+  --n0:#fcfbf7;--n1:#fffefc;--n2:#fbfaf5;--n3:#f3f1ea;--n4:#edebe5;
+  --n5:#ded9d0;--n6:#948e81;--n7:#666c76;--n8:#5f656e;--n9:#4a5058;
+  --n10:#2a2e35;--n11:#14161a;
+  --ac:#0d7a5f;--acs:#e7f2ee;--acd:#0a5e49;
+  --bg:var(--n0);--fg:var(--n11);--surface:var(--n1);
+  --border:var(--n4);--border-strong:var(--n5);--border-field:var(--n6);
+  --fill:var(--n2);--fill-strong:var(--n3);--rule:var(--n4);
+  --muted:var(--n8);--muted-2:var(--n7);--nav:var(--n9);
+  --alert-bg:#fdeceb;--alert-fg:#b3402e;
+  --warn-bg:#fdf3e0;--warn-fg:#8a5c0d;
+  --neu-bg:#f0efec;--neu-fg:var(--n8);
+  --ok-bg:#e7f2ee;--ok-fg:#0a5e49;
+  --chat-bg:#e8f0fb;--chat-fg:#1f5aa8;--chat-vien:#4d84d0;
+  --voice-bg:#f0ecfa;--voice-fg:#5b45a8;--voice-vien:#8f78d9;
+  --sans:'Be Vietnam Pro',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --r-sm:6px;--r-md:8px;--r-lg:12px;
+  --noi:0 8px 24px rgba(20,22,26,.24);
+  --noi-nhe:0 2px 10px rgba(20,22,26,.1);
+  /* thang đơn sắc component: đậm = tốn nhiều. Thứ tự cố định mọi nơi. */
+  --c-llm:#0d7a5f;--c-tts:#3f9a80;--c-stt:#74b7a4;
+  --c-embed:#a6d2c6;--c-sv:#cde5de;--c-vad:var(--n5);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 13.5px/1.5 var(--sans);
+     -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px;border-radius:4px}
+/* MỌI con số dùng mono + tabular (`theme.css:226`). */
+.num,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ── Thang cỡ chữ: SÁU BẬC ───────────────────────────────────────────────── */
+.t-nhan{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2)}
+.t-phu{font-size:12.5px;color:var(--muted)}
+.t-muc{font-size:15px;font-weight:600;letter-spacing:-.005em}
+.t-kpi{font-family:var(--mono);font-size:26px;font-weight:500;letter-spacing:-.02em;line-height:1.1}
+.t-kpi-vnd{font-family:var(--mono);font-size:32px;font-weight:600;letter-spacing:-.025em;line-height:1.06}
+
+/* ── LUẬT ĐẬM ─────────────────────────────────────────────────────────────
+   Đậm THẬT (600) chỉ ở bốn chỗ: tiêu đề · cột Chi phí · hàng Tổng ·
+   đúng một cụm trong dải đỏ. Mọi nhấn mạnh khác trong câu dùng 500 + màu
+   `n10` — phân biệt được mà không hét. Chữ nhỏ viết hoa (`t-nhan`, `th`)
+   giữ 600 vì ở 10,5px thì 400 mỏng đến mức khó đọc, đó là độ đọc chứ không
+   phải nhấn mạnh.
+   Phân biệt bằng CỠ và MÀU trước; weight là công cụ cuối. */
+.muc-chu p b,.dem b,.ghi-do b{font-weight:500;color:var(--n10)}
+.dai strong{font-weight:600}
+
+/* ══ KHUNG APP GIẢ — chỉ để thấy vị trí submenu «Bảng giá» ═════════════════ */
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100dvh}
+.navpanel{border-right:1px solid var(--border);background:var(--surface);
+          padding:18px 12px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100dvh}
+.nav-logo{display:flex;align-items:center;gap:9px;padding:0 8px 18px;font-weight:600;letter-spacing:-.01em}
+.nav-logo .dau{width:22px;height:22px;border-radius:6px;background:var(--ac);display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700}
+.nav-nhomten{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+              color:var(--muted-2);padding:14px 8px 6px}
+.nav-khoi{border-top:1px solid var(--n3);margin:6px 0;padding-top:8px}
+.nav-khoiten{display:flex;align-items:center;gap:7px;font-size:10.5px;font-weight:600;
+             letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2);padding:2px 8px 6px}
+.nav-muc{display:flex;align-items:center;gap:9px;height:34px;padding:0 9px;border-radius:var(--r-sm);
+         color:var(--nav);font-size:13.5px;text-decoration:none}
+.nav-muc:hover{background:var(--fill-strong);color:var(--fg)}
+.nav-muc.hoat{background:var(--acs);color:var(--acd);font-weight:500}
+.nav-muc.con{margin-left:16px;height:32px;font-size:13.5px}
+.nav-muc .cb{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--alert-fg)}
+.nav-ghi{margin-top:auto;font-size:10.5px;color:var(--muted-2);line-height:1.5;
+         border-top:1px dashed var(--border-strong);padding-top:10px}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{height:58px;display:flex;align-items:center;gap:12px;padding:0 26px;
+        border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;
+        background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px)}
+.topbar h1{font-size:19px;font-weight:600;letter-spacing:-.015em;margin:0}
+.topbar .ghi{margin-left:auto}
+.demo-tag{font-size:10.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+          color:var(--muted-2);border:1px dashed var(--border-strong);border-radius:999px;padding:3px 9px}
+
+/* ── Tab trang: Lượt dùng | Hoá đơn ──────────────────────────────────────── */
+.tabbar{display:flex;gap:2px;padding:0 26px;border-bottom:1px solid var(--border);
+        position:sticky;top:64px;z-index:19;background:var(--bg)}
+.tab{position:relative;height:44px;padding:0 14px;display:inline-flex;align-items:center;gap:8px;
+     font-size:13.5px;color:var(--nav)}
+.tab:hover{color:var(--fg)}
+.tab[aria-selected=true]{color:var(--fg);font-weight:600}
+.tab[aria-selected=true]::after{content:'';position:absolute;left:8px;right:8px;bottom:-1px;height:2px;
+     background:var(--ac);border-radius:2px 2px 0 0}
+.tab .dem{font-family:var(--mono);font-size:11px;color:var(--muted-2)}
+
+.trang{padding:0 26px 80px;max-width:1420px;width:100%}
+
+/* ── Hàng kỳ ─────────────────────────────────────────────────────────────── */
+.hang-ky{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 0 12px}
+.mang{display:inline-flex;background:var(--fill-strong);border-radius:var(--r-md);padding:3px;gap:2px}
+.mang button{height:30px;padding:0 12px;border-radius:var(--r-sm);font-size:12.5px;color:var(--nav);
+             display:inline-flex;align-items:center;gap:7px;transition:background .12s,color .12s}
+.mang button:hover{color:var(--fg)}
+.mang button[aria-pressed=true],.mang button[aria-selected=true]{
+  background:var(--surface);color:var(--fg);font-weight:500;border:1px solid var(--border);box-shadow:var(--noi-nhe)}
+.mang .dem{font-family:var(--mono);font-size:11px;color:var(--muted-2)}
+.mang button[aria-selected=true] .dem{color:var(--acd)}
+.khoang{display:flex;align-items:baseline;gap:8px}
+.khoang .ngay{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.hang-ky .phai{margin-left:auto;display:flex;gap:8px}
+.nut-phu{height:34px;display:inline-flex;align-items:center;gap:7px;padding:0 13px;
+         border:1px solid var(--border-field);border-radius:var(--r-md);font-size:13.5px;
+         background:var(--surface);transition:border-color .12s,background .12s}
+.nut-phu:hover{background:var(--fill);border-color:var(--n11)}
+.nut-chinh{height:34px;display:inline-flex;align-items:center;gap:7px;padding:0 14px;
+           border-radius:var(--r-md);font-size:13.5px;font-weight:500;background:var(--ac);color:#fff}
+.nut-chinh:hover{background:var(--acd)}
+.nut-chinh[disabled]{opacity:.42;cursor:default}
+
+.pill{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 8px;border-radius:var(--r-sm);
+      font-size:11px;font-weight:500;white-space:nowrap}
+.pill .dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.8}
+.pill-neu{background:var(--neu-bg);color:var(--neu-fg)}
+.pill-warn{background:var(--warn-bg);color:var(--warn-fg)}
+.pill-ac{background:var(--acs);color:var(--acd)}
+.pill-ok{background:var(--ok-bg);color:var(--ok-fg)}
+.pill-do{background:var(--alert-bg);color:var(--alert-fg)}
+
+/* ── Dải cảnh báo ────────────────────────────────────────────────────────── */
+.canh-bao{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+.dai{display:flex;align-items:center;gap:10px;padding:9px 13px;border-radius:var(--r-md);font-size:13.5px}
+.dai svg{flex:0 0 auto}
+/* link trong dải: KHÔNG đậm — nó đã nổi nhờ màu + gạch chân. */
+.dai .lk{margin-left:auto;font-weight:500;white-space:nowrap;color:inherit;text-decoration:none;
+         border-bottom:1px solid currentColor;padding-bottom:1px}
+.dai-do{background:var(--alert-bg);color:var(--alert-fg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--alert-fg) 20%,transparent)}
+.dai-vang{background:var(--warn-bg);color:var(--warn-fg)}
+/* Ghi chú chất lượng đo: một dòng chữ mờ, không hộp, không đậm. */
+.ghi-do{margin:0;padding:0 3px;font-size:12.5px;color:var(--muted);line-height:1.6}
+.ghi-do .cham{display:inline-block;width:6px;height:6px;border-radius:50%;
+              background:var(--warn-fg);opacity:.75;margin-right:7px;vertical-align:1px}
+.ghi-do .num{color:var(--n10)}
+.ghi-do .cach{color:var(--n5);margin:0 3px}
+
+/* ══ MỤC: tiêu đề NẰM NGOÀI thẻ, ba mục cùng một cấp ══════════════════════
+   Vòng 2 để tiêu đề trong thẻ nên trang đọc như «một dàn thẻ rồi hết».     */
+.muc{margin-bottom:20px}
+.muc-dau{display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:0 2px 9px}
+.muc-so{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--muted-2);
+        width:20px;height:20px;border:1px solid var(--border-strong);border-radius:var(--r-sm);
+        display:grid;place-items:center;flex:0 0 auto}
+/* Tiêu đề và dòng phụ NẰM CÙNG HÀNG — xếp hai dòng thì mỗi mục ăn thêm 18px
+   chiều cao, ba mục là 54px, đúng bằng khoản đẩy chart xuống dưới nếp gấp. */
+.muc-chu{min-width:0;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.muc-chu h2{margin:0;font-size:16px;font-weight:600;letter-spacing:-.012em}
+.muc-chu p{margin:0;font-size:12.5px;color:var(--muted)}
+.muc-dau .dieu{margin-left:auto;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+
+.the{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
+.the-dau{display:flex;align-items:center;gap:11px;padding:11px 15px 10px;border-bottom:1px solid var(--rule)}
+.the-dau .phai{margin-left:auto;display:flex;align-items:center;gap:10px}
+
+/* ── KPI ─────────────────────────────────────────────────────────────────── */
+.luoi-kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+     padding:13px 16px;display:flex;flex-direction:column;gap:7px;min-width:0}
+.kpi-chinh{background:linear-gradient(180deg,#f6fbf9,var(--surface) 62%);border-color:#d9e8e2}
+.kpi .so{display:flex;align-items:baseline;gap:6px;min-width:0}
+.kpi .dvi{font-size:13.5px;color:var(--muted-2);font-weight:500}
+.kpi .chan{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);min-height:18px}
+.delta{font-family:var(--mono);font-size:12.5px}
+.delta-len{color:var(--alert-fg)}.delta-xuong{color:var(--acd)}
+.tach{display:inline-flex;gap:9px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.tach b{font-family:var(--mono);font-weight:400;color:var(--n10)}
+
+/* ── Băng ②: chart + component ───────────────────────────────────────────── */
+.luoi-tien{display:grid;grid-template-columns:minmax(0,1fr) 336px;gap:14px;align-items:stretch}
+
+/* Thẻ chart là FLEX DỌC và vùng vẽ `flex:1` — chart phải bo sát thẻ.
+   Không `viewBox` cố định: `veChart()` đo vùng này rồi vẽ theo pixel thật. */
+.the-chart{display:flex;flex-direction:column;min-width:0}
+.the-chart .than{flex:1 1 auto;min-height:244px;position:relative;padding:10px 14px 6px}
+#chart-host{position:absolute;inset:10px 14px 6px}
+#chart{position:absolute;inset:0;display:block;overflow:visible}
+.ch-luoi{stroke:var(--border);stroke-width:1;shape-rendering:crispEdges}
+.ch-truc{stroke:var(--border-strong);stroke-width:1;shape-rendering:crispEdges}
+.ch-tb{stroke:var(--n6);stroke-width:1;stroke-dasharray:3 3}
+.ch-nhan{font-family:var(--mono);font-size:10.5px;fill:var(--muted-2)}
+.ch-nhan.dam{fill:var(--n10);font-weight:500}
+.ch-ct{fill:var(--n3);opacity:.55}
+.ch-vung{fill:url(#gr-ac)}
+.ch-duong{fill:none;stroke:var(--ac);stroke-width:1.75;stroke-linejoin:round;stroke-linecap:round}
+.ch-cross{stroke:var(--ac);stroke-width:1;stroke-dasharray:2 2;opacity:0}
+.ch-diem{fill:var(--surface);stroke:var(--ac);stroke-width:2;opacity:0}
+.ch-bat{fill:transparent}
+.ch-g.hover .ch-cross,.ch-g.hover .ch-diem{opacity:1}
+
+.tip{position:absolute;pointer-events:none;opacity:0;transform:translate(-50%,-100%);
+     background:var(--n11);color:#fff;border-radius:var(--r-md);padding:9px 11px;
+     box-shadow:var(--noi);min-width:186px;z-index:5;transition:opacity .1s}
+.tip.hien{opacity:1}
+.tip-ngay{font-family:var(--mono);font-size:11px;opacity:.66;margin-bottom:6px}
+.tip-tong{display:flex;justify-content:space-between;gap:14px;font-size:12.5px;font-weight:600;
+          padding-bottom:6px;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,.16)}
+.tip-hang{display:flex;align-items:center;gap:7px;font-size:11px;line-height:1.72;opacity:.92}
+.tip-hang i{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
+.tip-hang b{margin-left:auto;font-family:var(--mono);font-weight:400;font-variant-numeric:tabular-nums}
+
+.the-comp{display:flex;flex-direction:column;min-width:0}
+.the-comp .than{flex:1 1 auto;padding:6px 16px 14px;display:flex;flex-direction:column}
+.comp-hang{display:grid;grid-template-columns:1fr auto;align-items:center;gap:9px;
+           padding:8px 0;border-top:1px solid var(--rule)}
+.comp-hang:first-child{border-top:0}
+.comp-ten{display:flex;align-items:center;gap:8px;min-width:0}
+.comp-ten i{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
+.comp-ten .nhan{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.comp-ten .do{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);white-space:nowrap}
+.comp-so{text-align:right;display:flex;flex-direction:column;gap:1px}
+.comp-so .tien{font-family:var(--mono);font-size:13.5px;font-variant-numeric:tabular-nums}
+.comp-so .pt{font-family:var(--mono);font-size:10.5px;color:var(--muted-2)}
+.thanh{grid-column:1/-1;height:3px;border-radius:2px;background:var(--fill-strong);overflow:hidden;margin-top:1px}
+.thanh span{display:block;height:100%;border-radius:2px}
+.comp-vad{opacity:.72}
+.chu-thich{margin-top:auto;padding-top:11px;border-top:1px dashed var(--border-strong);
+           font-size:12.5px;color:var(--muted);line-height:1.55}
+.chu-thich b{color:var(--n10);font-weight:500}
+.rong{color:var(--n6)}
+
+/* ── Bảng ────────────────────────────────────────────────────────────────── */
+.o-loc-wrap{position:relative;display:inline-flex;align-items:center}
+.o-loc-wrap svg{position:absolute;left:10px;pointer-events:none;color:var(--muted-2)}
+.o-loc{height:34px;border:1px solid var(--border-strong);border-radius:var(--r-md);
+       padding:0 11px 0 31px;font-size:13.5px;background:var(--surface);width:210px}
+.o-loc:focus{border-color:var(--fg);outline:none}
+.bang-cuon{overflow-x:auto;border-radius:0 0 var(--r-lg) var(--r-lg)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead th{background:var(--fill);font-size:10.5px;font-weight:600;letter-spacing:.06em;
+         text-transform:uppercase;color:var(--muted-2);text-align:left;padding:9px 15px;
+         white-space:nowrap;border-bottom:1px solid var(--border)}
+thead th.p{text-align:right}
+tbody td{padding:10px 15px;border-bottom:1px solid var(--rule);vertical-align:middle}
+tbody td.p{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody td.p.tien{font-weight:600}
+tbody tr.bam{cursor:pointer}
+tbody tr.bam:hover{background:var(--fill)}
+tbody tr:last-child td{border-bottom:0}
+th .sort{display:inline-flex;align-items:center;gap:4px;color:var(--n10)}
+.chinh{display:flex;flex-direction:column;gap:1px;min-width:0}
+.chinh .ten{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chinh .ma{font-family:var(--mono);font-size:12.5px;color:var(--muted-2)}
+.hang-chua{background:var(--fill)}
+.hang-chua td{color:var(--muted)}
+.hang-tong td{border-top:1px solid var(--border-strong);border-bottom:0;background:var(--surface);
+              font-weight:600;padding-top:12px;padding-bottom:13px}
+.chip-kenh{display:inline-flex;align-items:center;height:21px;padding:0 8px;border-radius:var(--r-sm);
+           font-size:11px;font-weight:500}
+.chip-chat{background:var(--chat-bg);color:var(--chat-fg);box-shadow:inset 0 0 0 1px var(--chat-vien)}
+.chip-voice{background:var(--voice-bg);color:var(--voice-fg);box-shadow:inset 0 0 0 1px var(--voice-vien)}
+.chan-bang{display:flex;align-items:center;gap:12px;padding:11px 16px;border-top:1px solid var(--border);
+           background:var(--fill);border-radius:0 0 var(--r-lg) var(--r-lg)}
+.chan-bang .dem{font-size:12.5px;color:var(--muted)}
+.chan-bang .phai{margin-left:auto;display:flex;gap:6px}
+.nut-trang{width:31px;height:31px;border:1px solid var(--border-strong);border-radius:var(--r-sm);
+           background:var(--surface);display:inline-flex;align-items:center;justify-content:center}
+.nut-trang[disabled]{opacity:.4;cursor:default}
+
+/* ── Tab 2: Hoá đơn ──────────────────────────────────────────────────────── */
+.hd-dau{display:flex;align-items:flex-start;gap:18px;padding:17px 18px;flex-wrap:wrap}
+.hd-dau .tong{margin-left:auto;text-align:right}
+.hd-dau .tong .so{font-family:var(--mono);font-size:32px;font-weight:600;letter-spacing:-.025em;line-height:1.1}
+.hd-dau .nut{display:flex;gap:8px;align-items:center;width:100%;padding-top:4px}
+.hd-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:14px;
+         padding:0 18px 16px;border-bottom:1px solid var(--rule)}
+.hd-meta div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hd-meta .v{font-size:13.5px}
+.ky-truoc{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--rule)}
+.ky-truoc:first-child{border-top:0}
+.ky-truoc .ten{font-weight:500}
+.ky-truoc .phai{margin-left:auto;display:flex;align-items:center;gap:14px}
+.ky-truoc .so{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600}
+
+/* ── Màn Bảng giá ────────────────────────────────────────────────────────── */
+
+/* ① Ba ô số. Mỗi ô là MỘT NÚT mở panel — con số vừa trả lời câu hỏi vừa là
+   chỗ bấm để xử lý nó. Cỡ chữ ở đây CỐ Ý to: đây là thứ đọc từ xa. */
+.luoi-tt{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.o-tt{display:flex;flex-direction:column;gap:8px;align-items:flex-start;text-align:left;
+      background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+      padding:15px 17px;position:relative;transition:border-color .12s,background .12s}
+.o-tt:hover{border-color:var(--border-field);background:var(--fill)}
+.o-tt::after{content:'';position:absolute;top:15px;right:15px;width:7px;height:7px;
+             border-right:1.6px solid var(--n6);border-top:1.6px solid var(--n6);
+             transform:rotate(45deg);opacity:.5;transition:opacity .12s,transform .12s}
+.o-tt:hover::after{opacity:1;transform:rotate(45deg) translate(2px,-2px)}
+.o-tt .so{font-family:var(--mono);font-size:26px;font-weight:500;letter-spacing:-.02em;line-height:1.1}
+/* Ô ② mang TÊN bộ giá, không phải số — sans, nhỏ hơn một nấc, không mono.
+   Ép tên vào font mono chỉ vì hai ô kia là số thì tên đọc như một mã máy. */
+.o-tt .ten-bo{font-family:var(--sans);font-size:20px;font-weight:600;letter-spacing:-.015em;
+              line-height:1.25;text-align:left}
+.o-tt .chan{min-height:20px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+/* Nút mở panel nằm trong một câu — gạch chân, không phải nút có nền. */
+.lk-mo{font-weight:500;color:var(--warn-fg);border-bottom:1px solid currentColor;
+       padding-bottom:1px;margin-left:4px}
+.dai .lk{background:none;border:0;cursor:pointer}
+
+/* ② Danh sách bộ giá — hàng CAO, chữ đủ lớn, 5 cột. Không dòng phụ nào. */
+#bg-ds td{padding:14px 15px}
+#bg-ds .ten{font-weight:500}
+#bg-ds .ma{font-family:var(--mono);font-size:12.5px;color:var(--muted-2)}
+#bg-ds tr{cursor:pointer}
+#bg-ds tr:hover{background:var(--fill)}
+#bg-ds .mui{color:var(--n6);width:1%;text-align:right;padding-right:16px}
+#bg-ds tr:hover .mui{color:var(--fg)}
+
+/* Dải token: một dòng, không phải một dải cảnh báo (nó không cảnh báo gì). */
+.dai-token{display:flex;align-items:center;gap:9px;padding:16px 2px 4px;font-size:12.5px;color:var(--muted)}
+.dai-token svg{color:var(--muted-2);flex:0 0 auto}
+.dai-token .phai{margin-left:auto;display:flex;align-items:center;gap:9px}
+
+/* ── Panel dùng chung ───────────────────────────────────────────────────── */
+.p2-tieu{font-size:16px;font-weight:600;letter-spacing:-.012em}
+#p2-phu{gap:8px;flex-wrap:wrap}
+.p2-nut{margin-left:auto;display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.p2-khoi{margin-bottom:20px}
+.p2-khoi:last-child{margin-bottom:0}
+.p2-nhan{display:flex;align-items:baseline;gap:9px;margin-bottom:8px}
+.p2-nhan .t-nhan{flex:0 0 auto}
+.p2-nhan .kl{flex:1 1 auto;height:1px;background:var(--rule)}
+.p2-hop{border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden}
+.p2-ghi{font-size:12.5px;color:var(--muted);line-height:1.6;margin:9px 0 0}
+.p2-ghi code{font-family:var(--mono);font-size:12.5px}
+/* Nhóm dòng giá theo component — dễ đọc hơn hẳn một bảng 6 cột phẳng. */
+.g-dau td{background:var(--fill);font-family:var(--mono);font-size:11px;color:var(--muted-2);
+          padding:6px 15px;border-bottom:1px solid var(--rule)}
+.p2-hop table thead th{border-top:0}
+
+/* Hàng nút: căn PHẢI, nút chính CUỐI — luật 5 Design token của repo
+   (`HANG_NUT` ở `components/ui/Bang.tsx`). Một khuôn cho form, hộp xác nhận
+   VÀ hộp thoại; trước 2026-08-08 portal có 12 hàng căn trái + 5 hàng căn phải
+   nên chuyển màn là nút nhảy sang bên kia. */
+/* Nút nhỏ trong hàng bảng — ở app thật là hằng `NUT_HANG` (`ui/Bang.tsx`). */
+.nut-hang{height:30px;padding:0 11px;font-size:12.5px;display:inline-flex;align-items:center;
+          border:1px solid var(--border-field);border-radius:var(--r-sm);background:var(--surface)}
+.nut-hang:hover{background:var(--fill);border-color:var(--n11)}
+.hang-nut{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
+.bg-form{background:var(--fill);border:1px solid var(--border);border-radius:var(--r-md);padding:13px 14px}
+.bg-form-hang{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.bg-form-hang .tr{display:flex;flex-direction:column;gap:4px;min-width:0}
+.bg-form-hang .tr.rong{grid-column:1/-1}
+/* ⚠️ `appearance:none` + mũi tên tự vẽ — LUẬT 6 Design token của repo, không
+   phải trang trí. Để `appearance` mặc định thì Chromium tôn trọng `padding`
+   (34px, bằng ô nhập) còn WebKit BỎ QUA `padding` và ép metric riêng (~23px +
+   nút mũi tên hệ thống) ⇒ màn chỉ hỏng ở máy người dùng mở bằng Safari, dev
+   dùng Chrome không bao giờ thấy. Đúng cách nó lọt tới bản deploy 2026-08-10.
+   Ở app thật đây là class `o-chon` trong `styles/theme.css`.
+   Mã màu chevron là BẢN SAO của `--muted-2` (#666c76): data-URI là tài liệu
+   SVG riêng, `var(--…)` của trang không với tới. Đổi bậc n7 thì đổi cả ở đây.
+   `stroke-width` 1.92 = 1.6/20 quy về lưới 24, đúng nét bộ icon (`icons.tsx`). */
+.o-sel{height:34px;border:1px solid var(--border-strong);border-radius:var(--r-md);
+       padding:0 30px 0 9px;font-size:13.5px;background:var(--surface);color:inherit;
+       font-family:var(--mono);appearance:none;-webkit-appearance:none;
+       background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666c76' stroke-width='1.92' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+       background-repeat:no-repeat;background-position:right 8px center;background-size:15px 15px}
+.o-sel:focus{border-color:var(--fg);outline:none}
+.o-sel option[disabled]{color:var(--n6)}
+.o-gia{position:relative;display:flex;align-items:center}
+.o-gia b{position:absolute;right:11px;font-size:11px;color:var(--muted-2);pointer-events:none;font-weight:500}
+.o-gia .o-loc{padding-right:74px!important}
+.bg-goi{margin:10px 0 0;font-size:12.5px;color:var(--muted);line-height:1.55;min-height:18px}
+.bg-goi b{color:var(--warn-fg);font-weight:500}
+.so-nho{font-size:20px;font-weight:600;letter-spacing:-.02em;margin-top:3px}
+.hd-dau .delta-len{color:var(--alert-fg)}
+
+.ds-purpose{display:flex;flex-direction:column}
+.pp-hang{display:flex;align-items:center;gap:10px;padding:9px 14px;border-top:1px solid var(--rule)}
+.pp-hang:first-child{border-top:0}
+.pp-hang .nh{font-family:var(--mono);font-size:13.5px}
+.pp-hang .phai{margin-left:auto}
+.pp-chua{background:var(--warn-bg)}
+.sw{width:34px;height:19px;border-radius:999px;background:var(--n5);position:relative;flex:0 0 auto;
+    transition:background .14s}
+.sw::after{content:'';position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .14s}
+.sw[aria-checked=true]{background:var(--ac)}
+.sw[aria-checked=true]::after{transform:translateX(15px)}
+.sw[aria-checked=mixed]{background:var(--warn-fg);opacity:.55}
+
+/* ── Slide-over ──────────────────────────────────────────────────────────── */
+.lop-phu{position:fixed;inset:0;background:rgba(20,22,26,.32);opacity:0;pointer-events:none;
+         transition:opacity .18s;z-index:40}
+.lop-phu.mo{opacity:1;pointer-events:auto}
+.panel{position:fixed;top:0;right:0;bottom:0;width:min(760px,94vw);background:var(--surface);
+       border-left:1px solid var(--border);box-shadow:var(--noi);z-index:41;
+       transform:translateX(100%);transition:transform .22s cubic-bezier(.32,.72,0,1);
+       display:flex;flex-direction:column}
+.panel.mo{transform:none}
+.panel-dau{padding:17px 21px 13px;border-bottom:1px solid var(--border);flex:0 0 auto}
+.panel-dau .d1{display:flex;align-items:flex-start;gap:12px}
+.panel-dau .ma{font-family:var(--mono);font-size:13.5px}
+.panel-dau .dong{display:flex;align-items:center;gap:8px;margin-top:3px}
+.panel-dau .tong{margin-left:auto;text-align:right;flex:0 0 auto}
+.panel-dau .tong .so{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.02em}
+.nut-dong{width:31px;height:31px;border-radius:var(--r-sm);display:grid;place-items:center;
+          color:var(--muted);flex:0 0 auto}
+.nut-dong:hover{background:var(--fill-strong);color:var(--fg)}
+.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-top:15px}
+.meta div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.meta .v{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel-than{overflow-y:auto;padding:15px 21px 28px;flex:1 1 auto}
+.ghi-chu-turn{display:flex;gap:10px;background:var(--warn-bg);color:var(--warn-fg);
+              border-radius:var(--r-md);padding:11px 13px;font-size:12.5px;line-height:1.55;margin-bottom:16px}
+.ghi-chu-turn svg{flex:0 0 auto;margin-top:2px}
+.nhan-turn{display:flex;align-items:center;gap:10px;padding:11px 0 7px}
+.nhan-turn .kl{flex:1 1 auto;height:1px;background:var(--rule)}
+.ev{display:grid;grid-template-columns:30px 128px minmax(0,1fr) auto;align-items:center;gap:11px;
+    padding:8px 9px;border-radius:var(--r-sm)}
+.ev:hover{background:var(--fill)}
+.ev .seq-no{font-family:var(--mono);font-size:11px;color:var(--muted-2);text-align:right}
+.ev .cpn{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;min-width:0}
+.ev .cpn i{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
+.ev .cpn .pp{font-family:var(--mono);font-size:10.5px;color:var(--muted-2)}
+.ev .dolo{font-family:var(--mono);font-size:12.5px;color:var(--muted);white-space:nowrap;
+          overflow:hidden;text-overflow:ellipsis}
+.ev .gia{font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.ev.khong-tinh .gia{color:var(--n6)}
+
+/* ── Đáp ứng ─────────────────────────────────────────────────────────────── */
+@media (max-width:1180px){
+  .luoi-tien,.luoi-bg,.luoi-ad{grid-template-columns:1fr}
+  .the-comp .than{padding-bottom:12px}
+}
+@media (max-width:1000px){
+  .app{grid-template-columns:1fr}
+  .navpanel{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;
+            border-right:0;border-bottom:1px solid var(--border);gap:6px}
+  .nav-nhomten,.nav-khoi,.nav-ghi{display:none}
+  .nav-muc.con{margin-left:0}
+  .luoi-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:620px){
+  .trang{padding:0 14px 60px}.topbar{padding:0 14px}.tabbar{padding:0 14px}
+  .luoi-kpi{grid-template-columns:1fr}
+  .meta{grid-template-columns:repeat(2,1fr)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ══ Khung nav giả — CHỈ để thấy chỗ đứng của «Bảng giá» ═══════════════
+       Khối «Chi phí» có 3 mục ngang hàng. Trước đó `/pricing` là route ẩn
+       (`inNav:false`), mà dải cảnh báo đỏ lại trỏ tới nó — một đường dẫn tới
+       màn không có đường vào. Nay nó là mục nav thật, có badge số lỗ giá. -->
+  <nav class="navpanel">
+    <div class="nav-logo"><span class="dau">O</span>Odyssey</div>
+
+    <div class="nav-nhomten">Quản trị</div>
+    <a class="nav-muc" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M17 11h4M19 9v4"/></svg>Người dùng</a>
+    <a class="nav-muc" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14.5 9.5 20 4M4 20l5.5-5.5"/><circle cx="12" cy="12" r="3"/></svg>Tích hợp API</a>
+    <a class="nav-muc" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h8M8 17h4"/></svg>Nhật ký</a>
+
+    <div class="nav-khoi">
+      <div class="nav-khoiten">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19V5M4 19h16"/><path d="M8 15v-4M13 15V8M18 15v-6"/></svg>
+        Chi phí
+      </div>
+      <!-- ĐÂY là bộ chuyển màn duy nhất. Vòng 3 có LỖI: nav 3 mục (chết) +
+           tab bar 2 mục (sống) = hai bộ điều hướng cho cùng một việc, bấm nav
+           thì không gì xảy ra. Bỏ tab bar, giữ nav — vì «Bảng giá» là màn thứ
+           ba ngang hàng, mà một tab bar chỉ lặp lại 2 trong 3 mục thì luôn
+           thiếu. Đúng khuôn nav thật: 3 route, 3 NavLeaf trong một `khoi()`. -->
+      <button class="nav-muc con hoat" data-man="usage">Lượt dùng</button>
+      <button class="nav-muc con" data-man="hoadon">Hoá đơn</button>
+      <!-- Badge = số dòng `price_coverage_gap`: việc phải làm nhìn thấy từ nav. -->
+      <button class="nav-muc con" data-man="banggia">Bảng giá <span class="cb">3</span></button>
+    </div>
+
+    <div class="nav-ghi">
+      Khung nav giả — bấm được, để đi qua ba màn.
+      Nav thật khai ở <code>lib/nav-registry.ts</code>.
+    </div>
+  </nav>
+
+  <div class="main">
+
+    <header class="topbar">
+      <!-- Tiêu đề đổi theo màn — ở app thật `Topbar` render từ nhãn NavLeaf. -->
+      <h1 id="tb-tieu">Lượt dùng</h1>
+      <span class="pill pill-ac"><span class="dot"></span>Green Park</span>
+      <div class="ghi"><span class="demo-tag">Bản vẽ demo · vòng 4</span></div>
+    </header>
+
+    <!-- ════════════════════════ MÀN 1 — LƯỢT DÙNG ════════════════════════ -->
+    <div class="trang" id="man-usage">
+
+      <div class="hang-ky">
+        <div class="mang" role="group" aria-label="Kỳ">
+          <button aria-pressed="true">Tháng này</button>
+          <button aria-pressed="false">Tháng trước</button>
+          <button aria-pressed="false">7 ngày</button>
+          <button aria-pressed="false">30 ngày</button>
+          <button aria-pressed="false">Tuỳ chọn…</button>
+        </div>
+        <div class="khoang">
+          <span class="ngay">01/08 – 20/08/2026</span>
+          <span class="pill pill-neu"><span class="dot"></span>Kỳ đang chạy</span>
+        </div>
+        <div class="phai">
+          <button class="nut-phu">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 19h16"/></svg>
+            Xuất CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- ══ MỘT báo động, MỘT dòng ghi chú ═══════════════════════════════
+           Trước: 1 hộp đỏ + 3 hộp vàng cạnh nhau, mỗi hộp một con số đậm.
+           Bốn hộp cùng đòi chú ý ⇒ không hộp nào được chú ý, và cái duy nhất
+           thật sự cấp bách (mất doanh thu) bị ba cái kia làm loãng.
+
+           Phân loại lại theo VIỆC PHẢI LÀM:
+           · `thieuGia` = đang mất doanh thu, có việc phải làm ngay → dải đỏ.
+           · ba con số kia = chất lượng phép đo, KHÔNG có việc phải làm ngay
+             (đo thiếu là do agent, FE không "bù" được) → một dòng chữ mờ,
+             không hộp, không viền, không đậm. Vẫn đọc được, không tranh chú ý. -->
+      <div class="canh-bao">
+        <div class="dai dai-do" role="status">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4m0 3.5v.01"/><path d="M10.3 3.9 2.4 17.3A1.9 1.9 0 0 0 4 20.2h16a1.9 1.9 0 0 0 1.6-2.9L13.7 3.9a1.9 1.9 0 0 0-3.4 0Z"/></svg>
+          <span><strong>3 tổ hợp chưa có giá</strong> — lượt dùng khớp vào đó đang tính 0 đồng.</span>
+          <a class="lk" href="#">Bảng giá →</a>
+        </div>
+        <p class="ghi-do">
+          <span class="cham"></span>Chất lượng đo:
+          <span class="num">148</span> event LLM đo thiếu token <span class="num">(3,4%)</span>
+          <span class="cach">·</span> <span class="num">12</span> event không có số đo
+          <span class="cach">·</span> <span class="num">2</span> nhãn purpose chưa phân loại
+        </p>
+      </div>
+
+      <!-- ── MỤC ① ───────────────────────────────────────────────────────── -->
+      <section class="muc">
+        <div class="muc-dau">
+          <span class="muc-so">1</span>
+          <div class="muc-chu">
+            <h2>Kỳ này</h2>
+            <p>so với kỳ liền trước</p>
+          </div>
+        </div>
+        <div class="luoi-kpi">
+          <div class="kpi kpi-chinh">
+            <span class="t-nhan">Chi phí kỳ</span>
+            <div class="so"><span class="t-kpi-vnd" id="kpi-tien">—</span><span class="dvi">₫</span></div>
+            <div class="chan"><span class="delta delta-len">+8,4%</span><span>so với kỳ trước</span></div>
+          </div>
+          <div class="kpi">
+            <span class="t-nhan">Token</span>
+            <div class="so"><span class="t-kpi">12,04</span><span class="dvi">M</span></div>
+            <div class="chan"><span class="tach"><span>in <b>8,12M</b></span><span>out <b>3,44M</b></span><span>cache <b>0,48M</b></span></span></div>
+          </div>
+          <div class="kpi">
+            <span class="t-nhan">Phiên</span>
+            <div class="so"><span class="t-kpi">482</span></div>
+            <div class="chan"><span class="delta delta-len">+11,2%</span><span>· <span class="mono" id="kpi-moi-phien">—</span>/phiên</span></div>
+          </div>
+          <div class="kpi">
+            <span class="t-nhan">Khoá hoạt động</span>
+            <div class="so"><span class="t-kpi">7</span><span class="dvi">/ 9 khoá</span></div>
+            <div class="chan"><span>2 khoá không phát sinh lượt dùng</span></div>
+          </div>
+          <!-- KHÔNG có thẻ «Thời lượng voice»: `vad`/`call`/`stt` đo những quãng
+               audio CHỒNG LẤN, cộng gộp là tính một giây 3–4 lần (hợp đồng BE §2). -->
+        </div>
+      </section>
+
+      <!-- ── MỤC ② ───────────────────────────────────────────────────────── -->
+      <section class="muc">
+        <div class="muc-dau">
+          <span class="muc-so">2</span>
+          <div class="muc-chu">
+            <h2>Tiền đi đâu</h2>
+            <p>trái: <b>khi nào</b> tốn · phải: tốn vào <b>cái gì</b></p>
+          </div>
+        </div>
+        <div class="luoi-tien">
+
+          <div class="the the-chart">
+            <div class="the-dau">
+              <span class="t-muc">Chi phí theo ngày</span>
+              <div class="phai">
+                <span class="t-phu">TB <b class="mono" id="ch-tb">—</b>/ngày</span>
+                <span class="pill pill-neu">20 ngày</span>
+              </div>
+            </div>
+            <!-- Vùng vẽ `flex:1`; `veChart()` ĐO vùng này rồi vẽ theo pixel
+                 thật ⇒ chart luôn bo sát thẻ, kể cả khi grid kéo cao nó. -->
+            <div class="than"><div id="chart-host"><svg id="chart"></svg></div>
+              <div class="tip" id="tip" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <div class="the the-comp">
+            <div class="the-dau"><span class="t-muc">Theo component</span>
+              <span class="phai t-phu">Cả kỳ</span></div>
+            <div class="than">
+              <div id="ds-comp"></div>
+              <p class="chu-thich"><b>Cột số đo không có hàng tổng.</b> Giây audio của
+                <code class="mono">vad</code>·<code class="mono">stt</code>·<code class="mono">call</code>
+                chồng lấn nhau; cộng lại là đếm một giây nhiều lần. Chỉ cột tiền cộng được.</p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── MỤC ③ ───────────────────────────────────────────────────────── -->
+      <section class="muc">
+        <div class="muc-dau">
+          <span class="muc-so">3</span>
+          <div class="muc-chu">
+            <h2>Lượt dùng chi tiết</h2>
+            <p>cùng kỳ, cùng tổng — đổi chiều gộp</p>
+          </div>
+          <div class="dieu">
+            <div class="o-loc-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input class="o-loc" type="search" placeholder="Tìm khoá, khách, phiên…" />
+            </div>
+            <div class="mang" role="tablist" aria-label="Gộp theo">
+              <button role="tab" aria-selected="true"  data-gop="khoa">Khoá <span class="dem">6</span></button>
+              <button role="tab" aria-selected="false" data-gop="nguoi">Người tạo <span class="dem">4</span></button>
+              <button role="tab" aria-selected="false" data-gop="phien">Phiên <span class="dem">482</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="the">
+          <div class="bang-cuon"><table><thead id="bang-head"></thead><tbody id="bang-body"></tbody></table></div>
+          <div class="chan-bang">
+            <span class="dem" id="chan-dem"></span>
+            <span class="pill pill-neu" id="chan-goi" hidden></span>
+            <div class="phai">
+              <button class="nut-trang" disabled aria-label="Trang trước"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m14 6-6 6 6 6"/></svg></button>
+              <button class="nut-trang" aria-label="Trang sau"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m10 6 6 6-6 6"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /man-usage -->
+
+    <!-- ════════════════════════ MÀN 2 — HOÁ ĐƠN ══════════════════════════
+         CHƯA CÓ ENDPOINT. Bảng `billing.invoice`/`invoice_line` có trong
+         migration 0943, nhưng 11 endpoint của module không có cái nào đọc
+         chúng. Đây là BẢN VẼ dựng theo schema, có dải vàng nói rõ như vậy —
+         để duyệt hình thức trước khi BE mở đường. -->
+    <div class="trang" id="man-hoadon" hidden>
+
+      <div class="hang-ky">
+        <div class="mang" role="group" aria-label="Kỳ hoá đơn">
+          <button aria-pressed="true">08/2026</button>
+          <button aria-pressed="false">07/2026</button>
+          <button aria-pressed="false">06/2026</button>
+        </div>
+        <div class="khoang"><span class="ngay">01/08 – 31/08/2026</span></div>
+      </div>
+
+      <div class="canh-bao">
+        <div class="dai dai-vang">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8.5v.01M12 11.5V16"/></svg>
+          <span><strong>Bản vẽ — chưa có endpoint.</strong> Bảng <code class="mono">invoice</code>/<code class="mono">invoice_line</code>
+          đã có ở migration <code class="mono">0943</code>, nhưng chưa có <code class="mono">GET /billing/invoices</code>.</span>
+        </div>
+      </div>
+
+      <section class="muc">
+        <div class="muc-dau">
+          <span class="muc-so">1</span>
+          <div class="muc-chu"><h2>Hoá đơn kỳ 08/2026</h2>
+            <p>kỳ chưa chốt — còn tính lại được</p></div>
+        </div>
+        <div class="the">
+          <div class="hd-dau">
+            <div>
+              <div class="t-nhan">Trạng thái</div>
+              <div style="margin-top:5px"><span class="pill pill-neu"><span class="dot"></span>Nháp</span></div>
+            </div>
+            <div class="tong">
+              <div class="t-nhan">Tổng cộng</div>
+              <div class="so" id="hd-tong">—</div>
+              <div class="t-phu">chưa gồm VAT — <a href="#" style="color:var(--acd)">chốt chính sách VAT</a></div>
+            </div>
+            <div class="nut">
+              <button class="nut-phu">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg>
+                Tính lại
+              </button>
+              <button class="nut-chinh">Phát hành</button>
+              <span class="t-phu" style="margin-left:4px">Nút «Tính lại» chỉ mở cho kỳ <code class="mono">draft</code>.</span>
+            </div>
+          </div>
+          <div class="hd-meta">
+            <div><span class="t-nhan">Kỳ</span><span class="v mono">01/08 – 31/08/2026</span></div>
+            <div><span class="t-nhan">Bộ giá áp dụng</span><span class="v mono">pv_2026q3_std</span></div>
+            <div><span class="t-nhan">Đơn vị tiền</span><span class="v mono">VND</span></div>
+            <div><span class="t-nhan">Định giá lần cuối</span><span class="v mono">20/08 03:15</span></div>
+            <div><span class="t-nhan">Số dòng</span><span class="v mono" id="hd-so-dong">—</span></div>
+          </div>
+          <div class="bang-cuon">
+            <table><thead>
+              <tr><th>Component</th><th>Provider / Model</th><th>Metric</th>
+                  <th class="p">Số lượng</th><th class="p">Đơn giá</th><th class="p">Thành tiền</th></tr>
+            </thead><tbody id="hd-body"></tbody></table>
+          </div>
+          <div class="chan-bang">
+            <span class="dem">Làm tròn VND <b>một lần</b> ở dòng hoá đơn — không làm tròn ở <code class="mono">rated_usage</code> (<code class="mono">numeric(20,10)</code>).</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="muc">
+        <div class="muc-dau">
+          <span class="muc-so">2</span>
+          <div class="muc-chu"><h2>Các kỳ trước</h2>
+            <p>đã phát hành — số bất biến kể cả khi bảng giá đổi</p></div>
+        </div>
+        <div class="the">
+          <div class="ky-truoc">
+            <span class="ten">Tháng 07/2026</span><span class="pill pill-ok"><span class="dot"></span>Đã thu</span>
+            <div class="phai"><span class="t-phu mono">pv_2026q3_std</span><span class="so">1.112.480 ₫</span>
+              <button class="nut-phu">Xem</button></div>
+          </div>
+          <div class="ky-truoc">
+            <span class="ten">Tháng 06/2026</span><span class="pill pill-ok"><span class="dot"></span>Đã thu</span>
+            <div class="phai"><span class="t-phu mono">pv_2026q2_std</span><span class="so">946.220 ₫</span>
+              <button class="nut-phu">Xem</button></div>
+          </div>
+          <div class="ky-truoc">
+            <span class="ten">Tháng 05/2026</span><span class="pill pill-do"><span class="dot"></span>Đã huỷ</span>
+            <div class="phai"><span class="t-phu mono">pv_2026q2_std</span><span class="so rong">— ₫</span>
+              <button class="nut-phu">Xem</button></div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /man-hoadon -->
+
+    <!-- ════════════════════════ MÀN 3 — BẢNG GIÁ ══════════════════════════
+         Màn của NGƯỜI VẬN HÀNH NỀN TẢNG, không của tenant: 6 endpoint admin
+         gác bằng header `X-Platform-Admin-Token`, không bằng session portal.
+
+         ⚠️ VIẾT LẠI VÒNG 5 — vòng 4 ném cả bốn việc lên một trang (bảng lỗ giá
+         8 cột · danh sách bộ giá · bảng dòng giá 6 cột · form 5 ô · bảng diff
+         5 cột · bảng gán workspace · 12 nhãn purpose), cộng BỐN đoạn chú thích
+         12,5px ở chân bảng. Không màn nào đọc được như thế.
+
+         Nguyên tắc thay thế — DANH SÁCH CHÍNH + ĐÀO SÂU:
+         · Trang chỉ giữ hai thứ: TÌNH TRẠNG (3 ô số) và DANH SÁCH BỘ GIÁ.
+           Đó đúng là hai điều người vận hành hỏi: «có đang mất tiền không» và
+           «bộ nào đang chạy / tôi cần sửa bộ nào».
+         · Bốn thứ còn lại là ĐÀO SÂU, vào panel: chi tiết bộ giá (dòng giá +
+           form + preview) · lỗ giá · gán workspace · nhãn purpose.
+         · Mỗi ô số ở băng ① là MỘT ĐƯỜNG VÀO panel tương ứng. Con số vừa trả
+           lời câu hỏi vừa là chỗ bấm để xử lý nó — không có bảng nào phải cuộn
+           qua trước khi tới được việc.
+         · Chú thích dài chuyển vào panel (nơi nó đúng ngữ cảnh) hoặc vào
+           comment này. Trang chính KHÔNG còn đoạn chữ nhỏ nào. -->
+    <div class="trang" id="man-banggia" hidden>
+
+      <!-- Token nền tảng: `sessionStorage`, KHÔNG `localStorage` — token quản
+           trị nền tảng không được sống qua phiên trình duyệt. -->
+      <div class="dai-token">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        <span>Màn nền tảng — cần <code class="mono">X-Platform-Admin-Token</code></span>
+        <span class="phai">
+          <input class="o-loc" type="password" value="••••••••••••" style="width:150px;padding-left:11px" aria-label="Token quản trị nền tảng" />
+          <span class="pill pill-ok"><span class="dot"></span>Đã xác thực</span>
+        </span>
+      </div>
+
+      <!-- ══ NGOẠI LỆ: dải, KHÔNG phải ô số ═══════════════════════════════
+           Vòng 5 để «Đang mất mỗi kỳ» và «Nhãn chưa phân loại» thành 2 trong 3
+           ô số của màn chính. Sai hai lần:
+
+           ① Chúng là CHỈ BÁO NGOẠI LỆ. Lúc mọi thứ ổn, chúng chiếm 2/3 chỗ đắt
+              nhất của màn để nói «không có gì». Đúng thứ luật repo cấm ở `/agent`
+              («hiện nó thường trực là dạy người dùng bỏ qua chỗ đó, để rồi lúc
+              nó thành bất thường thì không ai còn nhìn»).
+           ② `thieuGia` ĐÃ có dải đỏ riêng ở màn Lượt dùng ⇒ ô này là bản sao.
+
+           Phép thử đúng cho một ô ở màn chính: **nó nói thứ không lấy được ở
+           đâu khác?** Ba ô mới đều qua; hai ô cũ thì không.
+
+           Lỗ giá KHÔNG phải «quên set giá trước khi cho dùng»: Portal đặt giá,
+           `usage_events` do AGENT ghi. Bên agent thêm một model mới là usage
+           xuất hiện với cặp `(provider, model)` chưa có dòng giá, `rate_usage()`
+           không khớp và trả 0 — không ai chặn. Đó là TRÔI LỆCH giữa hai hệ
+           thống, nên nó phải ồn ào khi có và im hẳn khi không. -->
+      <div class="canh-bao" id="bg-ngoaile">
+        <div class="dai dai-do" role="status">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4m0 3.5v.01"/><path d="M10.3 3.9 2.4 17.3A1.9 1.9 0 0 0 4 20.2h16a1.9 1.9 0 0 0 1.6-2.9L13.7 3.9a1.9 1.9 0 0 0-3.4 0Z"/></svg>
+          <span><strong>3 tổ hợp chưa có giá</strong> — agent đang dùng model chưa
+            đặt giá, mất <span class="num" id="bg-mat">—</span> mỗi kỳ.</span>
+          <button class="lk" data-mo="loGia">Xem →</button>
+        </div>
+        <p class="ghi-do">
+          <span class="cham"></span><span class="num">2</span> nhãn
+          <span class="mono">purpose</span> chưa phân loại — mặc định không tính khách.
+          <button class="lk-mo" data-mo="purpose">Phân loại →</button>
+        </p>
+      </div>
+
+      <!-- ── MỤC ① ĐANG ÁP — ba ô, mỗi ô nói một thứ CHỈ CÓ Ở MÀN NÀY ────── -->
+      <section class="muc">
+        <div class="muc-dau">
+          <span class="muc-so">1</span>
+          <div class="muc-chu"><h2>Đang áp</h2><p>toàn nền tảng, kỳ 01/08 – 20/08</p></div>
+        </div>
+        <div class="luoi-tt">
+
+          <!-- ① Thứ mà bảng giá SINH RA. Số này không có ở đâu khác: `/usage`
+               chỉ thấy một workspace, còn đây là tổng mọi workspace. -->
+          <button class="o-tt" data-mo="doanhThu">
+            <span class="t-nhan">Doanh thu kỳ này</span>
+            <span class="so num" id="tt-dt">—</span>
+            <span class="chan"><span class="delta delta-len" id="tt-dt-delta">—</span>
+              <span class="t-phu">so với kỳ trước</span></span>
+          </button>
+
+          <!-- ② «Bộ nào đang là mặc định» — trả lời cho MỌI workspace chưa gán
+               riêng. Bảng ② nói bộ nào active, nhưng không nói bộ nào là đích
+               rơi về của phần còn lại. -->
+          <button class="o-tt" data-mo="boMacDinh">
+            <span class="t-nhan">Bộ giá mặc định</span>
+            <span class="so ten-bo" id="tt-bo">—</span>
+            <span class="chan"><span class="mono t-phu" id="tt-bo-ma">—</span></span>
+          </button>
+
+          <!-- ③ Số hợp đồng riêng. Không gán KHÔNG phải lỗi — `resolve_price_version`
+               rơi về `is_default`, đó là đường đi bình thường. Nên ô này đếm
+               «bao nhiêu workspace có giá riêng», không phải «bao nhiêu chưa gán». -->
+          <button class="o-tt" data-mo="gan">
+            <span class="t-nhan">Workspace giá riêng</span>
+            <span class="so num" id="tt-rieng">—</span>
+            <span class="chan"><span class="t-phu" id="tt-rieng-phu">—</span></span>
+          </button>
+
+        </div>
+      </section>
+
+      <!-- ── MỤC ② BẢNG GIÁ — danh sách chính của màn ────────────────────── -->
+      <section class="muc">
+        <div class="muc-dau">
+          <span class="muc-so">2</span>
+          <div class="muc-chu"><h2>Bộ giá</h2><p>bấm một bộ để xem và sửa dòng giá</p></div>
+          <div class="dieu">
+            <button class="nut-chinh">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              Bộ giá mới
+            </button>
+          </div>
+        </div>
+        <div class="the">
+          <div class="bang-cuon">
+            <table><thead><tr>
+              <th>Bộ giá</th><th>Trạng thái</th>
+              <th class="p">Dòng giá</th><th class="p">Workspace</th><th></th>
+            </tr></thead><tbody id="bg-ds"></tbody></table>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /man-banggia -->
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ── Panel DÙNG CHUNG cho mọi phần đào sâu của màn Bảng giá ────────────
+     Bốn thứ vòng 4 nhồi vào trang giờ mở ở đây: chi tiết bộ giá · lỗ giá ·
+     gán workspace · nhãn purpose. Một khung, nội dung do JS dựng — bốn panel
+     riêng là bốn chỗ để lệch nhau ở lần sửa sau. -->
+<div class="lop-phu" id="lp2"></div>
+<aside class="panel" id="p2" role="dialog" aria-modal="true" aria-labelledby="p2-tieu">
+  <div class="panel-dau">
+    <div class="d1">
+      <div style="min-width:0">
+        <div class="p2-tieu" id="p2-tieu">—</div>
+        <div class="dong" id="p2-phu"></div>
+      </div>
+      <div class="p2-nut" id="p2-nut"></div>
+      <button class="nut-dong" id="p2-dong" aria-label="Đóng">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="panel-than" id="p2-than"></div>
+</aside>
+
+<!-- ── Slide-over chi tiết phiên (?phien=…) ─────────────────────────────── -->
+<div class="lop-phu" id="lop-phu"></div>
+<aside class="panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="panel-td">
+  <div class="panel-dau">
+    <div class="d1">
+      <div style="min-width:0">
+        <div class="ma" id="panel-td">ph_8f3c1a7e94b2</div>
+        <div class="dong"><span class="t-phu">Nguyễn Thu Hà · 0903 118 402</span>
+          <span class="chip-kenh chip-voice">Voice</span></div>
+      </div>
+      <div class="tong">
+        <div class="t-nhan" style="text-align:right">Chi phí phiên</div>
+        <div class="so" id="panel-tien">—</div>
+      </div>
+      <button class="nut-dong" id="nut-dong" aria-label="Đóng">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="meta">
+      <div><span class="t-nhan">Khoá</span><span class="v">K-prod-voice</span></div>
+      <div><span class="t-nhan">Bắt đầu</span><span class="v mono">18/08 14:22</span></div>
+      <div><span class="t-nhan">Lượt</span><span class="v mono">3</span></div>
+      <div><span class="t-nhan">Đo</span><span class="v"><span class="pill pill-warn">Đo thiếu</span></span></div>
+    </div>
+  </div>
+  <div class="panel-than">
+    <!-- `ghiChuTurn` — BE trả sẵn chuỗi này. NGUYÊN VĂN, luôn hiện, không
+         tooltip, không collapse (hợp đồng BE §3). -->
+    <div class="ghi-chu-turn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8.5v.01M12 11.5V16"/></svg>
+      <span><code class="mono">turn_idx</code> của dòng audio là <strong>xấp xỉ</strong>
+      (TTS của lượt N nằm ở lô N+1). Tổng theo phiên luôn đúng; đừng dùng số theo
+      từng lượt để đối chiếu tiền.</span>
+    </div>
+    <div id="timeline"></div>
+  </div>
+</aside>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   MỘT nguồn sự thật: `DL.llmNgay`. Mọi tổng khác — KPI, component, bảng khoá,
+   bảng người, VÀ dòng hoá đơn ở tab 2 — đều tính ra từ nó.
+   ══════════════════════════════════════════════════════════════════════════ */
+const DL = {
+  llmNgay: [
+    23260,33780,39700,37960,15540,12300,43640,49720,45260,42260,
+    52640,18340,14060,50820,54360,47580,56360,59080,25180,20360
+  ],
+  tyLe: { llm:1, tts:.3118, stt:.2079, embed:.0659, speaker_verify:.0373 },
+  thang: '08/2026',
+  soPhien: 482,
+};
+const COMP = [
+  { ma:'llm',            nhan:'LLM',            mau:'var(--c-llm)',   do:'12,04 M token' },
+  { ma:'tts',            nhan:'TTS (đọc)',      mau:'var(--c-tts)',   do:'1,84 M ký tự'  },
+  { ma:'stt',            nhan:'STT (nghe)',     mau:'var(--c-stt)',   do:'41.280 giây'   },
+  { ma:'embed',          nhan:'Embed',          mau:'var(--c-embed)', do:'24,5 M token'  },
+  { ma:'speaker_verify', nhan:'Xác thực giọng', mau:'var(--c-sv)',    do:'6.410 giây'    },
+];
+const VAD = { ma:'vad', nhan:'VAD (dò tiếng)', do:'52.910 giây' };
+const SOC = 'repeating-linear-gradient(45deg,var(--c-vad) 0 2px,transparent 2px 4px),var(--n3)';
+
+/* ── Định dạng: MỘT chỗ. Ở màn thật là `features/billing/dinh-dang.ts`. ──── */
+const F = {
+  tien:  n => Math.round(n).toLocaleString('vi-VN'),
+  pt:    n => n.toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+'%',
+  so:    n => n.toLocaleString('vi-VN'),
+  gia4:  n => n.toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2}),
+  token: n => n>=1e6 ? (n/1e6).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2})+' M'
+            : n>=1e4 ? Math.round(n/1e3).toLocaleString('vi-VN')+' k'
+            : n.toLocaleString('vi-VN'),
+  d2:    i => String(i).padStart(2,'0'),
+};
+
+const CHUOI = DL.llmNgay.map((llm,i)=>{
+  const o={ngay:i+1,phan:{},tong:0};
+  for(const c of COMP){ const v=llm*DL.tyLe[c.ma]; o.phan[c.ma]=v; o.tong+=v; }
+  return o;
+});
+const TONG_COMP={}; for(const c of COMP) TONG_COMP[c.ma]=CHUOI.reduce((s,d)=>s+d.phan[c.ma],0);
+const TONG = Object.values(TONG_COMP).reduce((a,b)=>a+b,0);
+const TB = TONG/CHUOI.length;
+
+document.getElementById('kpi-tien').textContent = F.tien(TONG);
+/* Suy ra, KHÔNG hardcode — một con số phái sinh viết tay sẽ lệch ngay lần đầu
+   ai đó sửa dữ liệu nguồn. */
+document.getElementById('kpi-moi-phien').textContent = F.tien(TONG/DL.soPhien)+' ₫';
+document.getElementById('ch-tb').textContent = F.tien(TB)+' ₫';
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CHART — đường + vùng tô, ĐO CONTAINER rồi vẽ theo pixel thật.
+   Không `viewBox` cố định: đó chính là thứ làm chart không bo sát thẻ ở vòng 2
+   (tỷ lệ khoá + grid kéo cao thẻ ⇒ hở một khoảng dưới).
+   Đổi từ cột chồng sang đường: thẻ «Theo component» ngay bên phải đã mã hoá
+   component rồi, và làm tốt hơn. Chart lo trục THỜI GIAN.
+   ══════════════════════════════════════════════════════════════════════════ */
+const SVGNS='http://www.w3.org/2000/svg';
+const host=document.getElementById('chart-host');
+const svg=document.getElementById('chart');
+const tip=document.getElementById('tip');
+
+function veChart(){
+  const W=host.clientWidth, H=host.clientHeight;
+  if(W<40||H<40) return;
+  svg.setAttribute('width',W); svg.setAttribute('height',H);
+  const L=48,R=10,T=14,B=24;                    // lề: nhãn trục y 48px bên trái
+  const w=W-L-R, h=H-T-B;
+  const buoc=25000, cap=Math.ceil(Math.max(...CHUOI.map(d=>d.tong))/buoc)*buoc;
+  const X=i=>L+(w*i)/(CHUOI.length-1);
+  const Y=v=>T+h-(v/cap)*h;
+
+  const el=(t,a)=>{const n=document.createElementNS(SVGNS,t);for(const k in a)n.setAttribute(k,a[k]);return n};
+  svg.textContent='';
+
+  // gradient vùng tô — một sắc accent, mờ dần xuống đáy
+  const defs=el('defs',{}); const g=el('linearGradient',{id:'gr-ac',x1:0,y1:0,x2:0,y2:1});
+  g.append(el('stop',{offset:'0%','stop-color':'var(--ac)','stop-opacity':.22}),
+           el('stop',{offset:'100%','stop-color':'var(--ac)','stop-opacity':.02}));
+  defs.append(g); svg.append(defs);
+
+  // nền cuối tuần: nhìn ra nhịp tuần mà không cần chú thích
+  CHUOI.forEach((d,i)=>{ if(i%7===5||i%7===6){
+    const x0=i===0?L:(X(i)+X(i-1))/2, x1=i===CHUOI.length-1?L+w:(X(i)+X(i+1))/2;
+    svg.append(el('rect',{class:'ch-ct',x:x0,y:T,width:Math.max(x1-x0,1),height:h}));
+  }});
+
+  // 4 vạch mờ + nhãn. Không lưới ô vuông.
+  for(let v=buoc; v<=cap; v+=buoc){
+    svg.append(el('line',{class:'ch-luoi',x1:L,x2:L+w,y1:Y(v),y2:Y(v)}));
+    const t=el('text',{class:'ch-nhan',x:L-9,y:Y(v)+3.5,'text-anchor':'end'});
+    t.textContent=F.so(v/1000)+'k'; svg.append(t);
+  }
+  svg.append(el('line',{class:'ch-truc',x1:L,x2:L+w,y1:Y(0),y2:Y(0)}));
+  const t0=el('text',{class:'ch-nhan',x:L-9,y:Y(0)+3.5,'text-anchor':'end'}); t0.textContent='0'; svg.append(t0);
+
+  // đường trung bình — mốc so sánh rẻ nhất, cột chồng không có chỗ cho nó
+  svg.append(el('line',{class:'ch-tb',x1:L,x2:L+w,y1:Y(TB),y2:Y(TB)}));
+  const tbl=el('text',{class:'ch-nhan',x:L+w,y:Y(TB)-6,'text-anchor':'end'});
+  tbl.textContent='TB'; svg.append(tbl);
+
+  // vùng tô + đường
+  const pts=CHUOI.map((d,i)=>[X(i),Y(d.tong)]);
+  svg.append(el('path',{class:'ch-vung',
+    d:`M${L},${Y(0)} `+pts.map(p=>`L${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ')+` L${L+w},${Y(0)} Z`}));
+  svg.append(el('path',{class:'ch-duong',
+    d:'M'+pts.map(p=>`${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' L')}));
+
+  // nhãn ngày: chỉ mốc 1·5·10·15·20 — 20 nhãn liền nhau là trục rối
+  CHUOI.forEach((d,i)=>{ const n=i+1; if(n===1||n%5===0){
+    const t=el('text',{class:'ch-nhan'+(n===1?' dam':''),x:X(i),y:H-7,'text-anchor':'middle'});
+    t.textContent=F.d2(n); svg.append(t);
+  }});
+  const tm=el('text',{class:'ch-nhan',x:L+w,y:H-7,'text-anchor':'end'}); tm.textContent=DL.thang; svg.append(tm);
+
+  // vùng bắt chuột theo cột + crosshair + điểm
+  const nhom=[];
+  CHUOI.forEach((d,i)=>{
+    const x0=i===0?L:(X(i)+X(i-1))/2, x1=i===CHUOI.length-1?L+w:(X(i)+X(i+1))/2;
+    const gg=el('g',{class:'ch-g',tabindex:0});
+    gg.append(el('line',{class:'ch-cross',x1:X(i),x2:X(i),y1:T,y2:Y(0)}));
+    gg.append(el('circle',{class:'ch-diem',cx:X(i),cy:Y(d.tong),r:4}));
+    gg.append(el('rect',{class:'ch-bat',x:x0,y:T,width:Math.max(x1-x0,1),height:h}));
+    svg.append(gg); nhom.push(gg);
+    const hien=()=>{
+      nhom.forEach(o=>o.classList.remove('hover')); gg.classList.add('hover');
+      tip.innerHTML=`<div class="tip-ngay">${F.d2(i+1)}/${DL.thang}</div>`
+        +`<div class="tip-tong"><span>Tổng</span><span>${F.tien(d.tong)} ₫</span></div>`
+        /* tách component vẫn còn — ở đây, chỗ không làm rối trục chính */
+        +[...COMP].reverse().map(c=>`<div class="tip-hang"><i style="background:${c.mau}"></i>${c.nhan}<b>${F.tien(d.phan[c.ma])}</b></div>`).join('');
+      tip.style.left=X(i)+'px';
+      tip.style.top=(Y(d.tong)-12)+'px';
+      tip.classList.add('hien');
+    };
+    const an=()=>{gg.classList.remove('hover');tip.classList.remove('hien')};
+    gg.addEventListener('mouseenter',hien); gg.addEventListener('focus',hien);
+    gg.addEventListener('mouseleave',an);   gg.addEventListener('blur',an);
+  });
+}
+new ResizeObserver(veChart).observe(host);
+veChart();
+
+/* ══ Bảng component ═════════════════════════════════════════════════════ */
+document.getElementById('ds-comp').innerHTML =
+  COMP.map(c=>({...c,tien:TONG_COMP[c.ma]})).sort((a,b)=>b.tien-a.tien).map(c=>{
+    const pt=c.tien/TONG*100;
+    return `<div class="comp-hang">
+      <div class="comp-ten"><i style="background:${c.mau}"></i>
+        <span class="nhan">${c.nhan}</span><span class="do">· ${c.do}</span></div>
+      <div class="comp-so"><span class="tien">${F.tien(c.tien)} ₫</span><span class="pt">${F.pt(pt)}</span></div>
+      <div class="thanh"><span style="width:${pt.toFixed(2)}%;background:${c.mau}"></span></div>
+    </div>`;
+  }).join('')
+  /* `vad` đo nhưng KHÔNG tính tiền (`units=0`): xám gạch chéo, không dùng sắc
+     accent — mắt phải phân biệt «tốn tiền» và «chỉ đo». Vẫn để trong bảng:
+     ai thấy 52.910 giây VAD trong log agent mà không thấy ở đây sẽ đi hỏi. */
+  + `<div class="comp-hang comp-vad">
+      <div class="comp-ten"><i style="background:${SOC}"></i>
+        <span class="nhan">${VAD.nhan}</span><span class="do">· ${VAD.do}</span></div>
+      <div class="comp-so"><span class="tien rong">0 ₫</span><span class="pt">không tính tiền</span></div>
+    </div>`;
+
+/* ══ Explorer: một bảng, ba chiều gộp ══════════════════════════════════ */
+const KHOA=[
+  {ten:'K-prod-web',  ma:'ody_live_a41c…',nguoi:'Trần Minh Quân',phien:187,tin:2810000,tout:1180000,cache:310000,share:.3887},
+  {ten:'K-prod-voice',ma:'ody_live_7f92…',nguoi:'Trần Minh Quân',phien:104,tin:2240000,tout: 980000,cache:112000,share:.3337},
+  {ten:'K-zalo-oa',   ma:'ody_live_c018…',nguoi:'Lê Thị Hồng',   phien: 92,tin:1640000,tout: 690000,cache: 41000,share:.1558},
+  {ten:'K-crm-sync',  ma:'ody_live_2d55…',nguoi:'Lê Thị Hồng',   phien: 36,tin: 870000,tout: 340000,cache:     0,share:.0766},
+  {ten:'K-test-qa',   ma:'ody_live_9b30…',nguoi:'Phạm Đức Anh',  phien: 41,tin: 410000,tout: 190000,cache: 16000,share:.0259,thuHoi:true},
+];
+const CHUA={phien:22,tin:150000,tout:60000,cache:1000};
+const SHARE_KHOA=KHOA.reduce((s,k)=>s+k.share,0);
+const TIEN_CHUA=TONG*(1-SHARE_KHOA);
+const NGUOI=[
+  {ten:'Trần Minh Quân',email:'quan.tm@greenpark.vn',khoa:2,phien:291,share:.3887+.3337},
+  {ten:'Lê Thị Hồng',   email:'hong.lt@greenpark.vn',khoa:2,phien:128,share:.1558+.0766},
+  {ten:'Phạm Đức Anh',  email:'anh.pd@greenpark.vn', khoa:1,phien: 41,share:.0259},
+];
+const PHIEN=[
+  {id:'ph_8f3c1a7e94b2',khach:'Nguyễn Thu Hà',sdt:'0903 118 402',kenh:'voice',bd:'18/08 14:22',turn: 3,tin:18400,tout: 7100,tien:24180,exact:false},
+  {id:'ph_2b71e0c4aa19',khach:'Đỗ Văn Khánh', sdt:'0912 447 260',kenh:'chat', bd:'18/08 11:07',turn:14,tin:42800,tout:16400,tien:18940,exact:true},
+  {id:'ph_5d94ff20b7c3',khach:'Bùi Ngọc Lan', sdt:'0987 220 118',kenh:'voice',bd:'17/08 16:41',turn: 5,tin:21600,tout: 9200,tien:16720,exact:true},
+  {id:'ph_c103a8e5512f',khach:null,           sdt:'0968 013 774',kenh:'chat', bd:'17/08 09:58',turn: 9,tin:31200,tout:11800,tien:12480,exact:true},
+  {id:'ph_71ae4b6d90aa',khach:'Vũ Hải Đăng',  sdt:'0345 991 620',kenh:'voice',bd:'16/08 15:12',turn: 2,tin: 9800,tout: 3900,tien: 9310,exact:false},
+  {id:'ph_e6802d1cf47b',khach:'Trịnh Mai Chi',sdt:'0777 306 155',kenh:'chat', bd:'16/08 10:33',turn: 6,tin:18900,tout: 7400,tien: 7620,exact:true},
+];
+const TH=(t,p)=>`<th${p?' class="p"':''}>${t}</th>`;
+const TD=(t,c='')=>`<td${c?` class="${c}"`:''}>${t}</td>`;
+const KHONG='<span class="rong">—</span>';
+
+function veBang(gop){
+  const head=document.getElementById('bang-head'), body=document.getElementById('bang-body');
+  const dem=document.getElementById('chan-dem'), goi=document.getElementById('chan-goi');
+  goi.hidden=true;
+
+  if(gop==='khoa'){
+    head.innerHTML='<tr>'+TH('Khoá')+TH('Người tạo')+TH('Phiên',1)+TH('Token in',1)
+      +TH('Token out',1)+TH('Cache read',1)
+      +`<th class="p"><span class="sort">Chi phí <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m6 10 6 6 6-6"/></svg></span></th></tr>`;
+    body.innerHTML=
+      KHOA.map(k=>`<tr>`
+        +TD(`<div class="chinh"><span class="ten">${k.ten}${k.thuHoi?' <span class="pill pill-neu">Đã thu hồi</span>':''}</span><span class="ma">${k.ma}</span></div>`)
+        +TD(k.nguoi)+TD(k.phien,'p')+TD(F.token(k.tin),'p')+TD(F.token(k.tout),'p')
+        +TD(k.cache?F.token(k.cache):KHONG,'p')+TD(F.tien(TONG*k.share),'p tien')+`</tr>`).join('')
+      /* HÀNG «Chưa phân loại» — LUẬT CỨNG (hợp đồng BE §1). Ghim CUỐI, không
+         ẩn được, không có nút lọc bỏ. Ẩn nó làm tổng các hàng THIẾU so với
+         `chiPhiTong` — và lệch theo hướng thiếu là hướng tệ. */
+      +`<tr class="hang-chua" title="Usage được ghi trước khi phiên có hàng conversations — chưa quy được về khoá nào.">`
+        +TD('<div class="chinh"><span class="ten">Chưa phân loại (không có khoá)</span><span class="ma">agentKeyId = null</span></div>')
+        +TD(KHONG)+TD(CHUA.phien,'p')+TD(F.token(CHUA.tin),'p')+TD(F.token(CHUA.tout),'p')
+        +TD(F.token(CHUA.cache),'p')+TD(F.tien(TIEN_CHUA),'p tien')+`</tr>`
+      +`<tr class="hang-tong">`+TD('Tổng kỳ')+TD('')+TD('504','p')+TD('8,12 M','p')
+        +TD('3,44 M','p')+TD('0,48 M','p')+TD(F.tien(TONG)+' ₫','p tien')+`</tr>`;
+    dem.textContent='6 khoá · 1 nhóm chưa phân loại';
+    goi.hidden=false;
+    goi.innerHTML='<span class="dot"></span>Tổng khớp <code class="mono">chiPhiTong</code> của API';
+  }
+
+  if(gop==='nguoi'){
+    head.innerHTML='<tr>'+TH('Người tạo')+TH('Email')+TH('Số khoá',1)+TH('Phiên',1)+TH('Chi phí',1)+'</tr>';
+    body.innerHTML=
+      NGUOI.map(n=>`<tr>`+TD(`<span class="ten">${n.ten}</span>`)
+        +TD(`<span class="t-phu">${n.email}</span>`)
+        +TD(n.khoa,'p')+TD(n.phien,'p')+TD(F.tien(TONG*n.share),'p tien')+`</tr>`).join('')
+      +`<tr class="hang-chua">`+TD('Chưa phân loại (không có khoá)')+TD(KHONG)
+        +TD(KHONG,'p')+TD(CHUA.phien,'p')+TD(F.tien(TIEN_CHUA),'p tien')+`</tr>`
+      +`<tr class="hang-tong">`+TD('Tổng kỳ')+TD('')+TD('5','p')+TD('504','p')
+        +TD(F.tien(TONG)+' ₫','p tien')+`</tr>`;
+    dem.textContent='3 người · 1 nhóm chưa phân loại';
+  }
+
+  if(gop==='phien'){
+    head.innerHTML='<tr>'+TH('Phiên')+TH('Khách')+TH('Kênh')+TH('Bắt đầu')+TH('Lượt',1)
+      +TH('Token in',1)+TH('Token out',1)+TH('Chi phí',1)+'</tr>';
+    body.innerHTML=PHIEN.map(p=>`<tr class="bam" data-phien="${p.id}">`
+      +TD(`<span class="ma">${p.id}</span>`)
+      +TD(`<div class="chinh"><span class="ten">${p.khach??KHONG}</span><span class="ma">${p.sdt}</span></div>`)
+      +TD(p.kenh==='voice'?'<span class="chip-kenh chip-voice">Voice</span>':'<span class="chip-kenh chip-chat">Chat</span>')
+      +TD(`<span class="mono t-phu">${p.bd}</span>`)
+      +TD(p.turn,'p')+TD(F.token(p.tin),'p')+TD(F.token(p.tout),'p')
+      /* `exact=true` KHÔNG có badge: đúng là mặc định. Pill xanh trên mọi hàng
+         là nhiễu, và nó làm hàng `false` khó thấy hơn — ngược mục đích. */
+      +TD(F.tien(p.tien)+(p.exact?'':' <span class="pill pill-warn">Đo thiếu</span>'),'p tien')
+      +`</tr>`).join('');
+    dem.textContent='1–6 / 482 phiên';
+  }
+}
+document.querySelectorAll('[data-gop]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-gop]').forEach(x=>x.setAttribute('aria-selected','false'));
+  b.setAttribute('aria-selected','true'); veBang(b.dataset.gop);
+}));
+veBang('khoa');
+
+/* ══ Tab 2: dòng hoá đơn — cộng đúng về TONG ══════════════════════════════
+   Chia `TONG_COMP` thành dòng theo metric, rồi ngược lại ra đơn giá. Dòng
+   cuối ăn phần dư sau khi làm tròn: làm tròn MỘT LẦN ở dòng hoá đơn, đúng
+   chính sách đã chốt (`rated_usage` giữ numeric(20,10), không tròn). */
+const DONG_HD=(()=>{
+  /* `ty` = phần của `TONG_COMP[component]` mà dòng này chiếm. Chọn sao cho đơn
+     giá suy ra đúng THỨ TỰ THỰC TẾ: output > input > cache_read (cache read
+     luôn rẻ nhất). Đặt sai thứ tự này là người xem hoá đơn thấy sai ngay. */
+  const spec=[
+    {c:'llm',  pv:'anthropic / claude-opus-5', m:'input_tokens',      q: 8120000, per:1e6, ty:.5396},
+    {c:'llm',  pv:'anthropic / claude-opus-5', m:'output_tokens',     q: 3440000, per:1e6, ty:.4572},
+    {c:'llm',  pv:'anthropic / claude-opus-5', m:'cache_read_tokens', q:  480000, per:1e6, ty:.0032},
+    {c:'tts',  pv:null,                        m:'chars',             q: 1840000, per:1,   ty:1},
+    {c:'stt',  pv:null,                        m:'audio_sec',         q:   41280, per:1,   ty:1},
+    {c:'embed',pv:'openai / text-embed-3',      m:'input_tokens',      q:24500000, per:1e6, ty:1},
+    {c:'speaker_verify',pv:null,                m:'audio_sec',         q:    6410, per:1,   ty:1},
+    {c:'vad',  pv:null,                        m:'audio_sec',         q:   52910, per:1,   ty:0},
+  ];
+  const ds=spec.map(s=>{
+    const goc = s.c==='vad' ? 0 : TONG_COMP[s.c]*s.ty;
+    return {...s, tien:Math.round(goc), gia: s.q ? goc/s.q*s.per : 0};
+  });
+  const du = Math.round(TONG) - ds.reduce((a,b)=>a+b.tien,0);
+  const i  = ds.reduce((mx,d,k,a)=>a[mx].tien>=d.tien?mx:k,0);   // dòng lớn nhất ăn phần dư
+  ds[i].tien += du;
+  return ds;
+})();
+document.getElementById('hd-body').innerHTML = DONG_HD.map(d=>`<tr>`
+  +TD(`<span class="ten">${d.c}</span>`)
+  +TD(d.pv?`<span class="mono t-phu">${d.pv}</span>`:KHONG)
+  +TD(`<span class="mono t-phu">${d.m}</span>`)
+  +TD(F.so(d.q),'p')
+  +TD(d.gia?F.gia4(d.gia)+(d.per===1e6?' /1M':''):'<span class="rong">0</span>','p')
+  +TD(d.tien?F.tien(d.tien)+' ₫':'<span class="rong">0 ₫</span>','p tien')
+  +`</tr>`).join('')
+  + `<tr class="hang-tong">`+TD('Tổng cộng')+TD('')+TD('')+TD('')+TD('')
+  +TD(F.tien(DONG_HD.reduce((a,b)=>a+b.tien,0))+' ₫','p tien')+`</tr>`;
+document.getElementById('hd-tong').textContent = F.tien(TONG)+' ₫';
+document.getElementById('hd-so-dong').textContent = DONG_HD.length;
+
+/* ══ Slide-over ═════════════════════════════════════════════════════════ */
+const EVENTS=[
+  {turn:1,seq:1, c:'stt',           purpose:'conversation',pp:null,                        do:'8,4 giây',     tien: 1260},
+  {turn:1,seq:2, c:'vad',           purpose:'stream',      pp:null,                        do:'11,2 giây',    tien:    0},
+  {turn:1,seq:3, c:'llm',           purpose:'conversation',pp:'anthropic/claude-opus-5',   do:'4.180 → 1.240',tien: 4820},
+  {turn:1,seq:4, c:'tts',           purpose:'conversation',pp:null,                        do:'842 ký tự',    tien: 1180},
+  {turn:2,seq:5, c:'speaker_verify',purpose:'session',     pp:null,                        do:'2,1 giây',     tien:  310},
+  {turn:2,seq:6, c:'stt',           purpose:'conversation',pp:null,                        do:'12,6 giây',    tien: 1890},
+  {turn:2,seq:7, c:'llm',           purpose:'conversation',pp:'anthropic/claude-opus-5',   do:'6.240 → 2.180',tien: 7640},
+  {turn:2,seq:8, c:'embed',         purpose:'semcache',    pp:'openai/text-embed-3',       do:'318 token',    tien:    0},
+  {turn:2,seq:9, c:'tts',           purpose:'conversation',pp:null,                        do:'1.104 ký tự',  tien: 1540},
+  {turn:3,seq:10,c:'llm',           purpose:'summary',     pp:'anthropic/claude-opus-5',   do:'2.840 → 610',  tien: 2980},
+  {turn:3,seq:11,c:'tts',           purpose:'conversation',pp:null,                        do:'1.832 ký tự',  tien: 2560},
+];
+const MAU=Object.fromEntries(COMP.map(c=>[c.ma,c.mau]));
+const NHAN=Object.fromEntries([...COMP,VAD].map(c=>[c.ma,c.nhan]));
+(function(){
+  let html='',cur=null;
+  for(const e of EVENTS){
+    if(e.turn!==cur){
+      cur=e.turn;
+      const tt=EVENTS.filter(x=>x.turn===cur).reduce((s,x)=>s+x.tien,0);
+      html+=`<div class="nhan-turn"><span class="t-nhan">Lượt ${cur}</span><span class="kl"></span>`
+          + `<span class="mono t-phu">${F.tien(tt)} ₫</span></div>`;
+    }
+    html+=`<div class="ev${e.tien===0?' khong-tinh':''}">`
+      +`<span class="seq-no">${e.seq}</span>`
+      +`<span class="cpn"><i style="background:${e.c==='vad'?SOC:MAU[e.c]}"></i>`
+        +`<span>${NHAN[e.c]}</span><span class="pp">${e.purpose}</span></span>`
+      +`<span class="dolo">${e.pp??KHONG} · ${e.do}</span>`
+      +`<span class="gia">${e.tien===0?'<span class="pill pill-neu">Không tính tiền</span>':F.tien(e.tien)+' ₫'}</span>`
+      +`</div>`;
+  }
+  document.getElementById('timeline').innerHTML=html;
+  document.getElementById('panel-tien').textContent=F.tien(EVENTS.reduce((s,e)=>s+e.tien,0))+' ₫';
+})();
+
+const panel=document.getElementById('panel'), phu=document.getElementById('lop-phu');
+const mo =()=>{panel.classList.add('mo');   phu.classList.add('mo');   document.body.style.overflow='hidden'};
+const dong=()=>{panel.classList.remove('mo');phu.classList.remove('mo');document.body.style.overflow=''};
+document.getElementById('bang-body').addEventListener('click',e=>{ if(e.target.closest('tr.bam')) mo() });
+document.getElementById('nut-dong').addEventListener('click',dong);
+phu.addEventListener('click',dong);
+addEventListener('keydown',e=>{ if(e.key==='Escape') dong() });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MÀN 3 — BẢNG GIÁ  ·  danh sách chính + đào sâu vào panel
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* `billing.pricing_basis` — 11 dòng, đúng số hạt giống của migration 0943.
+   Mỗi dòng nói: component nào tính tiền theo cột nào, và ĐƠN VỊ của đơn giá.
+   Form nhập giá SINH TỪ bảng này, không hardcode danh sách metric. */
+const BASIS=[
+  {c:'llm',            m:'input_tokens',      per:1e6,  dvi:'đ /1M token'},
+  {c:'llm',            m:'output_tokens',     per:1e6,  dvi:'đ /1M token'},
+  {c:'llm',            m:'cache_write_tokens',per:1e6,  dvi:'đ /1M token'},
+  {c:'llm',            m:'cache_read_tokens', per:1e6,  dvi:'đ /1M token'},
+  {c:'embed',          m:'input_tokens',      per:1e6,  dvi:'đ /1M token'},
+  {c:'tts',            m:'chars',             per:1,    dvi:'đ /ký tự'},
+  {c:'stt',            m:'audio_sec',         per:1,    dvi:'đ /giây',  pp:'conversation'},
+  {c:'stt',            m:'wall_ms',           per:60000,dvi:'đ /phút',  pp:'stream'},
+  {c:'vad',            m:'audio_sec',         per:1,    dvi:'đ /giây'},
+  {c:'speaker_verify', m:'audio_sec',         per:1,    dvi:'đ /giây'},
+  {c:'call',           m:'wall_ms',           per:60000,dvi:'đ /phút'},
+];
+/* `billing.purpose` — 4 nhãn KHÔNG tính khách (chốt ở THIET-KE-CHOT §9).
+   `null` = chưa phân loại: nhãn mới do agent sinh ra, phải chọn tường minh. */
+const PURPOSE=[
+  {n:'conversation',b:true},  {n:'summary',b:true},   {n:'suggestions',b:true},
+  {n:'embed',b:true},         {n:'stream',b:true},    {n:'session',b:true},
+  {n:'memory',b:false},       {n:'warm_cache',b:false},
+  {n:'addressee_gate',b:false},{n:'semcache',b:false},
+  {n:'rerank',b:null},        {n:'guardrail',b:null},
+];
+/* Ba lỗ giá — đọc như tình huống thật: thêm provider/model mới rồi quên đặt giá.
+   `uoc` = tiền ĐANG MẤT mỗi kỳ (lượng đo × giá bộ nháp). */
+const LO_GIA=[
+  {c:'llm',pp:'conversation',prov:'google',    model:'gemini-2.5-flash',m:'input_tokens', ev:412,do:'1,84 M token',  uoc:1.84e6/1e6* 7200},
+  {c:'llm',pp:'conversation',prov:'google',    model:'gemini-2.5-flash',m:'output_tokens',ev:412,do:'0,61 M token',  uoc:0.61e6/1e6*28800},
+  {c:'tts',pp:'conversation',prov:'elevenlabs',model:'eleven_v3',       m:'chars',        ev: 96,do:'128.400 ký tự', uoc:128400*0.41},
+];
+const LO_TONG=LO_GIA.reduce((s,l)=>s+l.uoc,0);
+
+/* Bộ giá. `dungRoi` = đã sinh ra `rated_usage` ⇒ trigger DB chặn mọi UPDATE. */
+const BO_GIA=[
+  {ma:'pv_2026q3_std',   ten:'Chuẩn Q3/2026',   tt:'active',  mac:true, wsp:3,dungRoi:true},
+  {ma:'pv_2026q4_draft', ten:'Nháp Q4/2026',    tt:'inactive',mac:false,wsp:0,dungRoi:false},
+  {ma:'pv_ent_greenpark',ten:'Riêng Green Park',tt:'active',  mac:false,wsp:1,dungRoi:true},
+  {ma:'pv_2026q2_std',   ten:'Chuẩn Q2/2026',   tt:'inactive',mac:false,wsp:0,dungRoi:true},
+];
+/* Dòng giá. Đơn giá khớp đơn giá suy ra ở màn Hoá đơn — cùng một bộ giá thì
+   hai màn không được nói hai số. */
+const ITEM={
+  pv_2026q3_std:[
+    {c:'llm',pp:'',prov:'anthropic',model:'claude-opus-5',m:'input_tokens',      g:49500},
+    {c:'llm',pp:'',prov:'anthropic',model:'claude-opus-5',m:'output_tokens',     g:98600},
+    {c:'llm',pp:'',prov:'anthropic',model:'claude-opus-5',m:'cache_write_tokens',g:61900},
+    {c:'llm',pp:'',prov:'anthropic',model:'claude-opus-5',m:'cache_read_tokens', g: 4950},
+    {c:'embed',pp:'',prov:'openai',model:'text-embed-3',  m:'input_tokens',      g: 2000},
+    {c:'tts',pp:'',prov:'',model:'',                      m:'chars',             g:0.126},
+    {c:'stt',pp:'conversation',prov:'',model:'',          m:'audio_sec',         g: 3.74},
+    {c:'speaker_verify',pp:'',prov:'',model:'',           m:'audio_sec',         g: 4.32},
+    {c:'vad',pp:'',prov:'',model:'',                      m:'audio_sec',         g:    0},
+  ],
+  pv_2026q4_draft:[
+    {c:'llm',pp:'',prov:'anthropic',model:'claude-opus-5',   m:'input_tokens',      g: 54000},
+    {c:'llm',pp:'',prov:'anthropic',model:'claude-opus-5',   m:'output_tokens',     g:108000},
+    {c:'llm',pp:'',prov:'anthropic',model:'claude-opus-5',   m:'cache_write_tokens',g: 67500},
+    {c:'llm',pp:'',prov:'anthropic',model:'claude-opus-5',   m:'cache_read_tokens', g:  5400},
+    {c:'llm',pp:'',prov:'google',   model:'gemini-2.5-flash',m:'input_tokens',      g:  7200},
+    {c:'llm',pp:'',prov:'google',   model:'gemini-2.5-flash',m:'output_tokens',     g: 28800},
+    {c:'embed',pp:'',prov:'openai',model:'text-embed-3',     m:'input_tokens',      g:  2000},
+    {c:'tts',pp:'',prov:'',model:'',                         m:'chars',             g: 0.132},
+    {c:'tts',pp:'',prov:'elevenlabs',model:'eleven_v3',      m:'chars',             g:  0.41},
+    {c:'stt',pp:'conversation',prov:'',model:'',             m:'audio_sec',         g:  3.92},
+    {c:'speaker_verify',pp:'',prov:'',model:'',              m:'audio_sec',         g:  4.32},
+  ],
+  pv_ent_greenpark:[
+    {c:'llm',pp:'',prov:'anthropic',model:'claude-opus-5',m:'input_tokens',      g:44550},
+    {c:'llm',pp:'',prov:'anthropic',model:'claude-opus-5',m:'output_tokens',     g:88740},
+    {c:'llm',pp:'',prov:'anthropic',model:'claude-opus-5',m:'cache_write_tokens',g:55710},
+    {c:'llm',pp:'',prov:'anthropic',model:'claude-opus-5',m:'cache_read_tokens', g: 4455},
+    {c:'embed',pp:'',prov:'openai',model:'text-embed-3',  m:'input_tokens',      g: 1800},
+    {c:'tts',pp:'',prov:'',model:'',                      m:'chars',             g:0.113},
+    {c:'stt',pp:'conversation',prov:'',model:'',          m:'audio_sec',         g: 3.37},
+    {c:'speaker_verify',pp:'',prov:'',model:'',           m:'audio_sec',         g: 3.89},
+    {c:'vad',pp:'',prov:'',model:'',                      m:'audio_sec',         g:    0},
+  ],
+  pv_2026q2_std:[
+    {c:'llm',pp:'',prov:'anthropic',model:'claude-opus-5',m:'input_tokens',     g:45000},
+    {c:'llm',pp:'',prov:'anthropic',model:'claude-opus-5',m:'output_tokens',    g:90000},
+    {c:'llm',pp:'',prov:'anthropic',model:'claude-opus-5',m:'cache_read_tokens',g: 4500},
+    {c:'embed',pp:'',prov:'openai',model:'text-embed-3',  m:'input_tokens',     g: 2000},
+    {c:'tts',pp:'',prov:'',model:'',                      m:'chars',            g:0.118},
+    {c:'stt',pp:'conversation',prov:'',model:'',          m:'audio_sec',        g:  3.5},
+    {c:'speaker_verify',pp:'',prov:'',model:'',           m:'audio_sec',        g: 4.05},
+    {c:'vad',pp:'',prov:'',model:'',                      m:'audio_sec',        g:    0},
+  ],
+};
+/* `ma: null` = chưa gán riêng ⇒ `resolve_price_version` rơi về bộ `is_default`.
+   Đó là đường đi BÌNH THƯỜNG, không phải lỗi — nên UI không gắn cờ cảnh báo.
+   `dt` = doanh thu kỳ này. Green Park CỐ Ý bằng đúng `TONG` của màn Lượt dùng:
+   cùng một workspace thì hai màn không được nói hai số. */
+const GAN=[
+  {ws:'Green Park',  ma:'pv_ent_greenpark',tu:'01/07/2026',dt:TONG},
+  {ws:'Sunrise City',ma:'pv_2026q3_std',   tu:'01/07/2026',dt:742180},
+  {ws:'Du Test',     ma:'pv_2026q3_std',   tu:'01/08/2026',dt:186400},
+  {ws:'Lakeview',    ma:null,              tu:null,        dt: 98240},
+];
+const DT_TONG=GAN.reduce((s,g)=>s+g.dt,0);
+const DT_KY_TRUOC=1988900;                 // để suy ra delta, không hardcode %
+const BO_MAC_DINH=BO_GIA.find(b=>b.mac);
+const basisCua=(c,m)=>BASIS.find(b=>b.c===c&&b.m===m);
+const giaHien=g=>g===0?'0'
+  :(g<1?g.toLocaleString('vi-VN',{minimumFractionDigits:3,maximumFractionDigits:3})
+       :g.toLocaleString('vi-VN'));
+const pillTT=tt=>tt==='active'
+  ? '<span class="pill pill-ok"><span class="dot"></span>Đang áp</span>'
+  : '<span class="pill pill-neu">Chưa áp</span>';
+
+/* ── Dải ngoại lệ (chỉ hiện khi CÓ) ──────────────────────────────────── */
+document.getElementById('bg-mat').textContent = F.tien(LO_TONG)+' ₫';
+/* Không có lỗ giá và không có nhãn lạ thì dải này BIẾN MẤT hẳn — đó là điều
+   kiện để nó còn nghĩa lúc xuất hiện. */
+if(!LO_GIA.length && !PURPOSE.some(p=>p.b===null))
+  document.getElementById('bg-ngoaile').hidden=true;
+
+/* ── ① Ba ô: mỗi ô nói một thứ CHỈ CÓ Ở MÀN NÀY ──────────────────────── */
+const rieng=GAN.filter(g=>g.ma && g.ma!==BO_MAC_DINH.ma).length;
+const dDT=(DT_TONG-DT_KY_TRUOC)/DT_KY_TRUOC*100;
+document.getElementById('tt-dt').textContent=F.tien(DT_TONG)+' ₫';
+const dEl=document.getElementById('tt-dt-delta');
+dEl.textContent=(dDT>=0?'+':'−')+F.pt(Math.abs(dDT));
+dEl.className='delta '+(dDT>=0?'delta-len':'delta-xuong');
+document.getElementById('tt-bo').textContent=BO_MAC_DINH.ten;
+document.getElementById('tt-bo-ma').textContent=BO_MAC_DINH.ma;
+document.getElementById('tt-rieng').textContent=rieng+' / '+GAN.length;
+document.getElementById('tt-rieng-phu').textContent=
+  (GAN.length-rieng)+' workspace dùng bộ mặc định';
+
+/* ── ② Danh sách bộ giá — 5 cột, hàng cao, không dòng phụ ─────────────── */
+document.getElementById('bg-ds').innerHTML = BO_GIA.map(b=>`<tr data-bo="${b.ma}">`
+  +TD(`<div class="chinh"><span class="ten">${b.ten}</span><span class="ma">${b.ma}</span></div>`)
+  +TD(pillTT(b.tt)+(b.mac?' <span class="pill pill-neu">Mặc định</span>':''))
+  +TD((ITEM[b.ma]||[]).length,'p')
+  +TD(b.wsp||'<span class="rong">—</span>','p')
+  +TD('<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m10 6 6 6-6 6"/></svg>','mui')
+  +`</tr>`).join('');
+
+/* ══ Panel dùng chung ═══════════════════════════════════════════════════ */
+const p2=document.getElementById('p2'), lp2=document.getElementById('lp2');
+function moP2({tieu,phu='',nut='',than}){
+  document.getElementById('p2-tieu').textContent=tieu;
+  document.getElementById('p2-phu').innerHTML=phu;
+  document.getElementById('p2-nut').innerHTML=nut;
+  document.getElementById('p2-than').innerHTML=than;
+  document.getElementById('p2-than').scrollTop=0;
+  p2.classList.add('mo'); lp2.classList.add('mo'); document.body.style.overflow='hidden';
+}
+function dongP2(){p2.classList.remove('mo');lp2.classList.remove('mo');document.body.style.overflow=''}
+document.getElementById('p2-dong').addEventListener('click',dongP2);
+lp2.addEventListener('click',dongP2);
+addEventListener('keydown',e=>{ if(e.key==='Escape') dongP2() });
+
+const khoi=(nhan,noi,ghi='')=>`<div class="p2-khoi">
+  <div class="p2-nhan"><span class="t-nhan">${nhan}</span><span class="kl"></span></div>
+  ${noi}${ghi?`<p class="p2-ghi">${ghi}</p>`:''}</div>`;
+const hop=noi=>`<div class="p2-hop"><div class="bang-cuon"><table>${noi}</table></div></div>`;
+
+/* ── PANEL: lỗ giá — 4 cột, không phải 8 ─────────────────────────────── */
+function panelLoGia(){
+  moP2({
+    tieu:'Lỗ giá',
+    phu:'<span class="pill pill-do"><span class="dot"></span>'+F.tien(LO_TONG)+' ₫ mỗi kỳ</span>',
+    than: khoi('3 tổ hợp có lượt dùng nhưng không dòng giá nào khớp',
+      hop('<thead><tr>'+TH('Tổ hợp')+TH('Lượt dùng',1)+TH('Đang mất',1)+TH('')+'</tr></thead><tbody>'
+        + LO_GIA.map(l=>`<tr>`
+            +TD(`<div class="chinh"><span class="ten mono">${l.c} · ${l.prov}/${l.model}</span>`
+               +`<span class="ma">${l.m} · ${l.pp}</span></div>`)
+            +TD(`<div class="chinh" style="align-items:flex-end"><span class="mono">${F.so(l.ev)} event</span>`
+               +`<span class="ma">${l.do}</span></div>`,'p')
+            +TD(`<span style="color:var(--alert-fg)">${F.tien(l.uoc)} ₫</span>`,'p tien')
+            +TD('<button class="nut-phu" class="nut-hang">Đặt giá</button>','p')
+            +`</tr>`).join('')
+        + `<tr class="hang-tong">`+TD('Tổng')+TD('')
+          +TD(`<span style="color:var(--alert-fg)">${F.tien(LO_TONG)} ₫</span>`,'p tien')+TD('')+`</tr>`
+        + '</tbody>'),
+      'Nguồn: view <code>billing.price_coverage_gap</code>. Bảng này <b>rỗng</b> là điều kiện để kích hoạt một bộ giá.'),
+  });
+}
+
+/* ── PANEL: gán workspace ────────────────────────────────────────────── */
+function panelGan(){
+  moP2({
+    tieu:'Gán bộ giá cho workspace',
+    phu:'<span class="t-phu">'+GAN.filter(g=>g.ma).length+' / '+GAN.length+' đã gán</span>',
+    than: khoi('Workspace',
+      hop('<thead><tr>'+TH('Workspace')+TH('Bộ giá')+TH('Hiệu lực từ')+TH('')+'</tr></thead><tbody>'
+        + GAN.map(g=>`<tr>`
+            +TD(`<span class="ten">${g.ws}</span>`)
+            +TD(g.ma?`<span class="mono t-phu">${g.ma}</span>`
+                    :'<span class="pill pill-warn">Chưa gán · dùng bộ mặc định</span>')
+            +TD(g.tu?`<span class="mono t-phu">${g.tu}</span>`:KHONG)
+            +TD('<button class="nut-phu" class="nut-hang">Gán</button>','p')
+            +`</tr>`).join('') + '</tbody>'),
+      'Mốc mới <b>đóng đúng tại</b> mốc mở của khoảng cũ. Hở thì usage rơi vào khe không bộ giá nào phủ '
+      +'(miễn phí, âm thầm); chồng thì <code>EXCLUDE</code> chặn (ồn ào, an toàn). '
+      +'Gán lùi vào kỳ đã định giá → <code>409 MOC_QUA_KHU_DA_DINH_GIA</code>.'),
+  });
+}
+
+/* ── PANEL: nhãn purpose ─────────────────────────────────────────────── */
+function panelPurpose(){
+  moP2({
+    tieu:'Nhãn purpose',
+    phu:'<span class="pill pill-warn"><span class="dot"></span>2 chưa phân loại</span>',
+    than: khoi('12 nhãn',
+      `<div class="p2-hop"><div class="ds-purpose">`
+      + PURPOSE.map(p=>`<div class="pp-hang${p.b===null?' pp-chua':''}">
+          <span class="nh">${p.n}</span>
+          <span class="phai" style="margin-left:auto;display:flex;align-items:center;gap:10px">
+            <span class="t-phu">${p.b===null?'chưa phân loại':(p.b?'tính khách':'không tính')}</span>
+            <span class="sw" role="switch" aria-checked="${p.b===null?'mixed':p.b}"></span>
+          </span></div>`).join('')
+      + `</div></div>`,
+      'Nhãn không nằm trong công thức thì không tính khách. Nhãn mới do agent sinh ra ở trạng thái '
+      +'<b>chưa phân loại</b> — phải chọn tường minh, mặc định không tính.'),
+  });
+}
+
+/* ── PANEL: chi tiết một bộ giá ──────────────────────────────────────── */
+let daPreview=null;      // mã bộ đã preview trong phiên hiện tại
+
+function panelBoGia(ma){
+  const b=BO_GIA.find(x=>x.ma===ma), items=ITEM[ma]||[];
+
+  /* Dòng giá NHÓM THEO COMPONENT — dễ đọc hơn hẳn một bảng 6 cột phẳng. */
+  const thuTu=[...new Set(items.map(i=>i.c))];
+  const bangItem=hop('<thead><tr>'+TH('Metric')+TH('Provider / Model')
+      +TH('Đơn giá',1)+TH('Đơn vị',1)+'</tr></thead><tbody>'
+    + thuTu.map(c=>`<tr class="g-dau">`+TD(c,'')+TD('')+TD('')+TD('')+`</tr>`
+        + items.filter(i=>i.c===c).map(i=>{
+            const ba=basisCua(i.c,i.m), khong=i.g===0;
+            return `<tr>`+TD(`<span class="mono t-phu">${i.m}${i.pp?' · '+i.pp:''}</span>`)
+              +TD(i.prov?`<span class="mono t-phu">${i.prov} / ${i.model}</span>`
+                        :'<span class="t-phu">mọi provider</span>')
+              +TD(khong?'<span class="rong">0</span>':giaHien(i.g),'p tien')
+              +TD(`<span class="t-phu mono">${khong?'không tính tiền':(ba?.dvi??'—')}</span>`,'p')
+              +`</tr>`;
+          }).join('')).join('') + '</tbody>');
+
+  /* Form chỉ hiện khi bộ CHƯA sinh ra tiền — bộ đã sinh tiền thì trigger
+     `price_item_bat_bien` chặn, bày một form không gửi được là mời gõ rồi ăn lỗi. */
+  const form = b.dungRoi ? '' : khoi('Thêm dòng giá', `<div class="bg-form">
+      <div class="bg-form-hang">
+        <label class="tr"><span class="t-phu">Component</span><select class="o-sel" id="fm-comp"></select></label>
+        <label class="tr"><span class="t-phu">Metric</span><select class="o-sel" id="fm-metric"></select></label>
+        <label class="tr"><span class="t-phu">Purpose</span><select class="o-sel" id="fm-purpose"></select></label>
+        <label class="tr"><span class="t-phu">Provider / Model</span>
+          <input class="o-loc" id="fm-pp" placeholder="để trống = mọi provider" style="width:100%;padding-left:11px" /></label>
+        <label class="tr rong"><span class="t-phu">Đơn giá</span>
+          <span class="o-gia"><input class="o-loc" id="fm-gia" inputmode="decimal" placeholder="0"
+                style="width:100%;padding-left:11px;text-align:right;font-family:var(--mono)" />
+            <b class="mono" id="fm-dvi">—</b></span></label>
+      </div>
+      <p class="bg-goi" id="fm-goi"></p>
+      <div class="hang-nut" style="margin-top:11px"><button class="nut-chinh">Thêm dòng</button></div>
+    </div>`);
+
+  moP2({
+    tieu: b.ten,
+    phu: `<span class="mono t-phu">${b.ma}</span>${pillTT(b.tt)}`
+       + (b.mac?'<span class="pill pill-neu">Mặc định</span>':'')
+       + (b.wsp?`<span class="t-phu">${b.wsp} workspace</span>`:''),
+    nut: `<button class="nut-phu" id="bg-preview">Preview 30 ngày</button>`
+       + `<button class="nut-chinh" id="bg-kichhoat"${(b.tt==='active'||daPreview!==ma)?' disabled':''}>`
+       + (b.tt==='active'?'Đã kích hoạt':'Kích hoạt')+`</button>`,
+    than:
+      /* Bộ đã sinh ra tiền: nói TRƯỚC, đừng để người dùng phát hiện bằng 500. */
+      (b.dungRoi?`<div class="dai dai-vang" style="margin-bottom:18px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        <span>Bộ này <strong>đã sinh ra tiền</strong> — không sửa được. Đổi giá = tạo bộ mới.</span></div>`:'')
+      + `<div id="pv-cho"></div>`
+      + khoi(items.length+' dòng giá', bangItem)
+      + form,
+  });
+
+  if(!b.dungRoi) dungForm();
+  document.getElementById('bg-preview').addEventListener('click',()=>chayPreview(ma));
+}
+
+/* ── Form sinh từ `pricing_basis` ────────────────────────────────────── */
+function dungForm(){
+  const fmC=document.getElementById('fm-comp'), fmM=document.getElementById('fm-metric');
+  const fmP=document.getElementById('fm-purpose'), fmD=document.getElementById('fm-dvi');
+  const fmG=document.getElementById('fm-goi');
+  if(!fmC) return;
+  if(!fmC.options.length){
+    fmC.innerHTML=[...new Set(BASIS.map(b=>b.c))].map(c=>`<option>${c}</option>`).join('');
+    fmP.innerHTML='<option value="">(mọi purpose)</option>'
+      +PURPOSE.filter(p=>p.b!==false).map(p=>`<option${p.b===null?' disabled':''}>${p.n}</option>`).join('');
+    fmC.addEventListener('change',dungForm); fmM.addEventListener('change',dungForm);
+  }
+  const c=fmC.value, ds=BASIS.filter(b=>b.c===c);
+  /* STT: MỘT cơ sở tính tiền, không phải hai. `(stt,conversation)/audio_sec` và
+     `(stt,stream)/wall_ms` cùng đo một quãng tiếng — đặt giá cả hai là thu tiền
+     STT hai lần. DB có unique `price_item_stt_single_basis` chặn; UI phải nói
+     TRƯỚC, không để người dùng ăn 409 sau khi bấm. */
+  const co=m=>(ITEM[boDangXem]||[]).some(i=>i.c==='stt'&&i.m===m);
+  fmM.innerHTML=ds.map(b=>{
+    const chan=c==='stt'&&(ITEM[boDangXem]||[]).some(i=>i.c==='stt')&&!co(b.m);
+    return `<option value="${b.m}"${chan?' disabled':''}>${b.m}${chan?' — đã chọn cơ sở khác':''}</option>`;
+  }).join('');
+  const ba=ds.find(b=>b.m===fmM.value)||ds[0];
+  fmD.textContent=ba?.dvi??'—';
+  if(ba?.pp) fmP.value=ba.pp;
+  const g=[];
+  if(c==='stt') g.push('<b>STT chỉ một cơ sở</b> — theo giây hoặc theo phút stream, không được cả hai.');
+  if(c==='vad'||c==='call') g.push('Component này thường để giá <b>0</b>: nó đo nhưng không tính khách.');
+  g.push('Để trống provider/model = áp cho mọi provider; dòng cụ thể hơn thắng dòng chung.');
+  fmG.innerHTML=g.join(' ');
+}
+
+/* ── Preview: diff so với bộ đang chạy ───────────────────────────────── */
+function chayPreview(ma){
+  const nen=ITEM['pv_2026q3_std'], nhap=ITEM[ma]||[];
+  /* Tỷ lệ giá theo component, so KHỚP TỪNG CẶP `(metric, provider, model)`.
+     KHÔNG lấy trung bình đơn giá cả component: bộ nháp thêm mấy dòng Gemini giá
+     rẻ sẽ kéo trung bình xuống và màn báo «LLM giảm 16%» trong khi mọi dòng
+     Anthropic đều TĂNG 9%. Dòng MỚI (trước là lỗ giá) đi vào hàng riêng. */
+  const khoaI=i=>`${i.m}|${i.prov}|${i.model}`;
+  const tyGia=c=>{
+    const a=nen.filter(i=>i.c===c), b=nhap.filter(i=>i.c===c), cap=[];
+    for(const y of b){ const x=a.find(z=>khoaI(z)===khoaI(y)); if(x&&x.g>0) cap.push(y.g/x.g); }
+    return cap.length ? cap.reduce((s,v)=>s+v,0)/cap.length : 1;
+  };
+  let cu=0,moi=0; const hang=[];
+  for(const c of COMP){
+    const c0=TONG_COMP[c.ma], c1=c0*tyGia(c.ma);
+    cu+=c0; moi+=c1; hang.push({nhan:c.nhan,mau:c.mau,c0,c1});
+  }
+  const phu = nhap===nen ? 0 : LO_TONG;
+  if(phu){ moi+=phu; hang.push({nhan:'Phủ lỗ giá',mau:'var(--alert-fg)',c0:0,c1:phu}); }
+  const d=moi-cu, len=d>=0;
+  const sac=v=>v>=0?'var(--alert-fg)':'var(--acd)';
+  const dau=v=>(v>=0?'+':'−')+F.tien(Math.abs(v));
+
+  document.getElementById('pv-cho').innerHTML = khoi('Preview 30 ngày',
+    `<div class="p2-hop">
+      <div class="hd-dau" style="padding:14px 15px 12px;gap:14px">
+        <div><div class="t-nhan">Bộ đang chạy</div><div class="so-nho mono">${F.tien(cu)} ₫</div></div>
+        <div style="align-self:center;color:var(--muted-2)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h16m0 0-5-5m5 5-5 5"/></svg></div>
+        <div><div class="t-nhan">Bộ này</div><div class="so-nho mono">${F.tien(moi)} ₫</div></div>
+        <div class="tong" style="margin-left:auto;text-align:right">
+          <div class="t-nhan">Chênh lệch</div>
+          <div class="so-nho mono" style="color:${sac(d)}">${dau(d)} ₫</div>
+          <div class="t-phu">${(len?'+':'−')+F.pt(Math.abs(d)/cu*100)}</div></div>
+      </div>
+      <div class="bang-cuon"><table>
+        <thead><tr>${TH('Component')}${TH('Đang chạy',1)}${TH('Bộ này',1)}${TH('Chênh',1)}</tr></thead>
+        <tbody>${hang.map(h=>`<tr>`
+          +TD(`<span class="comp-ten"><i style="background:${h.mau};width:9px;height:9px;border-radius:2px;display:inline-block"></i> ${h.nhan}</span>`)
+          +TD(F.tien(h.c0),'p')+TD(F.tien(h.c1),'p')
+          +TD(`<span style="color:${sac(h.c1-h.c0)}">${dau(h.c1-h.c0)}</span>`,'p')+`</tr>`).join('')}</tbody>
+      </table></div>
+    </div>`,
+    'Chạy trong transaction rồi <code>ROLLBACK</code> — không ghi dòng nào. '
+    +'Không có bước này thì kích hoạt một bộ giá là một phép thử trên tiền thật.');
+
+  daPreview=ma;
+  const kh=document.getElementById('bg-kichhoat');
+  if(kh && BO_GIA.find(x=>x.ma===ma).tt!=='active') kh.disabled=false;
+  document.getElementById('p2-than').scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ── PANEL: doanh thu theo workspace ─────────────────────────────────── */
+function panelDoanhThu(){
+  const sx=[...GAN].sort((a,b)=>b.dt-a.dt);
+  moP2({
+    tieu:'Doanh thu kỳ này',
+    phu:`<span class="mono t-phu">01/08 – 20/08/2026</span>`
+        +`<span class="pill pill-neu"><span class="dot"></span>Kỳ đang chạy</span>`,
+    than: khoi(GAN.length+' workspace',
+      hop('<thead><tr>'+TH('Workspace')+TH('Bộ giá')+TH('Doanh thu',1)+TH('Tỷ trọng',1)+'</tr></thead><tbody>'
+        + sx.map(g=>{
+            const pt=g.dt/DT_TONG*100;
+            return `<tr>`+TD(`<span class="ten">${g.ws}</span>`)
+              +TD(g.ma?`<span class="mono t-phu">${g.ma}</span>`
+                      :`<span class="mono t-phu">${BO_MAC_DINH.ma}</span> <span class="t-phu">(mặc định)</span>`)
+              +TD(F.tien(g.dt)+' ₫','p tien')
+              +TD(`<span class="t-phu">${F.pt(pt)}</span>`,'p')+`</tr>`;
+          }).join('')
+        + `<tr class="hang-tong">`+TD('Tổng')+TD('')+TD(F.tien(DT_TONG)+' ₫','p tien')
+          +TD('','p')+`</tr>` + '</tbody>'),
+      'Tính từ <code>billing.rated_usage</code> của mọi workspace. Hàng Green Park '
+      +'khớp đúng tổng ở màn <b>Lượt dùng</b> — cùng một workspace thì hai màn '
+      +'không được nói hai số.'),
+  });
+}
+
+/* ── Đấu nối ─────────────────────────────────────────────────────────── */
+let boDangXem=null;
+const PANEL={loGia:panelLoGia, gan:panelGan, purpose:panelPurpose,
+             doanhThu:panelDoanhThu,
+             boMacDinh:()=>{ boDangXem=BO_MAC_DINH.ma; panelBoGia(boDangXem); }};
+document.querySelectorAll('[data-mo]').forEach(b=>
+  b.addEventListener('click',()=>PANEL[b.dataset.mo]()));
+document.getElementById('bg-ds').addEventListener('click',e=>{
+  const tr=e.target.closest('tr[data-bo]'); if(!tr) return;
+  boDangXem=tr.dataset.bo; panelBoGia(boDangXem);
+});
+
+
+/* ══ Bộ chuyển màn — NAV, không phải tab bar ═════════════════════════════
+   Vòng 3 có cả nav (chết) lẫn tab bar (sống) = hai bộ điều hướng cho một
+   việc. Bỏ tab bar: «Bảng giá» là màn thứ ba ngang hàng, mà một tab bar chỉ
+   lặp 2 trong 3 mục thì luôn thiếu một chỗ để bấm. */
+const MAN={usage:'Lượt dùng', hoadon:'Hoá đơn', banggia:'Bảng giá'};
+document.querySelectorAll('[data-man]').forEach(b=>b.addEventListener('click',()=>{
+  const k=b.dataset.man;
+  document.querySelectorAll('[data-man]').forEach(x=>x.classList.toggle('hoat',x===b));
+  for(const m in MAN) document.getElementById('man-'+m).hidden = m!==k;
+  document.getElementById('tb-tieu').textContent=MAN[k];
+  if(k==='usage') veChart();   // lúc ẩn thì clientWidth = 0 ⇒ phải vẽ lại
+  scrollTo({top:0});
+}));
+
+/* Preset kỳ — chỉ đổi trạng thái nhìn thấy, demo không có backend. */
+document.querySelectorAll('.mang [aria-pressed]').forEach(b=>b.addEventListener('click',()=>{
+  b.parentElement.querySelectorAll('[aria-pressed]').forEach(x=>x.setAttribute('aria-pressed','false'));
+  b.setAttribute('aria-pressed','true');
+}));
+</script>
+</body>
+</html>
