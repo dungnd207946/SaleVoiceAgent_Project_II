@@ -1,0 +1,212 @@
+# odyssey-models — shared model microservices, decoupled from the agents.
+#
+#   embed   :8013  e5-large fp32 (1024d) + BM25 sparse + SigLIP2 image/text tower  (GPU)
+#   stt     :8012  sherpa Zipformer  — streaming STT over WebSocket                (CPU)
+#   speaker :8014  sherpa CAM++      — speaker embedding over HTTP                 (CPU)
+#   tts-omnivoice :8016  OmniVoice santa-tts-omnivoice (torch, fine-tune riêng) — batch synth over WebSocket (GPU) — PRIVATE HF repo cần HF_TOKEN; CC-BY-NC-4.0, non-commercial
+#
+# embed, tts-omnivoice and lipsync-musetalk sit behind the `gpu` compose profile
+# (BM25 in embed stays CPU-only regardless). A bare `docker compose up -d` starts
+# just stt + speaker; the full stack needs `docker compose --profile gpu up -d`.
+# GPU services need nvidia-container-toolkit on the host — see README.md.
+# All services are LAN-visible (0.0.0.0); access is gated by a shared bearer token
+# (ODYSSEY_MODELS_TOKEN from .env — health endpoints stay open). Models cache to
+# named volumes. Deploy on-prem chồng thêm docker-compose.onprem.yml (xem file đó).
+
+# Ghim tên project: không ghim thì Compose lấy tên folder, đổi folder là đổi tên container.
+name: odyssey-models
+
+services:
+  embed:
+    build:
+      context: .
+      dockerfile: embed/Dockerfile
+    image: odyssey-embed:local
+    profiles: ["gpu"]
+    ports:
+      - "0.0.0.0:8013:8013"
+    environment:
+      - EMBED_DENSE_MODEL=${EMBED_DENSE_MODEL:-intfloat/multilingual-e5-large}
+      - EMBED_SPARSE_MODEL=${EMBED_SPARSE_MODEL:-Qdrant/bm25}
+      - EMBED_VISUAL_MODEL=${EMBED_VISUAL_MODEL:-google/siglip2-base-patch16-256}
+      - EMBED_DEVICE=${EMBED_DEVICE:-cuda}
+      - EMBED_WARMUP=${EMBED_WARMUP:-dense}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - ODYSSEY_MODELS_TOKEN=${ODYSSEY_MODELS_TOKEN}
+      - ODYSSEY_LOG_LEVEL=${ODYSSEY_LOG_LEVEL:-INFO}
+    volumes:
+      - model_cache:/root/.cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,json,sys; d=json.load(urllib.request.urlopen('http://127.0.0.1:8013/health')); sys.exit(0 if d['status']=='ok' else 1)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 600s
+
+  # Streaming STT — standalone sherpa-onnx Zipformer over WebSocket (CPU).
+  # Self-contained (own sherpa-onnx, no agent image). Any service can use it by
+  # streaming PCM16/16k and reading partial/final JSON. LAN-visible.
+  stt:
+    build:
+      context: ./stt
+    image: odyssey-stt:local
+    ports:
+      - "0.0.0.0:8012:8012"
+    environment:
+      - STT_MODEL_DIR=${STT_MODEL_DIR:-/models/odyssey-stt}
+      - STT_MODEL_QUANTIZE=${STT_MODEL_QUANTIZE:-false}
+      - STT_PRESERVE_CASE=${STT_PRESERVE_CASE:-false}   # lowercase + sentence-case
+      - STT_SAMPLE_RATE=${STT_SAMPLE_RATE:-16000}
+      - STT_WS_PORT=8012   # cố định: khớp port publish "0.0.0.0:8012:8012" ở trên
+      - STT_NUM_THREADS=${STT_NUM_THREADS:-2}
+      - STT_DECODING_METHOD=${STT_DECODING_METHOD:-greedy_search}   # modified_beam_search để dùng hotwords
+      - STT_HOTWORDS_FILE=${STT_HOTWORDS_FILE:-}    # file trong /models (bind mount), 1 phrase/dòng
+      - STT_HOTWORDS_SCORE=${STT_HOTWORDS_SCORE:-1.5}
+      - STT_RULE1=${STT_RULE1:-2.4}
+      - STT_RULE2=${STT_RULE2:-1.2}
+      - STT_RULE3=${STT_RULE3:-20.0}
+      - STT_HF_REPO=${STT_HF_REPO:-NobleX-AI/santa-stt}
+      - STT_HF_REVISION=${STT_HF_REVISION:-prod}   # branch/tag/sha trên HF; mọi máy đều kéo từ prod
+      - HF_TOKEN=${HF_TOKEN:-}
+      - ODYSSEY_MODELS_TOKEN=${ODYSSEY_MODELS_TOKEN}
+    volumes:
+      - ./models:/models          # rw: mỗi lần boot stt so commit HF với models/odyssey-stt/.revision, khác thì tải và đổi chỗ (bản cũ ở odyssey-stt.prev)
+    restart: unless-stopped
+
+  # Speaker embedding — standalone sherpa-onnx CAM++ over HTTP (CPU). Self-contained
+  # (own sherpa-onnx, no agent image). Workers reach it via SPEAKER_REMOTE_URL:
+  # POST /embed {"audio_b64": ...} → {"embedding": [...]}. The single CAM++ ONNX
+  # auto-downloads from HF to the speaker_cache volume on first boot.
+  speaker:
+    build:
+      context: ./speaker
+    image: odyssey-speaker:local
+    ports:
+      - "0.0.0.0:8014:8014"
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+      - ODYSSEY_MODELS_TOKEN=${ODYSSEY_MODELS_TOKEN}
+    volumes:
+      - speaker_cache:/models       # single CAM++ ONNX auto-pulled from HF on first boot
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,json,sys; d=json.load(urllib.request.urlopen('http://127.0.0.1:8014/health')); sys.exit(0 if d['status']=='ok' else 1)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # OmniVoice-Luna-vi — CC-BY-NC-4.0 (non-commercial), see tts_omnivoice/README.md.
+  # Not truly streaming (whole-utterance generate()) — TTFB ≈ total synth time.
+  tts-omnivoice:
+    build:
+      context: ./tts_omnivoice
+    image: odyssey-tts-omnivoice:local
+    profiles: ["gpu"]
+    ports:
+      - "0.0.0.0:8016:8016"
+    environment:
+      - OMNIVOICE_MODEL_REPO=${OMNIVOICE_MODEL_REPO:-NobleX-AI/santa-tts-omnivoice}
+      - OMNIVOICE_DEVICE=${OMNIVOICE_DEVICE:-cuda:0}
+      - OMNIVOICE_NUM_STEP=${OMNIVOICE_NUM_STEP:-16}
+      - OMNIVOICE_GUIDANCE_SCALE=${OMNIVOICE_GUIDANCE_SCALE:-2.0}
+      # Trỏ vào bind-mount voices/omnivoice của repo (KHÔNG phải volume): giọng
+      # là artifact của sản phẩm, thuộc về source. Ở dev mount rw nên enroll
+      # ghi thẳng ra repo, commit được ngay; onprem mount ro — xem file đó.
+      - OMNIVOICE_CUSTOM_VOICES_DIR=${OMNIVOICE_CUSTOM_VOICES_DIR:-/app/voices}
+      - TTS_PORT=8016
+      - TTS_MAX_CONCURRENT=${OMNIVOICE_MAX_CONCURRENT:-2}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - ODYSSEY_MODELS_TOKEN=${ODYSSEY_MODELS_TOKEN}
+    volumes:
+      - omnivoice_cache:/root/.cache
+      # rw ở dev: `enroll_voice` ghi .pt thẳng vào repo, xong là `git add` được.
+      - ./voices/omnivoice:/app/voices
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8016/health').status==200 else 1)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 180s
+
+  # lipsync-musetalk — lip sync thời gian thực (MuseTalk 1.5) cho tab Voice của portal.
+  # Client là TRÌNH DUYỆT (avatarLipSync.ts), không phải agent. Số phiên cùng lúc =
+  # LIPSYNC_MAX_SESSIONS (mặc định 1 — 5060 Ti ~30 fps ≈ một luồng real-time); VRAM ~4,3 GB — cộng với embed +
+  # tts-omnivoice cùng profile `gpu` thì kiểm VRAM máy deploy.
+  lipsync-musetalk:
+    build:
+      context: ./lipsync_musetalk
+      dockerfile: Dockerfile
+    image: odyssey-lipsync-musetalk:local
+    profiles: ["gpu"]
+    ports:
+      - "0.0.0.0:8020:8020"
+      # API quản lý nhân vật (upload video / dựng / xem trước) — client là portal BACKEND.
+      - "0.0.0.0:8021:8021"
+    environment:
+      - LIPSYNC_PORT=8020
+      - LIPSYNC_HTTP_PORT=8021
+      # Nhân vật khách giữ nạp sẵn cùng lúc (LRU, mmap) — nhân vật mặc định luôn nạp.
+      - LIPSYNC_MAX_AVATARS=${LIPSYNC_MAX_AVATARS:-3}
+      - LIPSYNC_VIDEO_MAX_MB=${LIPSYNC_VIDEO_MAX_MB:-200}
+      # Đứng chờ của nhân vật khách: số frame đưa qua lại (3 ≈ 0,1s) + tốc độ — nhỏ hơn ⇒ đứng yên hơn.
+      - LIPSYNC_CHO_SO_FRAME=${LIPSYNC_CHO_SO_FRAME:-3}
+      - LIPSYNC_CHO_TOC=${LIPSYNC_CHO_TOC:-0.3}
+      # TTS cho video XEM TRƯỚC nhân vật (câu demo). Token rỗng = dùng ODYSSEY_MODELS_TOKEN.
+      - LIPSYNC_TTS_URL=${LIPSYNC_TTS_URL:-ws://tts-omnivoice:8016/tts}
+      - LIPSYNC_TTS_TOKEN=${LIPSYNC_TTS_TOKEN:-}
+      - LIPSYNC_DATA_DIR=/data
+      - LIPSYNC_BATCH_SIZE=${LIPSYNC_BATCH_SIZE:-8}
+      # Số phiên lip sync cùng lúc — giới hạn là SỨC TÍNH GPU (không phải VRAM). 5060 Ti: 1.
+      # GPU mạnh hơn: đo bằng `docker exec … python3 do_tai.py -n N` rồi nâng (README).
+      - LIPSYNC_MAX_SESSIONS=${LIPSYNC_MAX_SESSIONS:-1}
+      - LIPSYNC_FACEPARSE_REPO=${LIPSYNC_FACEPARSE_REPO:-ManyOtherFunctions/face-parse-bisent}
+      # UNet: rỗng = bản fine-tune tiếng Việt NobleX-AI/santa-lipsync-musetalk (private ⇒
+      # cần HF_TOKEN). Đặt cả ba để dùng model khác — bản gốc xem lipsync_musetalk/weights.py.
+      - LIPSYNC_UNET_REPO=${LIPSYNC_UNET_REPO:-}
+      - LIPSYNC_UNET_FILE=${LIPSYNC_UNET_FILE:-}
+      - LIPSYNC_UNET_SHA256=${LIPSYNC_UNET_SHA256:-}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - ODYSSEY_MODELS_TOKEN=${ODYSSEY_MODELS_TOKEN}
+      - ODYSSEY_LOG_LEVEL=${ODYSSEY_LOG_LEVEL:-INFO}
+    volumes:
+      # weights (~3,9 GB) + cache avatar dựng từ video nhân vật — xem lipsync_musetalk/README.md
+      - lipsync_cache:/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    # Boot ĐẦU: tải ~3,9 GB weights + dựng avatar (~2 phút GPU) trước khi mở cổng ⇒
+    # start_period dài. Các lần sau (cache khớp) sẵn sàng sau ~15s.
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8020/health').status==200 else 1)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 1200s
+
+volumes:
+  model_cache:
+  speaker_cache:
+  omnivoice_cache:
+  lipsync_cache:

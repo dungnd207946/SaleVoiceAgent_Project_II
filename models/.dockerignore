@@ -1,0 +1,11 @@
+.git
+.gitlab-ci.yml
+**/__pycache__
+**/*.pyc
+**/.venv
+**/*.egg-info
+models/
+docs/
+tests/
+.env
+*.service

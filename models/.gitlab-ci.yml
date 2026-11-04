@@ -1,0 +1,267 @@
+stages: [build, deploy]
+
+# Ba môi trường: dev (`develop`), uat (`uat`) và prod (`prod`) — giống 4 repo odyssey còn lại.
+#
+# ⚠️ Remote hiện chỉ có nhánh `develop`. Nhánh `prod` PHẢI được tạo (và protect) thì
+# hai job `*:prod` mới có lúc nào chạy. Nhánh đang làm việc (`cicd`) không khớp
+# workflow rule nào nên push lên nó KHÔNG sinh pipeline — đó là chủ ý, không phải lỗi.
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+    - if: $CI_COMMIT_BRANCH == "uat"
+    - if: $CI_COMMIT_BRANCH == "prod"
+
+variables:
+  AWS_DEFAULT_REGION: ap-southeast-1
+  ECR_URL: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com
+  IMAGE_TAG: ${CI_COMMIT_SHORT_SHA}
+  # NĂM image, NĂM repo ECR — khác 4 repo odyssey kia (mỗi repo một image).
+  # Thứ tự cố ý: hai image CPU nhẹ (stt, speaker) build trước, nên hỏng Dockerfile
+  # là biết sau ~2 phút thay vì sau khi đã ngồi chờ xong image CUDA.
+  # tts_omnivoice: OmniVoice (santa-tts-omnivoice fine-tune riêng), kiến trúc
+  # masked-diffusion. ECR repo phải TỒN TẠI TRƯỚC — xem "BƯỚC PHẢI LÀM TAY" dưới.
+  SERVICES: "stt speaker embed tts_omnivoice lipsync_musetalk"
+
+# TÊN JOB KHÔNG ĐƯỢC LÀ `image` — đó là từ khoá toàn cục của GitLab CI, nên `image:`
+# ở cột 0 bị đọc là khai báo image mặc định và cả file thành invalid (0 job).
+#
+# MỘT job build TUẦN TỰ mọi image, không phải job song song (`parallel: matrix`):
+# `embed` lẫn `tts_omnivoice` đều kéo wheel torch CUDA nhiều GB — build nặng cùng lúc
+# trên một máy on-prem là hết RAM/disk chứ không nhanh hơn.
+# Đổi lại: một service hỏng thì các image trước nó ĐÃ push (tag theo commit nên
+# không sao), log của mọi image nằm chung một job.
+.ecr-build:
+  stage: build
+  before_script:
+    - aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${ECR_URL}
+  script:
+    - |
+      set -e
+      for svc in $SERVICES; do
+        # `embed` build từ REPO ROOT vì image cần `pyproject.toml`
+        # (embed/Dockerfile §Build context). Các service còn lại tự chứa, context là
+        # chính thư mục của nó.
+        case "$svc" in
+          embed) ctx="." ;;
+          *) ctx="./$svc" ;;
+        esac
+
+        # Tên repo ECR dùng dấu gạch ngang (khớp docker-compose*.yml), tên thư mục/
+        # Dockerfile giữ dấu gạch dưới (quy ước Python package) — hai cái không nhất
+        # thiết trùng nhau, nên ánh xạ tường minh ở đây thay vì giả định svc==tên image.
+        img=$(echo "$svc" | tr '_' '-')
+
+        # KHÔNG `--pull`: base của embed/TTS là python:3.11-slim + torch CUDA (nhiều
+        # GB). Kéo lại base mỗi lần deploy là phí
+        # băng thông trên đường truyền on-prem. Thêm `--pull` khi cần vá base image.
+        # Không `--build-arg` nào: không Dockerfile nào trong repo khai ARG.
+        echo "=== build $svc (context=$ctx, image=odyssey-${img}) ==="
+        docker build -f "${svc}/Dockerfile" \
+          -t "${ECR_URL}/aidc/odyssey-${img}:${IMAGE_TAG}" \
+          -t "${ECR_URL}/aidc/odyssey-${img}:${LATEST_TAG}" "$ctx"
+        docker push "${ECR_URL}/aidc/odyssey-${img}:${IMAGE_TAG}"
+        docker push "${ECR_URL}/aidc/odyssey-${img}:${LATEST_TAG}"
+      done
+  after_script:
+    - echo "Images ${ECR_URL}/aidc/odyssey-{stt,speaker,embed,tts-omnivoice,lipsync-musetalk}:${IMAGE_TAG}"
+
+# Đăng nhập ECR bằng access key tĩnh (GitLab CI/CD Variables).
+build:image:dev:
+  extends: .ecr-build
+  tags:
+    - odyssey-dev-runner
+  # NĂM image build tuần tự trong 1 job. Image nặng nhất (tts_omnivoice) pin
+  # torch==2.8.0+cu128, và riêng bộ wheel NVIDIA CUDA mà nó kéo theo đã ~2.9GB
+  # nếu pip cache mount không hit (đo tại chỗ: cudnn 707MB + cublas 594MB + nccl
+  # 322MB + ...). Trên máy dev 13MB/s là ~8 phút/image, nhưng trên runner on-prem
+  # một image torch như vậy đã từng mất ~2h.
+  # 5h là đệm cho trường hợp xấu nhất — job hết giờ giữa chừng thì mất trắng cả
+  # những image đã build xong trước đó trong cùng job.
+  # LƯU Ý: `timeout` ở đây không vượt được `maximum_timeout` cấu hình trên runner;
+  # nếu runner đặt thấp hơn, GitLab lấy giá trị của runner chứ không báo lỗi.
+  timeout: 5h
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+      variables:
+        ENV: dev
+        LATEST_TAG: dev-latest
+  before_script:
+    - |
+      if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+        echo "AWS credentials not set — đặt trong GitLab CI/CD Variables"
+        exit 1
+      fi
+    - aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${ECR_URL}
+
+# UAT giống hệt dev (key tĩnh ECR), chỉ khác runner.
+build:image:uat:
+  extends: build:image:dev
+  tags:
+    - odyssey-uat-runner
+  rules:
+    - if: $CI_COMMIT_BRANCH == "uat"
+      variables:
+        ENV: uat
+        LATEST_TAG: uat-latest
+
+# Runner prod lấy quyền ECR từ IAM role của EC2 — key tĩnh ở đây sẽ đè quyền role.
+build:image:prod:
+  extends: .ecr-build
+  tags:
+    - odyssey-prod-runner
+  timeout: 5h   # xem giải thích ở build:image:dev
+  rules:
+    - if: $CI_COMMIT_BRANCH == "prod"
+      variables:
+        ENV: prod
+        LATEST_TAG: prod-latest
+
+# ------------------------
+# BƯỚC PHẢI LÀM TAY, pipeline cố ý không làm:
+#
+# 1. NĂM repository trên ECR phải TỒN TẠI TRƯỚC: `aidc/odyssey-stt`,
+#    `aidc/odyssey-speaker`, `aidc/odyssey-embed`, `aidc/odyssey-tts-omnivoice`,
+#    `aidc/odyssey-lipsync-musetalk`. ECR không tự tạo
+#    lúc `push`, lỗi trả về là `repository does not exist`.
+# 2. `docker network create odyssey-network` — một lần mỗi máy deploy. Dùng CHUNG
+#    với odyssey-agent và odyssey-portal-*, nên agent gọi được `stt:8012`,
+#    `embed:8013`, `speaker:8014`, `tts-omnivoice:8016`, `lipsync-musetalk:8020`
+#    bằng tên service.
+# 3. Biến `ODYSSEY_SECRET_MODELS_ENV` trong GitLab CI/CD Variables (Settings → CI/CD
+#    → Variables), Environment scope `dev`/`prod`, bật Protected. Nhận JSON phẳng
+#    một tầng HOẶC dotenv KEY=VALUE. `fetch_secrets.sh` render nó thành `.env` mỗi
+#    lần deploy — ĐỪNG sửa `.env` tay, lần sau ghi đè.
+#    BẮT BUỘC có ODYSSEY_MODELS_TOKEN: rỗng là TẮT xác thực trên mọi service đang
+#    nghe 0.0.0.0 (`embed/auth.py` trả về ngay khi token rỗng). fetch_secrets.sh và
+#    compose đều chặn điều kiện đó.
+#    BẮT BUỘC có HF_TOKEN: santa-tts-omnivoice là repo HF private.
+# 4. `models/odyssey-stt/` KHÔNG cần đặt sẵn: mỗi lần boot stt so commit HF của
+#    `STT_HF_REPO@STT_HF_REVISION` với `models/odyssey-stt/.revision`, khác thì tải và
+#    đổi chỗ (bản cũ ở `odyssey-stt.prev`). Revision mặc định `prod` cho MỌI máy (dev
+#    lẫn prod) — muốn thử model khác thì khai `STT_HF_REVISION=<branch|sha>` trong .env.
+#    Đổi model = push lên HF `prod` rồi bấm Retry job deploy (job luôn `--force-recreate`
+#    stt, xem script bên dưới). Tải hỏng thì stt chết trước khi mở 8012, healthcheck bắt.
+# 5. Máy deploy có GPU thì phải cài `nvidia-container-toolkit`; không có GPU thì bỏ
+#    `COMPOSE_PROFILES: gpu` ở job deploy — khi đó chỉ stt + speaker chạy, embed,
+#    tts-omnivoice và lipsync-musetalk nằm im sau profile.
+#    `tts` (v2) và `tts-vieneu-v3` đã GỠ (2026-10-06) — agent chỉ dùng tts-omnivoice.
+#    Job deploy không dùng `--remove-orphans` ⇒ container cũ còn chạy trên máy nào
+#    thì tắt tay một lần: `docker rm -f odyssey-models-tts-1
+#    odyssey-models-tts-vieneu-v3-1`, rồi dọn `docker volume rm
+#    odyssey-models_tts_cache odyssey-models_vieneu_v3_cache` và các image
+#    `aidc/odyssey-tts`, `aidc/odyssey-tts-vieneu-v3`.
+# 6. Máy deploy cần `jq` nếu giá trị biến ở dạng JSON — `apt-get install -y jq`.
+#    KHÔNG cần `aws` cli cho secret (chỉ cần cho `docker login` ECR ở trên).
+# ------------------------
+.deploy:
+  stage: deploy
+  variables:
+    GIT_STRATEGY: none # tự pull vào $DEPLOY_PATH ở dưới
+    # Compose đọc thẳng hai biến này, không cần cờ `-f`/`--profile` (và `-f` không nhận
+    # danh sách `a:b`). docker-compose.onprem.yml là override chồng lên file dev.
+    COMPOSE_FILE: docker-compose.yml:docker-compose.onprem.yml
+    # Bỏ đi = chỉ stt + speaker.
+    COMPOSE_PROFILES: gpu
+  before_script:
+    - aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${ECR_URL}
+    - git config --global url."https://cicd:${CI_TOKEN}@gitlab.noble.vn/".insteadOf "https://gitlab.noble.vn/"
+    - |
+      REPO_URL="https://gitlab.noble.vn/fintech-and-ai-development-center/ai-projects/odyssey-project/odyssey-models.git"
+
+      if [ ! -d "$DEPLOY_PATH" ]; then
+        git clone "$REPO_URL" "$DEPLOY_PATH"
+        cd "$DEPLOY_PATH"
+      else
+        cd "$DEPLOY_PATH"
+        git reset --hard
+      fi
+    - git checkout ${CI_COMMIT_BRANCH}
+    # Dọn file untracked sót lại khi một lần pull trước fail giữa chừng (git đã
+    # kịp tạo vài file mới rồi mới abort — lần sau chúng chặn chính file đó).
+    # KHÔNG dùng -x: /models (weights root-owned) và .env là gitignored, phải giữ.
+    - git clean -fd
+    - git pull
+    # `.env` cho compose, lấy từ GitLab CI/CD Variables ($ODYSSEY_SECRET_MODELS_ENV).
+    # Vị trí bắt buộc là ở ĐÂY: sau `git pull` (script nằm trong repo, phải là bản mới
+    # nhất). Compose của repo này nội suy `${...}` từ `.env` trong thư mục project —
+    # không dùng `env_file:` — nên `.env` phải ở gốc $DEPLOY_PATH.
+    #
+    # KHÔNG có `|| echo cảnh báo` như odyssey-portal-frontend: ở đó mọi biến đều có
+    # default đúng nên fetch hỏng vẫn deploy được. Ở đây ODYSSEY_MODELS_TOKEN không
+    # có default nào là đúng — thiếu nó là 4 service mở toang, phải đỏ.
+    - ODYSSEY_ENV=${ENV} bash ./fetch_secrets.sh
+  script:
+    - docker compose pull
+    # stt LUÔN được dựng lại, kể cả khi image không đổi: mỗi lần boot nó so commit HF
+    # `prod` với bản đang có và tự tải nếu khác. Nhờ vậy "đẩy model mới lên HF rồi bấm
+    # Retry job deploy" là đủ — không cần commit mới, không cần vào server. Chạy TRƯỚC
+    # lệnh `up` chung để stt chỉ boot đúng một lần (lệnh sau thấy nó đã khớp, bỏ qua).
+    # `--no-deps`: stt không phụ thuộc service nào, cờ này chỉ để không kéo theo gì.
+    - docker compose up -d --no-build --wait --force-recreate --no-deps stt
+    # `--no-build`: file onprem `!reset` mọi `build:` nên cờ này là lưới an toàn — nếu
+    # ai đó thêm service có `build:` mà quên reset, image vắng mặt sẽ KHÔNG được build
+    # tại chỗ (build embed/tts-omnivoice ở đây là hàng chục phút và một ổ đĩa đầy).
+    # `--wait` dùng được vì MỌI service đều khai HEALTHCHECK (stt ở file onprem).
+    # `start_period` của tts-omnivoice và embed là 600s (lần đầu kéo model từ HF) —
+    # nếu job timeout, nới `timeout` của job chứ đừng rút start_period xuống.
+    - docker compose up -d --no-build --wait
+    - docker compose ps
+  after_script:
+    - echo "Deployed tag ${IMAGE_TAG} — kiểm tra GET :8013/health :8014/health :8016/health"
+
+deploy:dev:
+  extends: .deploy
+  tags:
+    - odyssey-dev-runner
+  environment:
+    name: dev
+  # Job này pull NĂM image từ ECR rồi `up -d --wait`. Riêng odyssey-tts-omnivoice
+  # là 10.1GB (đo tại chỗ), và lần boot đầu nó còn kéo thêm ~2.5GB weights
+  # santa-tts-omnivoice từ HF — đường truyền on-prem tới HF đo được chỉ ~500KB/s,
+  # tức gần 1 tiếng cho riêng bước đó, chưa tính embed cũng kéo model lần đầu.
+  # `--wait` đứng chờ hết start_period (omnivoice 600s, embed 600s).
+  # 5h là đệm cho lần deploy đầu trên một máy chưa có volume cache; các lần sau
+  # cache còn nguyên nên chỉ mất vài phút.
+  timeout: 5h
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+      when: on_success
+      variables:
+        ENV: dev
+        # Home của user runner (shell executor chạy dưới `gitlab-runner`, KHÔNG phải
+        # `ubuntu`) — trỏ ra ngoài home đó thì `git clone` gãy ở mkdir: Permission denied.
+        DEPLOY_PATH: /home/gitlab-runner/odyssey/odyssey-models
+  needs:
+    - build:image:dev
+
+# UAT giống dev (profile `gpu`, timeout 5h), env từ GitLab Variables scope `uat`.
+deploy:uat:
+  extends: deploy:dev
+  tags:
+    - odyssey-uat-runner
+  environment:
+    name: uat
+  rules:
+    - if: $CI_COMMIT_BRANCH == "uat"
+      when: on_success
+      variables:
+        ENV: uat
+        DEPLOY_PATH: /home/gitlab-runner/odyssey/odyssey-models
+  needs:
+    - build:image:uat
+
+deploy:prod:
+  extends: .deploy
+  tags:
+    - odyssey-prod-runner
+  environment:
+    name: prod
+  timeout: 5h   # xem giải thích ở deploy:dev
+  rules:
+    - if: $CI_COMMIT_BRANCH == "prod"
+      when: on_success
+      variables:
+        ENV: prod
+        DEPLOY_PATH: /home/gitlab-runner/odyssey/odyssey-models
+  needs:
+    - build:image:prod

@@ -1,0 +1,30 @@
+# Model weights / data are provided at runtime (bind-mount or HF pull), never versioned.
+# PHẢI có `/` đầu: pattern không neo thì git khớp mọi cấp, và `models/` đã từng nuốt
+# `embed/models/` (registry 4 kind) — build trên box thiếu module, máy dev không thấy gì.
+/models/
+/model_cache/
+
+# Secrets / local
+.env
+.env.*
+# Mẫu (không chứa secret) — phải vào git, nếu không nó vô dụng.
+# Git KHÔNG hiểu comment cùng dòng với pattern, nên dòng này phải đứng riêng.
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+odyssey_models.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# audio sinh ra khi chạy scripts/try_tts.py
+scripts/output/
+
+# voices/: chỉ .pt (prompt đã clone) được commit. Clip audio mẫu là dữ liệu
+# sinh trắc của người thật — vào lịch sử git là ở đó vĩnh viễn, mà production
+# không cần tới nó. Xem voices/omnivoice/README.md.
+voices/**/*.wav
+voices/**/*.mp3
+voices/**/*.flac
