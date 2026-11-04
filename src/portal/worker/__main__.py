@@ -3,7 +3,7 @@
 Handler đăng ký lúc import `modules/<m>/jobs.py` — `load_handlers()` liệt kê chúng.
 
 Job theo giờ KHÔNG dùng scheduler trong tiến trình: cron trên máy chủ gọi một
-lệnh ghi một hàng vào control.jobs. Như vậy job có dấu vết, và "job không chạy"
+lệnh ghi một hàng vào shop.jobs. Như vậy job có dấu vết, và "job không chạy"
 là thứ nhìn thấy được.
 """
 
@@ -28,21 +28,10 @@ CHO_HUY_GIAY = 5.0
 
 
 def load_handlers() -> list[str]:
-    """Import jobs.py của các module có job — `register()` chạy lúc import.
-
-    `kb/web/jobs.py` cố ý KHÔNG ở đây: nó chạy ở worker riêng (`cli/kb_web_worker.py`).
-    """
-    import portal.modules.ingest.jobs
-    import portal.modules.kb.conflicts.jobs
+    """Import jobs.py của các module có job — `register()` chạy lúc import."""
     import portal.modules.kb.jobs
-    import portal.modules.nhan_vat.jobs
 
-    return [
-        portal.modules.ingest.jobs.__name__,
-        portal.modules.kb.conflicts.jobs.__name__,
-        portal.modules.kb.jobs.__name__,
-        portal.modules.nhan_vat.jobs.__name__,
-    ]
+    return [portal.modules.kb.jobs.__name__]
 
 
 async def run_lane(pool: asyncpg.Pool) -> None:

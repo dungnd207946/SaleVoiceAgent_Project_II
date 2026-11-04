@@ -1,9 +1,0 @@
-vi_words.txt — trích từ gói Debian `hunspell-vi` (LibreOffice dictionaries,
-/usr/share/hunspell/vi_VN.dic), Copyright The LibreOffice Project, MPL-2.0.
-
-en_words.txt — trích từ gói Debian `hunspell-en-us` (SCOWL,
-/usr/share/hunspell/en_US.dic), Copyright 2000-2011 Kevin Atkinson, giấy phép
-cho phép dùng/copy/sửa/phân phối tự do (xem /usr/share/doc/hunspell-en-us/copyright).
-
-Cả hai đã qua xử lý: bỏ dòng đếm đầu file, bỏ hậu tố affix ("/xxx"), hạ chữ
-thường, loại dòng không phải một từ thuần chữ cái, khử trùng lặp, sắp xếp.

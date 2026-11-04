@@ -1,7 +1,7 @@
 """Ảnh ngoài trong Markdown → kho của mình.
 
-Khách gửi sổ tay Markdown mà ảnh nằm trên S3 của họ. Ba lý do phải kéo về:
-· kho khách đổi quyền hoặc xoá tệp là ảnh vỡ phía người dùng cuối, không lỗi nào phía ta;
+Tài liệu (Markdown, nội dung bài viết…) hay nhúng ảnh từ CDN bên ngoài. Ba lý do phải kéo về:
+· kho bên ngoài đổi quyền hoặc xoá tệp là ảnh vỡ phía khách, không lỗi nào phía ta;
 · URL của họ đi thẳng vào vector làm nhiễu phép tìm (đo được: hạng 1 từ 7/10 lên 8/10 khi
   bỏ URL khỏi chuỗi nhúng, và URL S3 thật dài gấp đôi URL trong bài đo);
 · không cầm byte trong tay thì không sinh được thumbnail.
@@ -13,6 +13,8 @@ KÉO VỀ (`mirror_images`) mới chạm mạng và kho.
 import hashlib
 import re
 
+from portal.modules.kb import settings
+
 # Dùng chung với `rag._text_de_nhung` (cả hai gọi là "khớp một thẻ ảnh Markdown", và
 # hai bản chép tay từng LỆCH NHAU — bản của rag.py không cân bằng ngoặc tròn nên cắt
 # cụt `https://s3.khach.vn/file(1).png` tại dấu `)` đầu, dán phần đuôi vào ảnh kế tiếp).
@@ -22,8 +24,7 @@ MAX_IMAGES = 100
 MAX_BYTES = 10 * 1024 * 1024
 TIMEOUT_SEC = 15.0
 
-# Cùng tinh thần LANE_ENRICH (contracts.py): không giới hạn thì 100 ảnh × TIMEOUT_SEC
-# tuần tự giữ một worker gần nửa giờ cho MỘT tài liệu.
+# Tuần tự thì 100 ảnh × TIMEOUT_SEC giữ một worker gần nửa giờ cho MỘT tài liệu.
 MAX_CONCURRENT_FETCHES = 4
 
 _EXT_BY_TYPE = {
@@ -59,31 +60,15 @@ def rewrite_urls(text: str, table: dict[str, str]) -> str:
     return IMG_MD_RE.sub(lambda m: f"![{m.group(1)}]({table.get(m.group(2), m.group(2))})", text)
 
 
-async def mirror_images(text: str, *, tenant_id: str, store) -> tuple[str, list[str]]:
+async def mirror_images(text: str, *, store) -> tuple[str, list[str]]:
     """Kéo mọi ảnh ngoài về kho mình, sinh thumb, viết lại link. Trả (text mới, cảnh báo).
 
-    KHÔNG NÉM vì một ảnh hỏng, dù VĨNH VIỄN (404, sai content-type, vượt trần) hay TẠM
-    THỜI (`httpx.TimeoutException`/`TransportError` — một cơn nghẽn mạng phía kho
-    khách) — cùng lý lẽ `jobs._thumb_neu_thieu` đã ghi: tài liệu là sản phẩm chính, ảnh
-    là minh hoạ. Một tài liệu 27 ảnh mà 1 ảnh timeout vài giây vẫn phải nạp được; đánh
-    dấu cả tệp `loi` là bắt người dùng tải lại một tệp không hề sai.
+    KHÔNG NÉM vì một ảnh hỏng, dù vĩnh viễn (404, sai content-type, vượt trần) hay tạm
+    thời (timeout): tài liệu là sản phẩm chính, ảnh là minh hoạ — một ảnh hỏng không được
+    làm cả tệp `error`. Cảnh báo vẫn phân biệt hai loại vì người đọc cần biết tải lại có ích không.
 
-    ⚠️ KHÔNG theo doctrine `TemporaryError` mà `jobs._tai_anh`/`_thumb_neu_thieu` theo
-    (né ở `_fetch_one` ném lên tận đây rồi CỐ Ý không ném tiếp): hàm này chạy trong
-    `handle_kb_file_index`, đăng ký `retries=0` (`jobs.py`, cuối file) — ném lên đó
-    không mua được một lượt thử lại nào, nó chỉ đổi "1 ảnh timeout, 26 ảnh vẫn nạp,
-    một dòng cảnh báo" thành "27 ảnh mất trắng, tệp `loi`, người dùng phải tự tải lại
-    tay". Doctrine đó đúng cho `handle_enrich`, đăng ký `retries=RETRY_VIEC_KB` — ném
-    ở đó THẬT SỰ mua một lượt thử lại. Cảnh báo vẫn phân biệt hai loại lỗi (tạm thời vs
-    vĩnh viễn) vì người đọc log cần biết tải lại tệp có ích không.
-
-    Tải ĐỒNG THỜI có giới hạn (`MAX_CONCURRENT_FETCHES`, cùng tinh thần `LANE_ENRICH`)
-    chứ không tuần tự — cảnh báo vẫn theo ĐÚNG THỨ TỰ NGUỒN (`to_fetch`), không theo
-    thứ tự hoàn tất, vì `asyncio.gather` trả kết quả cùng thứ tự đối số.
-
-    IDEMPOTENT: sau lượt đầu, link trong `text` đã trỏ kho mình nên lượt sau không tìm
-    thấy ảnh ngoài và không tải lại gì. `documents.body` được nhúng lại MỖI LẦN SỬA, nên
-    tính chất này là bắt buộc chứ không phải tiện tay.
+    IDEMPOTENT: sau lượt đầu, link đã trỏ kho mình nên lượt sau không tải lại gì — văn bản
+    được nhúng lại MỖI LẦN SỬA, nên tính chất này là bắt buộc.
     """
     import asyncio
 
@@ -109,7 +94,7 @@ async def mirror_images(text: str, *, tenant_id: str, store) -> tuple[str, list[
 
     async def _bounded(http: "httpx.AsyncClient", url: str) -> tuple[str, str | None]:
         async with sem:
-            return await _fetch_one(http, url, tenant_id=tenant_id, store=store)
+            return await _fetch_one(http, url, store=store)
 
     async with httpx.AsyncClient(timeout=TIMEOUT_SEC, follow_redirects=True) as http:
         results = await asyncio.gather(*(_bounded(http, url) for url in to_fetch), return_exceptions=True)
@@ -117,11 +102,6 @@ async def mirror_images(text: str, *, tenant_id: str, store) -> tuple[str, list[
     table: dict[str, str] = {}
     for url, result in zip(to_fetch, results, strict=True):
         if isinstance(result, TemporaryError):
-            # KHÔNG `raise result` — xem docstring ở trên: `retries=0` làm cho ném ở
-            # đây tương đương với mất cả tài liệu, không phải một lượt thử lại. Nói rõ
-            # "tạm thời" trong câu cảnh báo (khác nhánh dưới) vì đó là thông tin hành
-            # động được: tải lại tệp NHIỀU KHẢ NĂNG sẽ lấy được ảnh này, khác một 404
-            # vĩnh viễn mà tải lại không đổi được gì.
             warnings.append(f"{url}: lỗi mạng tạm thời ({result}) — thử tải lại tệp để lấy ảnh này")
             continue
         if isinstance(result, BaseException):
@@ -143,21 +123,15 @@ async def mirror_images(text: str, *, tenant_id: str, store) -> tuple[str, list[
     return rewrite_urls(text, table), warnings
 
 
-async def _fetch_one(http, url: str, *, tenant_id: str, store) -> tuple[str, str | None]:
+async def _fetch_one(http, url: str, *, store) -> tuple[str, str | None]:
     """Tải một ảnh → kho mình → thumb. Trả (KHOÁ của ảnh gốc, cảnh báo thumb hoặc None).
 
     Tải theo DÒNG và cắt ngay khi quá trần: đọc trọn thân rồi mới đo thì một
     phản hồi 2 GB đã nằm trong RAM trước khi ta kịp từ chối — đó là một điều ước, không
     phải một giới hạn.
 
-    Lỗi mạng TẠM THỜI (`httpx.TimeoutException`/`TransportError`) NÉM `TemporaryError`
-    — không phải để lan tới job (xem docstring `mirror_images`: người gọi CỐ Ý không
-    ném tiếp), mà để người gọi phân biệt được nó với lỗi VĨNH VIỄN (404, content-type
-    sai, vượt trần) và viết cảnh báo đúng loại.
-
-    Ảnh gốc lưu XONG trước khi sinh thumb; nếu thumb hỏng, ảnh gốc KHÔNG bị mồ côi và
-    link vẫn được viết lại — thumb chỉ là tối ưu hiển thị (cùng lý lẽ
-    `jobs._thumb_neu_thieu`), không phải điều kiện để coi ảnh là đã mirror thành công.
+    Lỗi mạng TẠM THỜI ném `TemporaryError` để người gọi viết cảnh báo đúng loại.
+    Ảnh gốc lưu XONG trước thumb: thumb hỏng không làm mồ côi ảnh gốc, link vẫn được viết lại.
     """
     import httpx
 
@@ -180,12 +154,11 @@ async def _fetch_one(http, url: str, *, tenant_id: str, store) -> tuple[str, str
     data = bytes(buf)
 
     digest = hashlib.sha256(data).hexdigest()
-    key = store.key(tenant_id=tenant_id, path=f"kb/anh/{digest}.{_ext(ctype, url)}")
+    key = store.key(path=f"{settings.IMAGES_PREFIX}{digest}.{_ext(ctype, url)}")
     await store.put(key=key, data=data, content_type=ctype)
-    # `key` đã mang tiền tố tenant; `store.key()` idempotent nên truyền lại là an toàn,
-    # và `is_internal_key(key)` True ⇒ thumb thành `.../kb/anh/<digest>.thumb.webp`.
+    # `is_internal_key(key)` True ⇒ thumb thành `kb/anh/<digest>.thumb.webp`.
     try:
-        await thumbnail.sinh_va_luu(store, tenant_id=tenant_id, media_url=key, content_hash=digest, tai_ve=lambda: data)
+        await thumbnail.sinh_va_luu(store, media_url=key, content_hash=digest, tai_ve=lambda: data)
     except TemporaryError:
         raise
     except Exception as e:  # noqa: BLE001 — thumb hỏng KHÔNG được xoá công lưu ảnh gốc

@@ -1,224 +1,288 @@
-"""ROUTER module kb. Đường tương đối — tiền tố /api/v1 do api/app.py gắn.
+"""Kho tri thức: «Tài liệu tra cứu» (`/kb/files`), trạng thái + nạp lại toàn bộ (`/kb/status`,
+`/kb/reindex`), và đường phát tệp công khai (`/public/files/...`).
 
-Module này chủ yếu là worker; route ở đây là kho «Tài liệu tra cứu» (`/kb/files`).
-Dùng `catalog.*` chứ không tạo action mới: PQ_01 nhóm 7–8 đã gộp Dự án · Quỹ căn ·
-Tài liệu · Media vào một quyền.
+⚠️ Route quản trị đang MỞ (chưa có đăng nhập admin) — chỉ chạy ở dev.
 """
 
 import hashlib
 import logging
 import re
 import unicodedata
+from typing import Annotated, Literal
 
 import asyncpg
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, status
+from fastapi.responses import RedirectResponse
 
-from portal.api import loi
-from portal.core import nhat_ky
-from portal.core.auth.actions import ACTIONS
-from portal.core.auth.principal import Principal
-from portal.core.auth.require import lay_pool, require
-from portal.core.db.session import tenant_conn
+from portal.api.loi import LoiPortal, du_lieu_khong_hop_le, khong_tim_thay
+from portal.core.crud import LIMIT_MAC_DINH, Limit, Offset, Trang
+from portal.core.db.pool import get_pool
+from portal.core.db.session import tx
 from portal.core.jobs import enqueue
-from portal.modules.kb import files_repo, service
-from portal.modules.kb.clients.rag import collection_name
-from portal.modules.kb.conflicts.router import ROUTER as CONFLICTS_ROUTER
+from portal.modules.kb import deps, files_repo, service, settings
 from portal.modules.kb.contracts import (
     DOC_TYPE_KB_FILE,
     KIND_KB_FILE_INDEX,
+    KIND_REINDEX_ALL,
+    KINDS,
     LOAI_HO_TRO,
-    NoiDungDoanOut,
-    TaiLieuOut,
+    ChunkOut,
+    DemEntityOut,
+    DemJobOut,
+    DemOut,
+    KbFileOut,
+    KbStatusOut,
+    ReindexOut,
 )
-from portal.modules.kb.index.store import QdrantStore
-from portal.modules.kb.jobs import object_store
-from portal.modules.kb.web.router import ROUTER as WEB_ROUTER
 
 log = logging.getLogger(__name__)
 
 ROUTER = APIRouter()
-ROUTER.include_router(WEB_ROUTER)
-ROUTER.include_router(CONFLICTS_ROUTER)
-"""Màn «Dữ liệu ngoài» (`/kb-web/*`) — `api/app.py::ROUTERS` chỉ gắn `router.py`, gói con tự nối vào đây."""
+
+PUBLIC_PREFIXES: tuple[str, ...] = (settings.IMAGES_PREFIX, "media/")
+"""Thư mục được phát CÔNG KHAI (agent gửi link cho khách, không có phiên): ảnh đã kéo về
+kho (`kb/anh/`, gồm thumb) và ảnh sản phẩm (`media/`). Tài liệu gốc (`kb/files/`) RIÊNG TƯ
+có chủ ý — mở thêm thư mục nào thì khai tường minh ở đây, đừng đổi thành `kb/` trần."""
+
+_MIME = {
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "png": "image/png",
+    "gif": "image/gif",
+    "webp": "image/webp",
+    "svg": "image/svg+xml",
+    "mp4": "video/mp4",
+    "pdf": "application/pdf",
+}
+_MIME_UPLOAD = {
+    "pdf": "application/pdf",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "md": "text/markdown; charset=utf-8",
+}
+
+FileState = Literal["processing", "ready", "error"]
 
 
-# ─── Kho «Tài liệu tra cứu» — 3 route của màn /kb (spec 2026-08-20) ────────────────
-
-GIOI_HAN_BYTE = 25 * 1024 * 1024
-"""⚠️ CON SỐ TẠM — KB_01 BR12 để ngưỡng dung lượng chưa chốt (đầu vào bảng giá).
-Giữ nguyên 25 MB của bản M6 gốc. Đặt ở router như bản gốc, KHÔNG đưa vào
-settings.py (file đó đang có sửa đổi chưa commit của phiên khác)."""
-
-_FILE = File(...)
-
-
-def _loai_khong_ho_tro() -> "loi.LoiPortal":
-    return loi.LoiPortal("UNSUPPORTED_TYPE", 422, "Chỉ nhận file PDF, DOCX hoặc XLSX")
-
-
-def _qua_dung_luong() -> "loi.LoiPortal":
-    return loi.LoiPortal("FILE_TOO_LARGE", 422, "File vượt dung lượng cho phép (25 MB)")
-
-
-def _file_rong() -> "loi.LoiPortal":
-    return loi.LoiPortal("FILE_TOO_LARGE", 422, "File rỗng — không có gì để nạp")
-
-
-def _khong_co_tai_lieu() -> "loi.LoiPortal":
-    return loi.LoiPortal("NO_DOCUMENT", 404, "Không tìm thấy tài liệu")
+def _khong_co_tep() -> LoiPortal:
+    return LoiPortal("NOT_FOUND", 404, "Không tìm thấy tệp")
 
 
 def _ten_lanh(ten: str) -> str:
-    """Tên tệp trong key S3 rút về ASCII lành — key là ĐỊNH DANH, không phải tên hiển thị
-    (tên gốc nằm ở cột ten_file). Unicode/khoảng trắng trong key bắt mọi chỗ đọc
-    (presign, public_url) gánh encoding, và đó là chỗ lệch nhau âm thầm."""
-    mo = unicodedata.normalize("NFKD", ten).encode("ascii", "ignore").decode()
+    """Tên trong KHOÁ rút về ASCII lành — khoá là định danh, tên hiển thị nằm ở `file_name`.
+    Unicode/khoảng trắng trong khoá bắt mọi chỗ đọc gánh encoding, và đó là chỗ lệch âm thầm."""
+    mo = unicodedata.normalize("NFKD", ten.replace("đ", "d").replace("Đ", "D")).encode("ascii", "ignore").decode()
     mo = re.sub(r"[^A-Za-z0-9._-]+", "-", mo).strip("-.")
-    return mo or "tep"
+    return mo[:120] or "tep"
 
 
-def _ra_tai_lieu(t: files_repo.HangTaiLieu) -> TaiLieuOut:
-    return TaiLieuOut(
-        id=t.id,
-        tenFile=t.ten_file,
-        loai=t.loai,
-        kichThuoc=t.kich_thuoc,
-        state=t.state,
-        chunkCount=t.chunk_count,
-        loiMessage=t.loi_message,
-        uploadedAt=t.uploaded_at,
-        uploadedBy=t.uploaded_by,
+def _out(r: asyncpg.Record) -> KbFileOut:
+    return KbFileOut.model_validate(dict(r))
+
+
+async def _lay_tep(conn: asyncpg.Connection, file_id: int) -> asyncpg.Record:
+    r = await files_repo.lay(conn, file_id)
+    if r is None:
+        raise khong_tim_thay("tài liệu", file_id)
+    return r
+
+
+# ─── «Tài liệu tra cứu» ─────────────────────────────────────────────────────────
+
+
+@ROUTER.get("/kb/files", response_model=Trang[KbFileOut])
+async def liet_ke_tep(
+    state: FileState | None = None,
+    product_id: Annotated[int | None, Query(alias="productId")] = None,
+    brand_id: Annotated[int | None, Query(alias="brandId")] = None,
+    limit: Limit = LIMIT_MAC_DINH,
+    offset: Offset = 0,
+    pool: asyncpg.Pool = Depends(get_pool),
+) -> Trang[KbFileOut]:
+    dk: list[str] = []
+    ts: list[object] = []
+    for cot, gt in (("state", state), ("product_id", product_id), ("brand_id", brand_id)):
+        if gt is not None:
+            ts.append(gt)
+            dk.append(f"{cot} = ${len(ts)}")
+    async with tx(pool) as conn:
+        rows, total = await files_repo.liet_ke(conn, dieu_kien=dk, tham_so=ts, limit=limit, offset=offset)
+    return Trang[KbFileOut](items=[_out(r) for r in rows], total=total, limit=limit, offset=offset)
+
+
+@ROUTER.post("/kb/files", status_code=status.HTTP_202_ACCEPTED, response_model=KbFileOut)
+async def tai_len(
+    file: Annotated[UploadFile, File()],
+    product_id: Annotated[int | None, Form(alias="productId")] = None,
+    brand_id: Annotated[int | None, Form(alias="brandId")] = None,
+    pool: asyncpg.Pool = Depends(get_pool),
+) -> KbFileOut:
+    """202 — bóc chữ + nhúng chạy NỀN qua job `kb_file_index`; đợi xong mới trả thì tệp lớn
+    làm request timeout trước khi job kịp xong."""
+    ten = file.filename or ""
+    loai = ten.rsplit(".", 1)[-1].lower() if "." in ten else ""
+    if loai not in LOAI_HO_TRO:
+        raise LoiPortal("UNSUPPORTED_TYPE", 422, "Chỉ nhận tệp PDF, DOCX, XLSX hoặc Markdown (.md)")
+    noi_dung = await file.read()
+    if not noi_dung:
+        raise LoiPortal("EMPTY_FILE", 422, "Tệp rỗng — không có gì để nạp")
+    tran_mb = settings.get_env().file_max_mb
+    if len(noi_dung) > tran_mb * 1024 * 1024:
+        raise LoiPortal("FILE_TOO_LARGE", 422, f"Tệp vượt dung lượng cho phép ({tran_mb} MB)")
+
+    sha = hashlib.sha256(noi_dung).hexdigest()
+    objects = deps.object_store()
+    key = objects.key(path=f"{settings.FILES_PREFIX}{sha}/{_ten_lanh(ten)}")
+
+    # Kiểm TRƯỚC khi lên kho: lỗi sau khi đã `put` là để lại object không hàng nào trỏ tới.
+    async with tx(pool) as conn:
+        if product_id is not None and not await conn.fetchval("SELECT 1 FROM shop.products WHERE id = $1", product_id):
+            raise du_lieu_khong_hop_le(f"Không có sản phẩm #{product_id}")
+        if brand_id is not None and not await conn.fetchval("SELECT 1 FROM shop.brands WHERE id = $1", brand_id):
+            raise du_lieu_khong_hop_le(f"Không có hãng #{brand_id}")
+        if (trung := await files_repo.co_khoa(conn, key)) is not None:
+            raise LoiPortal("DUPLICATE_FILE", 409, f"Tệp này đã được tải lên (tài liệu #{trung})")
+
+    # Lên kho TRƯỚC khi ghi hàng: hàng trỏ tới khoá chưa tồn tại là tài liệu job không bao giờ
+    # nạp được, đứng mãi ở «Đang xử lý».
+    await objects.put(key=key, data=noi_dung, content_type=_MIME_UPLOAD[loai])
+    async with tx(pool) as conn:
+        r = await files_repo.them(
+            conn,
+            file_name=ten,
+            s3_key=key,
+            size_bytes=len(noi_dung),
+            file_type=loai,
+            product_id=product_id,
+            brand_id=brand_id,
+        )
+        await enqueue(conn, kind=KIND_KB_FILE_INDEX, actor="admin", payload={"file_id": r["id"]})
+    return _out(r)
+
+
+@ROUTER.get("/kb/files/{file_id}", response_model=KbFileOut)
+async def lay_tep(file_id: int, pool: asyncpg.Pool = Depends(get_pool)) -> KbFileOut:
+    async with tx(pool) as conn:
+        return _out(await _lay_tep(conn, file_id))
+
+
+@ROUTER.get("/kb/files/{file_id}/content", response_model=list[ChunkOut])
+async def noi_dung(file_id: int, pool: asyncpg.Pool = Depends(get_pool)) -> list[ChunkOut]:
+    """Các đoạn ĐÃ NHÚNG (đọc từ Qdrant) — không phải tệp gốc. Rỗng khi chưa `ready`."""
+    async with tx(pool) as conn:
+        r = await _lay_tep(conn, file_id)
+    if r["chunk_count"] <= 0:
+        return []
+    store = deps.qdrant_store()
+    try:
+        return await service.noi_dung_da_nap(
+            store,
+            collection=settings.collection_documents(),
+            file_id=file_id,
+            title=r["file_name"],
+            chunk_count=r["chunk_count"],
+        )
+    finally:
+        await store.aclose()
+
+
+@ROUTER.post("/kb/files/{file_id}/reindex", status_code=status.HTTP_202_ACCEPTED, response_model=KbFileOut)
+async def nap_lai_tep(file_id: int, pool: asyncpg.Pool = Depends(get_pool)) -> KbFileOut:
+    async with tx(pool) as conn:
+        r = await files_repo.dat_lai(conn, file_id)
+        if r is None:
+            raise khong_tim_thay("tài liệu", file_id)
+        await enqueue(conn, kind=KIND_KB_FILE_INDEX, actor="admin", payload={"file_id": file_id})
+    return _out(r)
+
+
+@ROUTER.delete("/kb/files/{file_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def xoa_tep(file_id: int, pool: asyncpg.Pool = Depends(get_pool)) -> Response:
+    """Xoá HÀNG trước (commit), rồi mới dọn Qdrant + S3.
+
+    Thứ tự này để mọi đường hỏng đều về phía an toàn: dọn ngoài hỏng thì còn rác (point/tệp
+    mồ côi — log lỗi, `kb_reindex_all` không với tới nhưng không ai đọc nhầm), còn đảo lại thì
+    có thể còn HÀNG trỏ vào tệp đã mất. Job đang nạp đúng tệp này: `danh_dau_san_sang` trúng
+    0 hàng và job tự gỡ point vừa ghi (xem `service.index_kb_file`).
+    """
+    async with tx(pool) as conn:
+        r = await files_repo.xoa(conn, file_id)
+    if r is None:
+        raise khong_tim_thay("tài liệu", file_id)
+
+    store = deps.qdrant_store()
+    try:
+        await store.delete_by_record(settings.collection_documents(), record_id=file_id, doc_type=DOC_TYPE_KB_FILE)
+    except Exception as e:  # noqa: BLE001 — hàng đã xoá; dọn hỏng chỉ để lại rác, phải log
+        log.error("xoá point kb_file#%s hỏng — còn point mồ côi: %s: %s", file_id, type(e).__name__, e)
+    finally:
+        await store.aclose()
+    try:
+        await deps.object_store().delete(key=r["s3_key"])
+    except Exception as e:  # noqa: BLE001 — như trên
+        log.error("xoá tệp %s hỏng — còn tệp mồ côi: %s: %s", r["s3_key"], type(e).__name__, e)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ─── Luồng B: trạng thái + nạp lại toàn bộ ─────────────────────────────────────
+
+
+@ROUTER.post("/kb/reindex", status_code=status.HTTP_202_ACCEPTED, response_model=ReindexOut)
+async def nap_lai_toan_bo(
+    force: bool = Query(False, description="Bỏ qua so hash — dùng khi collection Qdrant bị dựng lại"),
+    pool: asyncpg.Pool = Depends(get_pool),
+) -> ReindexOut:
+    async with tx(pool) as conn:
+        job_id = await enqueue(conn, kind=KIND_REINDEX_ALL, actor="admin", payload={"force": force})
+    return ReindexOut(job_id=job_id)
+
+
+@ROUTER.get("/kb/status", response_model=KbStatusOut)
+async def trang_thai(pool: asyncpg.Pool = Depends(get_pool)) -> KbStatusOut:
+    async with tx(pool) as conn:
+        rec = await conn.fetch(
+            "SELECT entity, state, count(*)::int AS count FROM shop.kb_index_state GROUP BY 1, 2 ORDER BY 1, 2"
+        )
+        tep = await conn.fetch("SELECT state, count(*)::int AS count FROM shop.kb_files GROUP BY 1 ORDER BY 1")
+        viec = await conn.fetch(
+            """SELECT kind, state, count(*)::int AS count FROM shop.jobs
+                WHERE kind = ANY($1) AND state IN ('queued', 'running', 'failed')
+                GROUP BY 1, 2 ORDER BY 1, 2""",
+            list(KINDS),
+        )
+    return KbStatusOut(
+        records=[DemEntityOut.model_validate(dict(r)) for r in rec],
+        files=[DemOut.model_validate(dict(r)) for r in tep],
+        jobs=[DemJobOut.model_validate(dict(r)) for r in viec],
     )
 
 
-@ROUTER.get("/kb/files", response_model=list[TaiLieuOut])
-async def kb_liet_ke(
-    p: Principal = require(ACTIONS.CATALOG_READ),
-    pool: asyncpg.Pool = Depends(lay_pool),
-) -> list[TaiLieuOut]:
-    """Kho rỗng trả [] — đó là trạng thái bình thường của workspace mới (BR04)."""
-    async with tenant_conn(pool, p.tenant_id) as conn:
-        return [_ra_tai_lieu(t) for t in await files_repo.liet_ke(conn)]
+# ─── Phát tệp công khai ─────────────────────────────────────────────────────────
 
 
-@ROUTER.post("/kb/files", status_code=202, response_model=TaiLieuOut)
-async def kb_tai_len(
-    file: UploadFile = _FILE,
-    p: Principal = require(ACTIONS.CATALOG_WRITE),
-    pool: asyncpg.Pool = Depends(lay_pool),
-) -> TaiLieuOut:
-    """202 — bóc chữ và nhúng chạy BẤT ĐỒNG BỘ qua job `kb_file_index`.
+@ROUTER.get("/public/files/{key:path}")
+async def phat_tep_cong_khai(key: str) -> Response:
+    """Phát ảnh cho khách cuối — URL nằm trong lịch sử chat nên phải sống lâu.
 
-    Trả về sau khi index xong nghĩa là người dùng nhìn spinner vài phút cho một
-    tệp lớn, và request timeout trước khi job xong (KB_01 §I.2, giữ từ bản gốc).
+    `key` đến TỪ CLIENT: chỉ thư mục trong `PUBLIC_PREFIXES` được phát, chặn `..`. Chế độ
+    `S3_REDIRECT_ENABLED` trả 307 tới URL kho có hạn (byte không chạm tiến trình API).
     """
-    ten_goc = file.filename or ""
-    loai_tep = ten_goc.rsplit(".", 1)[-1].lower()
-    if loai_tep not in LOAI_HO_TRO:
-        raise _loai_khong_ho_tro()
-
-    noi_dung = await file.read()
-    if not noi_dung:
-        raise _file_rong()
-    if len(noi_dung) > GIOI_HAN_BYTE:
-        raise _qua_dung_luong()
-
-    # Lên kho tệp TRƯỚC khi ghi hàng: hàng trỏ tới một s3_key không tồn tại là một
-    # tài liệu job không bao giờ nạp được, và nó đứng mãi ở «Đang xử lý» (bài học 0390d86).
-    sha = hashlib.sha256(noi_dung).hexdigest()
-    store = object_store()
-    key = store.key(tenant_id=p.tenant_id, path=f"kb/{sha}/{_ten_lanh(ten_goc)}")
-    await store.put(key=key, data=noi_dung, content_type=file.content_type or "application/octet-stream")
-
-    async with tenant_conn(pool, p.tenant_id) as conn:
-        t = await files_repo.them(
-            conn, ten_file=ten_goc, s3_key=key, kich_thuoc=len(noi_dung), loai=loai_tep, uploaded_by=p.user_id
-        )
-        await enqueue(
-            conn, tenant_id=p.tenant_id, kind=KIND_KB_FILE_INDEX, actor=p.user_id, payload={"record_id": t.id}
-        )
-        await nhat_ky.ghi(conn, p.tenant_id, "kb.upload", p.user_id, {"file_id": t.id, "ten_file": t.ten_file})
-    return _ra_tai_lieu(t)
-
-
-@ROUTER.get("/kb/files/{file_id}/noi-dung", response_model=list[NoiDungDoanOut])
-async def kb_noi_dung(
-    file_id: int,
-    p: Principal = require(ACTIONS.CATALOG_READ),
-    pool: asyncpg.Pool = Depends(lay_pool),
-) -> list[NoiDungDoanOut]:
-    """Bản ĐÃ NẠP của một tài liệu — spec Task 15. Hàng của tenant khác ra `None` ở
-    đây (RLS lọc) nên rơi cùng nhánh 404 với id không tồn tại, không phải 403."""
-    async with tenant_conn(pool, p.tenant_id) as conn:
-        t = await files_repo.doc(conn, file_id)
-    if t is None:
-        raise _khong_co_tai_lieu()
-    if t.chunk_count <= 0:
-        return []
-    q = _qdrant_store()
-    try:
-        return await service.noi_dung_da_nap(
-            q,
-            collection=collection_name(p.tenant_id),
-            file_id=t.id,
-            ten_file=t.ten_file,
-            chunk_count=t.chunk_count,
-        )
-    finally:
-        await q.aclose()
-
-
-def _qdrant_store() -> QdrantStore:
-    """Xoá point KHÔNG đi qua `open_dependencies()`: bộ đó dựng cả EmbedClient (raise
-    khi thiếu KB_SANTA_MODELS_TOKEN), mà xoá point không cần embed — cùng lý lẽ
-    `ops/collections.xoa_kho_cua_workspace` đã ghi."""
     from portal.core.config import get_settings
+    from portal.core.storage import KhongTimThay, kho_tep_dung_chung
 
+    if ".." in key.split("/") or "\\" in key or not key.startswith(PUBLIC_PREFIXES):
+        raise _khong_co_tep()
     cfg = get_settings()
-    return QdrantStore(url=cfg.qdrant_url, api_key=cfg.qdrant_api_key)
-
-
-@ROUTER.delete("/kb/files/{file_id}", status_code=204)
-async def kb_xoa(
-    file_id: int,
-    p: Principal = require(ACTIONS.CATALOG_DELETE),
-    pool: asyncpg.Pool = Depends(lay_pool),
-) -> None:
-    """BR07 — gỡ khỏi kho tri thức NGAY, trong cùng thao tác. Không thùng rác.
-
-    Thứ tự: đọc/404 → xoá HÀNG (trong giao dịch CHƯA commit) → gỡ point Qdrant →
-    commit → tệp S3 (best-effort). Hàng chỉ thật sự biến mất lúc commit — Qdrant
-    hỏng thì rollback trả hàng lại nguyên vẹn, không để lộ trạng thái nửa-xoá.
-
-    Xoá hàng TRƯỚC (dù chưa commit) đóng race với worker `kb_file_index`: `DELETE`
-    và `UPDATE ... danh_dau_san_sang` của worker cùng khoá một hàng, Postgres tự
-    serialize hai giao dịch. Worker khoá trước ⇒ route đợi tới khi worker commit
-    xong rồi mới xoá, point đã lên Qdrant thì route gỡ được ngay. Route khoá trước
-    ⇒ worker bị chặn tới khi route commit; `danh_dau_san_sang` khi đó UPDATE trúng
-    0 hàng, trả `False`, và worker tự gỡ point nó vừa ghi (xem `service.index_kb_file`).
-    Mọi interleaving vì thế rơi vào một trong hai nhánh sạch — không còn cửa sổ vài
-    giây của thao tác "upload rồi xoá ngay" để lại point mồ côi.
-
-    Đánh đổi: crash ĐÚNG giữa lúc gỡ Qdrant và lúc commit để lại hàng còn `san_sang`
-    nhưng đã mất point (giao dịch DB rollback do crash, point Qdrant thì không có gì
-    hoàn tác) — hiếm, và tự chữa: bấm Xoá lại là `delete_by_record` gặp point đã mất
-    (trả 0 êm) rồi xoá nốt hàng.
-    """
-    async with tenant_conn(pool, p.tenant_id) as conn:
-        t = await files_repo.doc(conn, file_id)
-        if t is None:
-            raise _khong_co_tai_lieu()
-
-        await files_repo.xoa(conn, file_id)
-
-        q = _qdrant_store()
-        try:
-            await q.delete_by_record(collection_name(p.tenant_id), record_id=file_id, doc_type=DOC_TYPE_KB_FILE)
-        finally:
-            await q.aclose()
-
-        try:
-            await object_store().delete(key=t.s3_key)
-        except Exception as e:  # noqa: BLE001 — best-effort, xem docstring
-            log.warning("xoá tệp S3 %s bỏ qua: %s: %s", t.s3_key, type(e).__name__, e)
-        await nhat_ky.ghi(conn, p.tenant_id, "kb.delete", p.user_id, {"file_id": file_id, "ten_file": t.ten_file})
+    kho = kho_tep_dung_chung()
+    cache = "public, max-age=31536000, immutable"
+    if cfg.s3_redirect_enabled:
+        url = await kho.presign_get(key, ttl_sec=cfg.s3_redirect_ttl_sec)
+        return RedirectResponse(url, status_code=status.HTTP_307_TEMPORARY_REDIRECT, headers={"Cache-Control": cache})
+    try:
+        noi_dung_tep = await kho.doc(key)
+    except KhongTimThay as e:
+        raise _khong_co_tep() from e
+    duoi = key.rsplit(".", 1)[-1].lower() if "." in key else ""
+    return Response(
+        content=noi_dung_tep, media_type=_MIME.get(duoi, "application/octet-stream"), headers={"Cache-Control": cache}
+    )

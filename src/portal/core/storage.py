@@ -1,17 +1,10 @@
 """Kho tệp — S3 ở production, MinIO ở dev/test. Cùng một giao thức.
 
-VÌ SAO ASYNC (`aioboto3`, không `boto3`): publish có upload nằm trên đường người
-dùng đang chờ. `boto3` đồng bộ sẽ chặn event loop của uvicorn suốt lượt upload —
-một tenant publish là mọi request khác đứng im.
+VÌ SAO ASYNC (`aioboto3`, không `boto3`): upload nằm trên đường người dùng đang chờ.
+`boto3` đồng bộ chặn event loop của uvicorn suốt lượt upload — mọi request khác đứng im.
 
-VÌ SAO CÁCH LY BẰNG TIỀN TỐ, KHÔNG BẰNG BUCKET RIÊNG: một bucket mỗi tenant nghĩa
-là thêm tenant phải tạo tài nguyên hạ tầng, và số bucket của một tài khoản AWS có
-trần. Tiền tố `tenants/<id>/*` cộng policy theo access key cho cùng mức cách ly mà
-thêm tenant chỉ là thêm một hàng. Cổng 5 kiểm đúng cơ chế này.
-
-MỌI đường dẫn phải đi qua `duong_dan_*()`. Ghép chuỗi tại chỗ gọi là cách chắc
-chắn để một ngày nào đó có một key nằm ngoài tiền tố của tenant — và policy chỉ
-bảo vệ được thứ nằm trong tiền tố nó biết.
+Một cửa hàng, một bucket. Module tự đặt thư mục của nó
+(`kb/` cho kho tri thức) — đường phát tệp công khai chỉ mở đúng những thư mục khai tường minh.
 """
 
 from contextlib import asynccontextmanager
@@ -20,69 +13,15 @@ from functools import lru_cache
 import aioboto3
 from botocore.exceptions import ClientError
 
-from portal.core.ten_tai_nguyen import ten_khoa_truy_cap
-
-__all__ = [
-    "KhoTep",
-    "KhongTimThay",
-    "chinh_sach_tien_to",
-    "kho_tep_tu_cai_dat",
-    "ten_khoa_truy_cap",
-    "tien_to_tenant",
-]
+__all__ = ["KhoTep", "KhongTimThay", "kho_tep_dung_chung", "kho_tep_tu_cai_dat"]
 
 
 class KhongTimThay(Exception):
     """Khoá không tồn tại trong kho.
 
-    Là lớp riêng chứ không để `ClientError` lọt ra: tầng gọi cần phân biệt "chưa
-    publish lần nào" (bình thường) với "kho tệp hỏng" (sự cố), và mã lỗi của S3
-    không phải thứ router nên biết.
+    Lớp riêng chứ không để `ClientError` lọt ra: tầng gọi cần phân biệt "không có tệp"
+    (404 bình thường) với "kho tệp hỏng" (sự cố), và mã lỗi S3 không phải thứ router nên biết.
     """
-
-
-def tien_to_tenant(tenant_id: str) -> str:
-    """`tenants/<id>/` — MỌI thứ của một tenant trên kho tệp nằm dưới đây.
-
-    Kho tệp KHÔNG có RLS, nên với nó **tiền tố chính là cơ chế cách ly** (xem
-    `core/ten_tai_nguyen.py`). Chuỗi này trước bản xoá-cứng được ghép tay ở BỐN
-    chỗ trong chính file này; thêm chỗ thứ năm cho đường xoá là thêm một cơ hội để
-    một bản lệch — và lệch ở đây nghĩa là hoặc policy mở rộng hơn ý muốn, hoặc lệnh
-    xoá quét sang tenant khác.
-    """
-    return f"tenants/{tenant_id}/"
-
-
-def chinh_sach_tien_to(tenant_id: str, bucket: str) -> dict:
-    """Policy S3 cho pod một tenant: CHỈ `tenants/<id>/*`.
-
-    Ở dev là policy gắn vào access key của MinIO; ở production là IAM policy gắn
-    vào role của task. Cùng một tài liệu JSON — đó là lý do nó là hàm ở đây chứ
-    không phải một file YAML của devops: cổng 5 kiểm được đúng thứ prod dùng.
-
-    ⚠️ `ListBucket` phải kèm điều kiện `s3:prefix`, KHÔNG cấp trần. Không có điều
-    kiện thì pod liệt kê được toàn bộ bucket — và danh sách đường dẫn của khách
-    khác đã là rò rỉ: tên tệp mang tên dự án, số lần publish nói họ hoạt động
-    mạnh cỡ nào. Đây là chỗ dễ sót nhất khi viết policy S3 vì `GetObject` bị chặn
-    đúng còn `ListBucket` thì không, và triệu chứng là không có triệu chứng nào.
-    """
-    tien_to = tien_to_tenant(tenant_id)
-    return {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
-                "Resource": [f"arn:aws:s3:::{bucket}/{tien_to}*"],
-            },
-            {
-                "Effect": "Allow",
-                "Action": ["s3:ListBucket"],
-                "Resource": [f"arn:aws:s3:::{bucket}"],
-                "Condition": {"StringLike": {"s3:prefix": [f"{tien_to}*"]}},
-            },
-        ],
-    }
 
 
 class KhoTep:
@@ -159,9 +98,8 @@ class KhoTep:
         """Mọi khoá dưới một tiền tố, đã sắp xếp.
 
         Phân trang tường minh: `list_objects_v2` trả tối đa 1000 khoá một lượt và
-        **không báo lỗi** khi cắt bớt. Một bundle vài tệp thì không chạm trần, nhưng
-        `liet_ke("tenants/<id>/")` sau vài trăm lần publish thì có — và triệu chứng
-        là "bundle cũ biến mất", không phải một exception.
+        **không báo lỗi** khi cắt bớt — thiếu vòng lặp thì tệp thứ 1001 "biến mất"
+        mà không có exception nào.
         """
         khoa: list[str] = []
         async with self._client() as c:
@@ -180,20 +118,10 @@ class KhoTep:
     async def xoa_tien_to(self, tien_to: str) -> int:
         """Xoá MỌI object dưới một tiền tố. Trả số object đã xoá.
 
-        Đường xoá cứng workspace gọi nó với `tien_to_tenant(tenant_id)`.
+        `delete_objects` theo lô 1000 (trần của S3 API) — xoá từng khoá là N round-trip.
 
-        `delete_objects` theo lô 1000 — trần của S3 API, và cũng là trần trả về của
-        một lượt `list_objects_v2`. Xoá từng khoá một là N round-trip cho một
-        workspace có vài nghìn tệp, đủ lâu để một request `DELETE` chạm timeout.
-
-        ⚠️ TIỀN TỐ PHẢI KẾT THÚC BẰNG `/`. Không có nó thì `tenants/abc` cũng khớp
-        `tenants/abcd/...` — tức xoá workspace `abc` cuốn theo dữ liệu của `abcd`.
-        `tien_to_tenant()` luôn thêm dấu đó; phép kiểm ở đây là lưới thứ hai cho
-        người gọi tự ghép chuỗi.
-
-        KHÔNG dung thứ lỗi. Người gọi (`workspace.service.don_ha_tang_ngoai`) quyết
-        định nuốt hay không — ở đây mà `except` thì "đã xoá 0 tệp" và "kho tệp hỏng"
-        đọc ra cùng một con số.
+        ⚠️ TIỀN TỐ PHẢI KẾT THÚC BẰNG `/`: không có nó thì `kb` khớp cả `kb-cu/...`.
+        KHÔNG dung thứ lỗi — "đã xoá 0 tệp" và "kho hỏng" không được ra cùng một con số.
         """
         if not tien_to.endswith("/"):
             raise ValueError(f"tiền tố phải kết thúc bằng '/': {tien_to!r}")
@@ -228,8 +156,8 @@ class KhoTep:
 def kho_tep_dung_chung() -> KhoTep:
     """Một `KhoTep` cho cả tiến trình. Dùng cái này ở đường phát tệp.
 
-    Tab Media nạp tới 42 ảnh mỗi lần mở, và `kho_tep_tu_cai_dat()` dựng đối tượng MỚI mỗi
-    request — 42 lần dựng session cho một lần mở tab. Test đổi cấu hình thì gọi `.cache_clear()`.
+    Một trang nhiều ảnh là nhiều request phát tệp; `kho_tep_tu_cai_dat()` dựng đối tượng MỚI
+    mỗi lần gọi. Test đổi cấu hình thì gọi `.cache_clear()`.
     """
     return kho_tep_tu_cai_dat()
 
@@ -237,11 +165,9 @@ def kho_tep_dung_chung() -> KhoTep:
 def kho_tep_tu_cai_dat() -> KhoTep:
     """Dựng `KhoTep` từ `Settings`. CHỖ DUY NHẤT làm việc đó.
 
-    Cả API lẫn worker gọi hàm này. Vì sao quan trọng: handler job `publish` chạy
-    trong tiến trình worker, nơi **không có app nào** để lấy `app.state`. Nếu API
-    lấy kho từ `app.state` còn worker tự dựng theo cách khác thì hai bên có thể
-    trỏ vào hai bucket khác nhau, và triệu chứng là "publish báo thành công nhưng
-    agent không thấy bundle" — không có lỗi nào ở đâu cả.
+    Cả API lẫn worker gọi hàm này: worker không có `app.state`, và nếu hai bên dựng kho
+    theo hai cách thì có thể trỏ vào hai bucket — "upload thành công nhưng job không thấy
+    tệp", không có lỗi nào ở đâu cả.
     """
     from portal.core.config import get_settings
 

@@ -1,142 +1,55 @@
-# Odyssey Portal — Backend
+# Phone Shop — Backend
 
-Control plane cho SaaS agent chăm sóc khách hàng của NobleX. Nơi khách hàng doanh nghiệp tự cấu hình
-agent, nạp dữ liệu, và xem vận hành.
+Backend cho cửa hàng bán lẻ điện thoại (kiểu thegioididong.com) và agent tư vấn mua điện thoại. Có ba phần:
 
-> **Repo này là backend.** Frontend ở
-> [odyssey-portal-frontend](https://gitlab.noble.vn/fintech-and-ai-development-center/ai-projects/odyssey-project/odyssey-portal-frontend). Hai repo tách từ
-> `odyssey-portal-fullstack` ngày 2026-07-30 — history 29 commit thời monorepo còn ở đó (đã archive).
+- **API quản trị và trang bán hàng**: sản phẩm, giá, khuyến mãi, trả góp, chính sách, cửa hàng/tồn kho, khách hàng/giữ hàng, đánh giá.
+- **Kho tri thức (Qdrant)**: tài liệu upload và dữ liệu DB được nhúng vector để agent `kb_search`.
+- **View cho agent**: `shop.agent_*_v`, agent đọc trực tiếp qua text-to-SQL.
 
-**Trạng thái:**
+Stack: FastAPI · asyncpg (SQL thuần, không ORM) · Postgres 18 · Alembic · Qdrant · MinIO/S3 · uv.
 
-| | |
-|---|---|
-| **M1** — nền cách ly đa-tenant | ✅ xong · 96 test xanh · 6 cổng cách ly xanh |
-| **M2a-FE** — app shell (menu · route · design token · phiên giả) | ✅ xong · 46 test xanh · [README của repo frontend](https://gitlab.noble.vn/fintech-and-ai-development-center/ai-projects/odyssey-project/odyssey-portal-frontend) |
-| **M2a-BE** — auth · workspace · `require(action)` | ⏭ tiếp theo |
-| M3 · M4 · M5 · M6 · M7 · M8 · M9 | chưa bắt đầu — **dựng màn được ngay** trên app shell + MSW |
-
-**Nhận một màn thì đọc README của [repo frontend](https://gitlab.noble.vn/fintech-and-ai-development-center/ai-projects/odyssey-project/odyssey-portal-frontend)** — nó nói rõ sửa file
-nào, không sửa file nào.
+> ⚠️ **Chưa có đăng nhập.** Mọi route quản trị đang mở. Chỉ chạy ở dev, không expose ra Internet.
 
 ## Chạy local
 
 ```bash
-make dev                      # postgres 5433 · redis 6380 · minio 9000 (dev; production: Aurora + S3)
-uv sync
-make migrate
-make test                     # tất cả (96 test)
-make test-unit                # không cần Docker
-make test-isolation           # 6 cổng cách ly
-make test-module M=m4         # test của một module (khi module đó tồn tại)
-make lint
-make check                    # lint + test — chạy trước khi mở merge request
+cp .env.example .env          # cổng riêng của dự án này: Postgres 5452, API 8110…
+docker network create pj2-network   # một lần
+make up                       # dựng hạ tầng → migrate → cấp login portal_api → seed mẫu
+make api                      # http://localhost:8110/docs
+make worker                   # hàng đợi shop.jobs (index Qdrant) — cần KB_EMBED_URL
+make check                    # ruff + toàn bộ test (Postgres testcontainers riêng)
 ```
 
-Sau `make migrate` lần đầu, chạy một lần để `portal_api` đăng nhập được ở máy dev:
+`make reset` xoá sạch hạ tầng của dự án này (`pj2-backend`), không đụng container của dự án khác.
 
-```sql
-ALTER ROLE portal_api LOGIN PASSWORD 'apidev';
+## Cấu trúc
+
+```
+migrations/versions/0001_shop.py          baseline duy nhất
+migrations/versions/_data/0001_shop/      DDL schema `shop` (bảng, view agent, trigger KB)
+scripts/seed_shop.sql                     dữ liệu mẫu (make seed-shop)
+src/portal/
+├─ api/        create_app() · ROUTERS · handler lỗi (lỗi ràng buộc DB → 409/422)
+├─ core/       config · db (pool, tx) · crud (CRUD dùng chung) · ban_hang · jobs · storage · public_url
+├─ modules/    catalog · products · promotions · finance · policies · content
+│              stores · customers · reviews · kb
+└─ worker/     tiêu hoá shop.jobs
 ```
 
-Vì sao phải bước này: migration 0003 tạo `portal_api` ở dạng NOLOGIN không mật khẩu — fail-closed,
-để không ship mật khẩu nào trong git. Chi tiết ở [.env.example](.env.example).
+## API (`/api/v1`, xem đầy đủ ở `/docs`)
 
-Frontend chạy độc lập, **không cần backend** (MSW trả dữ liệu giả) — xem
-[repo frontend](https://gitlab.noble.vn/fintech-and-ai-development-center/ai-projects/odyssey-project/odyssey-portal-frontend).
-
-Ràng buộc production (không test được bằng testcontainers): [deploy/README.md](deploy/README.md).
-
-## Đọc theo thứ tự này
-
-| # | Tài liệu | Trả lời |
-|---|---|---|
-| 1 | [Kiến trúc & bản đồ module](docs/superpowers/specs/2026-07-29-odyssey-portal-kien-truc-va-ban-do-module.md) | Kiến trúc · **bản đồ 9 module** · đối chiếu 18 màn hình · cấu trúc repo · tech stack |
-| 2 | [Hợp đồng cách ly đa-tenant](docs/contracts/isolation.md) | Đọc **trước khi viết dòng query đầu tiên** |
-| 3 | [M1 — Nền cách ly đa-tenant](docs/superpowers/specs/2026-07-29-m1-nen-cach-ly-da-tenant.md) | Module đầu tiên |
-
-Tài liệu nghiệp vụ đã chốt (copy từ `odyssey-dashboard-prototype` — **nguồn sự thật**):
-
-| Tài liệu | Nội dung |
+| Module | Nội dung |
 |---|---|
-| [phan-bien-prototype](docs/product/2026-07-28-phan-bien-prototype-va-dinh-huong-san-pham.md) | 18 màn đối chiếu thực tế · phạm vi MVP · 7 quyết định sản phẩm |
-| [work-packages-mvp](docs/product/2026-07-28-work-packages-mvp.md) | 8 gói việc A→H · phụ thuộc · nợ kỹ thuật |
-| [PQ_01 phân quyền](docs/product/2026-07-29-pq01-phan-quyen.md) | 4 vai trò · 13 nhóm hành động · quyền hỗ trợ có hạn |
-| [HT_01 quan hệ 3 lớp](docs/product/2026-07-29-ht01-quan-he-dashboard-backend-agent.md) | Dashboard · Backend · Agent · business rule |
-| [control-plane-design (ref)](docs/product/2026-07-28-tenant-portal-control-plane-design.ref.md) | 22 quyết định kỹ thuật · schema · publish · tech stack |
-| [slice-1a (ref)](docs/product/2026-07-28-slice-1a.ref.md) | Plan chi tiết nền cách ly · 3 sửa lỗi C1/C2/C3 |
+| catalog | hãng, ngành hàng, dòng máy, nhãn nhu cầu, từ điển tính năng |
+| products | sản phẩm, màu, biến thể/SKU (lịch sử giá), thông số, media, FAQ, sản phẩm liên quan. Trang bán hàng: `GET /catalog/products` (lọc kiểu TGDĐ), `/catalog/products/{slug}` (chi tiết gộp), `/catalog/compare` |
+| promotions | khuyến mãi + đối tượng áp dụng; `/promotions/applicable` |
+| finance | đối tác tài chính, gói trả góp + đối tượng áp dụng; `/installment-plans/quote(s)` tính tiền góp |
+| policies | chính sách, gói bảo hành mua thêm; `/service-packages/quote` |
+| content | bài viết + sản phẩm liên kết |
+| stores | tỉnh/thành, cửa hàng, tồn kho; `/variants/{id}/availability` |
+| customers | khách hàng (chuẩn hoá SĐT), giữ hàng/hẹn (trừ tồn kho trong giao dịch) |
+| reviews | đánh giá (tự tính lại điểm sản phẩm), hỏi đáp |
+| kb | tài liệu tra cứu (`/kb/files`), `/kb/reindex`, `/kb/status`, `/public/files/{key}` |
 
-Thiết kế gốc: `../odyssey-dashboard-prototype/design/Tenant Portal.dc.html` — **chỉ đọc**. Nó là
-brainstorm, không phải yêu cầu (quyết định W1): lấy layout · state model · design token từ nó, lấy
-**hành vi** từ tài liệu nghiệp vụ.
-
-## Bản đồ module
-
-```
-M1 ──> M2a ─┬──> M3  (giao được cho người khác — spec tổng §3.3)
-            ├──> M4  (2 người — nó là một CMS, không phải hai cái form)
-            ├──> M5  (dev với FakePublisher; nút «Áp dụng» khoá tới khi M3 xong)
-            ├──> M6 · M7 · M8
-            ├──> M9  (làm cuối, xâu chuỗi M4·M5·M6)
-            └──> M2b (hoãn — chờ chốt ranh giới quyền admin)
-```
-
-| M | Tên | Màn hình |
-|---|---|---|
-| M1 | Nền cách ly đa-tenant + hạ tầng dùng chung (`jobs` · worker · heartbeat) | *(không có UI)* |
-| M2a-FE | App shell · nav registry · design token · phiên giả (MSW) | *(18 route rỗng)* |
-| M2a-BE | Auth · Workspace · `require(action)` | Đăng nhập · Users (danh sách) |
-| M2b | Phân quyền đầy đủ — **hoãn** | Users (đổi vai trò · mời) |
-| M3 | Kho tệp · Config store · Publish | *(job/version panel)* |
-| M4 | Dữ liệu BĐS | Dự án · Form Dự án · Quỹ căn · Form Quỹ căn · Lĩnh vực |
-| M5 | Agent Studio | Agent & Kênh |
-| M6 | Tài liệu KB | Tài liệu |
-| M7 | Vận hành | Tổng quan · Hội thoại · Lịch hẹn · Cần bổ sung |
-| M8 | Kết nối · Nhật ký · Lưu trữ | Tích hợp & API · Nhật ký & Dữ liệu · Cài đặt |
-| M9 | Onboarding | Onboarding |
-
-**M1 và M2a tuần tự; phần còn lại song song.** Sáu cơ chế làm việc đó chạy được: spec tổng §4.
-
-> **M2a tách FE/BE (chốt 2026-07-30).** Spec §3.1 nói "M2a trước mọi module có UI" vì hai lý do:
-> mọi màn đều sau đăng nhập, **và** M2a ship app shell mà 7 module kia treo màn lên. Lý do thứ hai
-> đã xong (M2a-FE). Lý do thứ nhất **không chặn dev FE**: mỗi module ship kèm fake + MSW handler
-> (spec §4②), nên dựng màn được trên phiên giả. Nên bảy module có UI **bắt đầu được ngay**, không
-> chờ M2a-BE. Cái vẫn phải chờ M2a-BE là *ghép vào API thật*.
-
-**Ba quyết định hoãn có chủ đích** (chốt 2026-07-29): agent nhận cấu hình bằng image riêng hay bundle
-+ con trỏ · ai bấm được "Tạo workspace" · admin nền tảng có đọc được `tenant_data` không. Điều kiện
-của từng cái ở spec tổng §3.4 — quan trọng nhất: **mặc định làm bản chặt**, vì *chặt → nới* là một
-migration còn *nới → chặt* là viết lại.
-
-## Bốn luật không được phá
-
-Ba luật đầu **đang được CI canh hôm nay**. Luật 4 chưa — xem ghi chú của nó.
-
-1. **Mọi truy vấn `tenant_data` đi qua `tenant_conn()`**, trong một giao dịch. Không có đường đọc
-   ngoài giao dịch — nếu không thì với connection pool, request sau kế thừa workspace của request
-   trước.
-2. **Bảng mới trong `tenant_data` phải gọi `control.enforce_tenant_isolation()`.** Quên ⇒ CI đỏ
-   (cổng 6, `tests/isolation/test_isolation_catalog.py`).
-3. **Module chỉ import `portal.core.*` và `portal.modules.<khác>.contracts`.** Import ruột module
-   khác ⇒ CI đỏ (`tests/test_module_boundaries.py`).
-4. **Mọi endpoint khai `action` của nó** qua `require(action)` từ ngày đầu, kể cả khi phân quyền chưa
-   xây (M2b hoãn). Nếu không thì lúc làm M2b sẽ phải rà lại toàn bộ endpoint, và bỏ sót một cái là
-   một lỗ hổng không ai thấy.
-   > **Luật này đến cùng M2a, chưa có hiệu lực ở M1.** M1 không có tầng API, không có `require()`, và
-   > **không có check CI nào cho nó** — bản trước của file này viết "Route không khai `action` ⇒ CI
-   > đỏ", điều đó SAI. Một luật được quảng cáo là đã tự động canh mà thực ra không, còn tệ hơn là
-   > không có luật: người ta thôi kiểm bằng mắt vì tin rằng máy đang kiểm. Ghi ở đây để M2a dựng
-   > `require()` **cùng** với check CI của nó, trong cùng một PR.
-
-Và một luật quy trình: **viết contract sớm, thi công muộn.** Module giao cho người khác (như M3) phải
-có `docs/contracts/<seam>.md` + spec **trước khi** module phụ thuộc nó bắt đầu — nếu không thì không
-có gì để `fake` mà code.
-
-## Tech stack
-
-FastAPI · Pydantic v2 · uvicorn · **asyncpg thô (không ORM)** · **Aurora PostgreSQL** ở production (devops chuyển lúc deploy; dev: container Postgres bản mới nhất — [khoảng hở version](deploy/README.md)) · Redis · **Amazon S3** (dev: MinIO — chuẩn
-S3) · React 18 · Vite · TypeScript strict · Tailwind 4 · shadcn/ui · TanStack Router + Query v5 ·
-pytest + testcontainers.
-
-**Không dùng:** ORM · Celery/RabbitMQ · Next.js · K8s operator. Lý do ở
-[control-plane-design](docs/product/2026-07-28-tenant-portal-control-plane-design.ref.md) §10.3–§10.6.
+Thiết kế DB: [docs/superpowers/specs/2026-11-02-phone-shop-db-design.md](docs/superpowers/specs/2026-11-02-phone-shop-db-design.md). Triển khai: [deploy/README.md](deploy/README.md).

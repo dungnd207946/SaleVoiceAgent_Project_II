@@ -3,7 +3,7 @@
 CƠ CHẾ ĐỘC LẬP MODULE: mỗi module ship modules/<m>/jobs.py gọi register(),
 worker tự gom. Thêm một loại job KHÔNG sửa file nào của M1.
 
-    # portal/modules/m4_realestate/jobs.py
+    # portal/modules/<m>/jobs.py
     from portal.core.jobs import JobResult, register
 
     async def handle_import(conn, payload):
@@ -12,8 +12,8 @@ worker tự gom. Thêm một loại job KHÔNG sửa file nào của M1.
 
     register("import", handle_import)
 
-Handler nhận connection đã ở TRONG tenant_conn() của job, nên nó bị RLS như mọi
-thứ khác — handler không thấy tenant khác dù có quên WHERE.
+Handler nhận connection đã ở TRONG một giao dịch (`tx()`): handler ném lỗi thì mọi
+thứ nó ghi được rollback, job chuyển `failed`.
 """
 
 import asyncio
@@ -26,7 +26,7 @@ from dataclasses import dataclass
 
 import asyncpg
 
-from portal.core.db.session import tenant_conn
+from portal.core.db.session import tx
 
 log = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ _INFLIGHT: Counter[str] = Counter()
 class JobRef:
     id: int
     attempt: int
-    """Số lượt đã thử trước lượt này (`control.jobs.attempts` lúc nhận việc)."""
+    """Số lượt đã thử trước lượt này (`shop.jobs.attempts` lúc nhận việc)."""
     pool: asyncpg.Pool
     """Pool đang chạy job — để ghi việc phải sống sót khi giao dịch của handler rollback."""
 
@@ -92,7 +92,7 @@ _CHO_GOC_GIAY = 30
 LUOT_CHO_HANDLER = 5
 
 # Việc `running` lâu hơn ngưỡng này coi là KẸT và được thu hồi. Bằng ngưỡng của khung nhìn
-# `control.jobs_stuck` (migration 0006) — khung nhìn đó đã liệt kê việc treo từ lâu nhưng
+# `shop.jobs_stuck` (migration cũ) — khung nhìn đó đã liệt kê việc treo từ lâu nhưng
 # KHÔNG CÓ GÌ ĐỌC NÓ, nên việc kẹt nằm `running` vĩnh viễn.
 #
 # Vì sao phải thu hồi, không chỉ để đó: chỉ báo của tab kiến thức suy "đang nạp" từ đúng
@@ -100,7 +100,7 @@ LUOT_CHO_HANDLER = 5
 # nút nào bấm (nút Thử lại chỉ hiện ở nhánh lỗi).
 _KET_PHUT = 15
 
-# Nhịp tim của việc đang chạy (`control.jobs.heartbeat_at`, migration 0977): ghi mỗi `NHIP_TIM_GIAY`.
+# Nhịp tim của việc đang chạy (`shop.jobs.heartbeat_at`): ghi mỗi `NHIP_TIM_GIAY`.
 # Mất nhịp quá `MAT_NHIP_PHUT` là worker giữ việc đã chết (deploy giết container, OOM) — thu hồi ngay, không
 # chờ ngưỡng kẹt của loại việc (tới 6 giờ với `kbweb_run`).
 NHIP_TIM_GIAY = 30
@@ -119,13 +119,13 @@ MAT_NHIP_PHUT = 5
 # "production dùng SKIP LOCKED" — xoá SKIP LOCKED khỏi jobs.py mà cả bộ test vẫn xanh.
 # Một guard mà không ai từng thấy nó đỏ thì chưa phải guard. Đưa câu SQL ra đây để
 # test import và chạy ĐÚNG câu mà run_once() chạy, không phải một bản sao của nó.
-_CAU_NHAT_JOB = """SELECT id, tenant_id, kind, payload, attempts FROM control.jobs
+_CAU_NHAT_JOB = """SELECT id, kind, payload, attempts FROM shop.jobs
                     WHERE state = 'queued' AND run_after <= now() ORDER BY id
                       FOR UPDATE SKIP LOCKED LIMIT 1"""
 
 # Thiếu vế lọc kind, một hàng đợi đầy caption ở đầu chặn làn index dù làn đó đang rỗng:
 # `ORDER BY id LIMIT 1` chỉ trả cái cũ nhất, không quan tâm làn nào còn chỗ.
-_CLAIM_BY_KIND_SQL = """SELECT id, tenant_id, kind, payload, attempts FROM control.jobs
+_CLAIM_BY_KIND_SQL = """SELECT id, kind, payload, attempts FROM shop.jobs
                     WHERE state = 'queued' AND run_after <= now() AND kind = ANY($1)
                     ORDER BY id
                       FOR UPDATE SKIP LOCKED LIMIT 1"""
@@ -141,7 +141,7 @@ _CLAIM_BY_KIND_SQL = """SELECT id, tenant_id, kind, payload, attempts FROM contr
 #
 # `attempts + 1`: lượt vừa chết vẫn tính là một lượt đã dùng, không thì một việc treo đi
 # treo lại — hay một việc tự làm worker chết — sẽ được thu hồi vô hạn.
-_CAU_THU_HOI = """UPDATE control.jobs SET
+_CAU_THU_HOI = """UPDATE shop.jobs SET
        state      = CASE WHEN attempts + 1 <= $1 THEN 'queued' ELSE 'failed' END,
        attempts   = attempts + 1,
        run_after  = now(),
@@ -157,14 +157,14 @@ _CAU_THU_HOI = """UPDATE control.jobs SET
 
 # Trả việc khi worker dừng (deploy gửi SIGTERM): không tăng `attempts` vì việc không hỏng, chỉ bị cắt. Chỉ hàng
 # còn `running` — việc vừa kịp ghi xong thì giữ nguyên kết quả.
-_CAU_TRA_LAI = """UPDATE control.jobs SET
+_CAU_TRA_LAI = """UPDATE shop.jobs SET
        state = 'queued', started_at = NULL, heartbeat_at = NULL, run_after = now(),
        message = 'trả lại hàng đợi: worker dừng khi việc đang chạy'
      WHERE id = ANY($1::bigint[]) AND state = 'running'
    RETURNING id"""
 
-# Việc tiến trình này đang giữ (id → tenant). Việc bị huỷ giữa chừng ở lại đây để `tra_lai_viec_dang_giu` trả nó.
-_DANG_GIU: dict[int, str] = {}
+# Việc tiến trình này đang giữ (tập id). Việc bị huỷ giữa chừng ở lại đây để `tra_lai_viec_dang_giu` trả nó.
+_DANG_GIU: set[int] = set()
 
 
 def register(
@@ -211,49 +211,15 @@ def get_handler(kind: str) -> JobHandler | None:
     return _HANDLERS.get(kind)
 
 
-async def enqueue(
-    conn: asyncpg.Connection, *, tenant_id: str, kind: str, actor: str, payload: dict, cho_giay: float = 0
-) -> int:
-    """Xếp một job. Gọi TRONG tenant_conn() của request đã xác thực.
+async def enqueue(conn: asyncpg.Connection, *, kind: str, actor: str, payload: dict, cho_giay: float = 0) -> int | None:
+    """Xếp một job. Gọi trong CÙNG giao dịch với thay đổi dữ liệu sinh ra nó: giao dịch
+    rollback thì job cũng không tồn tại — không có job trỏ vào hàng chưa từng được ghi.
 
-    Chuỗi tin cậy: tenant của job đến từ CHÍNH KẾT NỐI, không từ tham số.
-
-    VÌ SAO KHÔNG TIN THAM SỐ NỮA (lỗ hổng đã bít ở đây):
-    `control.jobs` nằm ở schema `control` — nó KHÔNG có RLS, và không có ràng buộc
-    nào buộc `tenant_id` của hàng khớp `portal.current_tenant()`. Nên bản trước,
-    một lời gọi
-
-        async with tenant_conn(pool, "A") as conn:
-            await enqueue(conn, tenant_id="B", kind=..., actor=..., payload=...)
-
-    THÀNH CÔNG: nó xếp việc cho tenant B từ trong giao dịch của tenant A, và worker
-    về sau chạy job đó với ngữ cảnh của B — tức handler của B thao tác trên dữ liệu
-    của B theo yêu cầu của một request thuộc A. Đây là đường chéo-tenant tự do cuối
-    cùng còn lại trong bề mặt Python mà M1 xuất ra.
-
-    `tenant_id` GIỮ LẠI như một phép kiểm tra dư (redundancy check), không còn là
-    nguồn quyền: caller khai ý định của mình, và nếu ý định đó lệch với tenant hiệu
-    lực của kết nối thì đây là một BUG hoặc một cuộc tấn công — cả hai đều phải nổ,
-    không được đi tiếp. Cùng hình dạng với guard đã có trong `tenant_conn()`.
+    Đã có việc y hệt (`kind` + `payload`) đang chờ ⇒ không xếp thêm, trả None
+    (`shop.enqueue_once`, cùng hàm trigger KB dùng). `cho_giay` > 0: việc chỉ được nhặt sau chừng ấy giây.
     """
-    hieu_luc = await conn.fetchval("SELECT portal.current_tenant()")
-    if not hieu_luc:
-        raise RuntimeError(
-            "enqueue() không suy được tenant từ kết nối (portal.current_tenant() là NULL) — "
-            "phải gọi TRONG tenant_conn(). Xếp job không có tenant là xếp việc cho không ai."
-        )
-    if tenant_id != hieu_luc:
-        raise RuntimeError(
-            f"enqueue() được gọi với tenant_id={tenant_id!r} nhưng tenant hiệu lực của kết nối là "
-            f"{hieu_luc!r} — control.jobs không có RLS nên hàng này sẽ ghi được và worker sẽ chạy "
-            "job đó bằng ngữ cảnh của tenant kia. Đây là đường chéo-tenant, không phải tuỳ chọn."
-        )
-    # `cho_giay` > 0: việc chỉ được nhặt sau chừng ấy giây — cho các job THĂM DÒ (chờ một
-    # dịch vụ ngoài làm xong) tự xếp lại lượt sau mà không giữ worker ngồi chờ.
     return await conn.fetchval(
-        """INSERT INTO control.jobs (tenant_id, kind, actor, payload, run_after)
-           VALUES ($1, $2, $3, $4::jsonb, now() + make_interval(secs => $5)) RETURNING id""",
-        hieu_luc,
+        "SELECT shop.enqueue_once($1, $2, $3::jsonb, $4)",
         kind,
         actor,
         json.dumps(payload),
@@ -312,12 +278,12 @@ async def run_once(pool: asyncpg.Pool, *, kinds: list[str] | None = None) -> int
             if row is None:
                 return None
             await claim_conn.execute(
-                "UPDATE control.jobs SET state = 'running', started_at = now(), heartbeat_at = now() WHERE id = $1",
+                "UPDATE shop.jobs SET state = 'running', started_at = now(), heartbeat_at = now() WHERE id = $1",
                 row["id"],
             )
         _INFLIGHT[str(row["kind"])] += 1
         job_id = int(row["id"])
-        _DANG_GIU[job_id] = str(row["tenant_id"])
+        _DANG_GIU.add(job_id)
 
     nhip = asyncio.create_task(_giu_nhip(pool, job_id))
     bi_huy = False
@@ -330,7 +296,7 @@ async def run_once(pool: asyncpg.Pool, *, kinds: list[str] | None = None) -> int
         nhip.cancel()
         _INFLIGHT[str(row["kind"])] -= 1
         if not bi_huy:
-            _DANG_GIU.pop(job_id, None)
+            _DANG_GIU.discard(job_id)
 
 
 async def _giu_nhip(pool: asyncpg.Pool, job_id: int) -> None:
@@ -339,14 +305,14 @@ async def _giu_nhip(pool: asyncpg.Pool, job_id: int) -> None:
         try:
             async with pool.acquire() as conn:
                 await conn.execute(
-                    "UPDATE control.jobs SET heartbeat_at = now() WHERE id = $1 AND state = 'running'", job_id
+                    "UPDATE shop.jobs SET heartbeat_at = now() WHERE id = $1 AND state = 'running'", job_id
                 )
         except Exception:  # noqa: BLE001 — lỡ một nhịp không được giết việc đang chạy
             log.warning("ghi nhịp tim job %s hỏng", job_id, exc_info=True)
 
 
 async def _run_claimed_job(pool: asyncpg.Pool, row: asyncpg.Record) -> int:
-    job_id, tenant_id, kind = row["id"], row["tenant_id"], row["kind"]
+    job_id, kind = row["id"], row["kind"]
     payload = json.loads(row["payload"])
     handler = get_handler(kind)
 
@@ -356,38 +322,38 @@ async def _run_claimed_job(pool: asyncpg.Pool, row: asyncpg.Record) -> int:
         # worker cũ còn sống — giết ngay là mất việc (37 job kb_thumb, dev 2026-08-17).
         da_thu = int(row["attempts"])
         if da_thu < LUOT_CHO_HANDLER:
-            await _xep_lai(pool, tenant_id, job_id, da_thu + 1, f"chưa có handler cho kind={kind!r} — chờ bản mới")
+            await _xep_lai(pool, job_id, da_thu + 1, f"chưa có handler cho kind={kind!r} — chờ bản mới")
         else:
-            await _finish(pool, tenant_id, job_id, "failed", 0, f"không có handler cho kind={kind!r}")
+            await _finish(pool, job_id, "failed", 0, f"không có handler cho kind={kind!r}")
         return job_id
 
     token = _CURRENT_JOB.set(JobRef(id=int(job_id), attempt=int(row["attempts"]), pool=pool))
     try:
-        async with tenant_conn(pool, tenant_id) as conn:
+        async with tx(pool) as conn:
             result = await handler(conn, payload)
     except Exception as exc:  # noqa: BLE001 — mọi lỗi handler thành job failed, có thông điệp thật
         da_thu = int(row["attempts"])
         con_luot = da_thu < retries_of(kind)
         log.exception("job %s (%s) hỏng ở lượt %d/%d", job_id, kind, da_thu + 1, retries_of(kind) + 1)
         if con_luot:
-            await _xep_lai(pool, tenant_id, job_id, da_thu + 1, f"{type(exc).__name__}: {exc}")
+            await _xep_lai(pool, job_id, da_thu + 1, f"{type(exc).__name__}: {exc}")
         else:
-            await _finish(pool, tenant_id, job_id, "failed", 0, f"{type(exc).__name__}: {exc}")
+            await _finish(pool, job_id, "failed", 0, f"{type(exc).__name__}: {exc}")
         return job_id
     finally:
         _CURRENT_JOB.reset(token)
 
-    await _finish(pool, tenant_id, job_id, "success", result.count, result.message)
+    await _finish(pool, job_id, "success", result.count, result.message)
     return job_id
 
 
-async def _xep_lai(pool: asyncpg.Pool, tenant_id: str, job_id: int, attempts: int, message: str) -> None:
+async def _xep_lai(pool: asyncpg.Pool, job_id: int, attempts: int, message: str) -> None:
     """Về `queued` với `run_after` lùi theo cấp số nhân. Giữ nguyên `id` nên nó vẫn đứng
     trước các việc mới theo `ORDER BY id` khi tới lúc chạy — cố ý, việc cũ ưu tiên hơn."""
     cho = _CHO_GOC_GIAY * (2 ** (attempts - 1))
-    async with tenant_conn(pool, tenant_id) as conn:
+    async with tx(pool) as conn:
         await conn.execute(
-            """UPDATE control.jobs
+            """UPDATE shop.jobs
                   SET state = 'queued', attempts = $2, run_after = now() + make_interval(secs => $3),
                       started_at = NULL, message = $4
                 WHERE id = $1""",
@@ -399,10 +365,10 @@ async def _xep_lai(pool: asyncpg.Pool, tenant_id: str, job_id: int, attempts: in
     log.info("job %s xếp lại, thử lượt %d sau %ds", job_id, attempts + 1, cho)
 
 
-async def _finish(pool: asyncpg.Pool, tenant_id: str, job_id: int, state: str, count: int, message: str) -> None:
-    async with tenant_conn(pool, tenant_id) as conn:
+async def _finish(pool: asyncpg.Pool, job_id: int, state: str, count: int, message: str) -> None:
+    async with tx(pool) as conn:
         await conn.execute(
-            """UPDATE control.jobs
+            """UPDATE shop.jobs
                   SET state = $2, finished_at = now(), count = $3, message = $4
                 WHERE id = $1""",
             job_id,

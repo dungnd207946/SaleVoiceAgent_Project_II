@@ -3,9 +3,8 @@
 Semaphore chứ không đẩy hết một lúc: service chạy trên `device: cpu` (kiểm qua
 /health), nên 100 request song song chỉ làm nó xếp hàng, không nhanh hơn.
 
-Retry ở ĐÂY, không ở tầng job: `control.jobs` không có cột `attempts` nên một job
-`failed` không tự chạy lại — trước bản này cách retry duy nhất là bấm nạp lại cả
-dự án. Hết lượt thì dense/sparse NỔ còn visual trả rỗng; xem `visual_image`.
+Retry ở ĐÂY cho lỗi thoáng qua (429/5xx/mạng) — rẻ hơn để cả job thất bại rồi xếp lại.
+Hết lượt thì dense/sparse NỔ còn visual trả rỗng; xem `visual_image`.
 """
 
 import asyncio
@@ -121,12 +120,10 @@ class EmbedClient:
     async def _tai_base64(self, url: str) -> str:
         """Ảnh vượt `VISUAL_MAX_BYTES` thì thu nhỏ trước khi encode — xem hằng số đó.
 
-        Ảnh đã nhỏ đi NGUYÊN BYTE: thêm một lượt giải mã/nén Pillow cho 870 ảnh chỉ để
-        ra tệp tương đương. `to_thread` vì Pillow là CPU thuần, chạy trong event loop là
-        chặn cả worker suốt lúc giải mã.
+        Ảnh đã nhỏ đi NGUYÊN BYTE — nén lại chỉ tốn CPU để ra tệp tương đương. `to_thread`
+        vì Pillow là CPU thuần, chạy trong event loop là chặn cả worker suốt lúc giải mã.
 
-        Khoá nội bộ đọc thẳng từ kho: thumb nằm trong MinIO cùng máy, đi vòng qua HTTP
-        là tải lại ảnh gốc nhiều MB lần thứ hai.
+        Khoá nội bộ đọc thẳng từ kho thay vì đi vòng qua HTTP.
         """
         from portal.modules.kb.storage.object_store import is_internal_key
 

@@ -55,65 +55,9 @@ services:
     command: ["migrate"]
     # HAI file env chứ không một: entrypoint từ chối vai `serve` nếu thấy
     # MIGRATOR_URL. Dùng chung một file thì không có gì báo sai — container xanh,
-    # request 200, chỉ là RLS mất hiệu lực (README §1-§2).
+    # request 200, chỉ là runtime cầm quyền DDL (README §1-§2).
     env_file:
       - deploy/odyssey-portal-migrate.env
-    restart: "no"
-
-  # Định giá usage → tiền. Gọi từ systemd timer, KHÔNG từ pipeline deploy.
-  # Xem deploy/systemd/README.md.
-  #
-  # LƯỚI AN TOÀN, không phải đường chính: từ `0950` tiền được tính trong chính câu
-  # INSERT vào `usage_events` (trigger `usage_events_dinh_gia`). Vai này vá ba lỗ
-  # trigger không với tới — xem deploy/systemd/README.md.
-  #
-  #   docker compose -f docker-compose.dev.yml run --rm dinh-gia dinh-gia
-  #                                                   ^service      ^vai entrypoint
-  #
-  # Hai chữ `dinh-gia` KHÔNG phải lỗi copy: cái đầu là tên service của compose,
-  # cái sau là vai truyền cho entrypoint. `run --rm <service> <args>` THAY THẾ
-  # `command:` bên dưới, nên vai phải được viết lại — bỏ nó đi là container chạy
-  # `--gio 1` như tên vai và entrypoint `chet` với "vai không hợp lệ".
-  dinh-gia:
-    # Cùng lý lẽ profile với `migrate`: `up --wait` không được thấy service này
-    # (nó thoát sau khi định giá xong, và `--wait` coi container thoát là lỗi).
-    profiles: ["billing"]
-    image: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-portal-backend:${IMAGE_TAG:-dev-latest}
-    # Không cờ ⇒ cửa sổ mặc định 48h, đúng nhịp hằng đêm. `--gio N` / `--tu/--den`
-    # override được ở dòng lệnh khi cần chạy tay một cửa sổ khác.
-    command: ["dinh-gia"]
-    # File env của MIGRATE: `rate_usage()` định giá cho MỌI tenant (p_tenant NULL),
-    # là thao tác cấp nền tảng — xem docstring `portal/cli/dinh_gia_usage.py`.
-    # Entrypoint từ chối vai này nếu thiếu MIGRATOR_URL.
-    env_file:
-      - deploy/odyssey-portal-migrate.env
-    restart: "no"
-
-  # Owner đầu tiên của môi trường — MỘT LẦN, chạy tay sau `migrate` lần đầu.
-  # Không nằm trong pipeline deploy có chủ đích: nó in ra một link mời chỉ dùng
-  # được một lần, và một job tự chạy mỗi lần deploy sẽ hoặc in lại link vô ích
-  # (đã có user active → script tự từ chối), hoặc chôn nó trong log của lần deploy
-  # thứ 40 mà không ai đọc.
-  #
-  #   SEED_OWNER_EMAIL=... SEED_ORG_ID=... \
-  #     docker compose -f docker-compose.dev.yml run --rm seed-owner
-  seed-owner:
-    # Cùng lý lẽ profile với `migrate`: `up --wait` không được thấy service này.
-    profiles: ["seed"]
-    image: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-portal-backend:${IMAGE_TAG:-dev-latest}
-    command: ["seed-owner"]
-    # File env của BACKEND, không phải của migrate: việc ở đây là DML trên schema
-    # `control` bằng role runtime. Entrypoint từ chối vai này nếu thấy MIGRATOR_URL.
-    env_file:
-      - deploy/odyssey-portal-backend.env
-    # Bốn biến truyền lúc chạy, không nằm trong file env: chúng chỉ có nghĩa cho
-    # đúng một lần chạy này, và để trong file env là để lại cấu hình chết mà lần
-    # deploy sau đọc phải.
-    environment:
-      SEED_OWNER_EMAIL: ${SEED_OWNER_EMAIL:-}
-      SEED_ORG_ID: ${SEED_ORG_ID:-}
-      SEED_ORG_NAME: ${SEED_ORG_NAME:-}
-      SEED_PORTAL_URL: ${SEED_PORTAL_URL:-}
     restart: "no"
 
   backend:
@@ -133,7 +77,7 @@ services:
       # không thấy migrate completed nên `up` chạy migration lần hai, tranh khoá DDL.
     restart: unless-stopped
 
-  # Hàng đợi `control.jobs`. Thêm 2026-08-05 — README §8.4 đặt điều kiện "cùng lúc
+  # Hàng đợi `shop.jobs`. Thêm 2026-08-05 — README §8.4 đặt điều kiện "cùng lúc
   # với `jobs.py` đầu tiên", và `modules/kb/jobs.py` đã tới.
   #
   # KHÔNG có `ports`: worker không phục vụ HTTP. Không có `container_name`: nginx của
@@ -162,53 +106,6 @@ services:
       qdrant:
         condition: service_started
     restart: unless-stopped
-
-  # Worker RIÊNG của kb/web (`kbweb_run`/`kbweb_project` + lịch theo tenant) — chạy mãi, tách khỏi `worker` ở trên
-  # vì nhịp/tải khác hẳn (trafilatura + LLM + Gemini). File env RIÊNG
-  # (odyssey-portal-crawl.env): key DashScope/Gemini của crawl không dùng chung
-  # với phần khác (giới hạn tốc độ tính theo tài khoản/project).
-  #
-  # profiles: ["crawl"] — CÙNG profile với service `crawl` bên dưới, KHÔNG mặc
-  # định như `worker`. `env_file` là lỗi CỨNG nếu file không tồn tại (khác biến
-  # thiếu trong file, vốn chỉ rỗng) — một host chưa tạo
-  # deploy/odyssey-portal-crawl.env (chưa opt-in kb/web) sẽ làm `docker compose
-  # up -d` hỏng cho MỌI service, kể cả những service không liên quan gì tới
-  # crawl. Đứng sau profile thì compose bỏ qua service này hoàn toàn khi không
-  # ai gọi `--profile crawl`, kể cả việc đọc `env_file` của nó.
-  crawl-worker:
-    profiles: ["crawl"]
-    # tag `-crawl`: cùng code, thêm Chromium cho tầng trình duyệt (Dockerfile tầng `crawl`)
-    image: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-portal-backend:${IMAGE_TAG:-dev-latest}-crawl
-    command: ["crawl-worker"]
-    env_file:
-      - deploy/odyssey-portal-crawl.env
-    cpus: "1.0"
-    mem_limit: 1g
-    healthcheck:
-      disable: true
-    depends_on:
-      redis:
-        condition: service_started
-      qdrant:
-        condition: service_started
-    restart: unless-stopped
-
-  # Chuỗi đêm/tuần/dựng lại của kb/web cho MỘT tenant, chạy TAY (backfill, dựng lại) — lịch thật
-  # do crawl-worker tự đọc từ tenant_data.kbweb_schedules, không còn systemd timer
-  # (deploy/systemd/README.md). Cùng lý lẽ profile với `dinh-gia`/`migrate`:
-  # `up --wait` không được thấy service này (nó thoát sau khi chạy xong).
-  #
-  #   docker compose -f docker-compose.dev.yml run --rm crawl crawl --tenant T [--weekly|--rebuild|...]
-  #                                                    ^service ^vai entrypoint
-  crawl:
-    profiles: ["crawl"]
-    image: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-portal-backend:${IMAGE_TAG:-dev-latest}-crawl
-    command: ["crawl"]
-    env_file:
-      - deploy/odyssey-portal-crawl.env
-    cpus: "1.0"
-    mem_limit: 1g
-    restart: "no"
 
 volumes:
   redis-data:

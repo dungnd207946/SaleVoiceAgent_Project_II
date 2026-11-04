@@ -41,10 +41,10 @@ _LUI_TOI_DA = 0.4
 
 @dataclass(frozen=True, slots=True)
 class Chunk:
-    """`text` là nội dung THUẦN — chưa gắn tiền tố tên dự án.
+    """`text` là nội dung THUẦN — chưa gắn tiền tố tiêu đề bản ghi.
 
     Tiền tố do `clients/rag.py` gắn khi dựng chuỗi đem nhúng, và `content_hash` tính
-    trên `text` này chứ KHÔNG trên chuỗi đã gắn tiền tố: nhờ vậy đổi tên dự án không
+    trên `text` này chứ KHÔNG trên chuỗi đã gắn tiền tố: nhờ vậy đổi tiêu đề không
     làm đổi dấu tay, nên không phải nhúng lại cả cây con (xem hợp đồng payload §4).
     """
 
@@ -91,7 +91,7 @@ def _gom_section(khoi: list[_Khoi]) -> list[_Section]:
 def split(text: str, spec: ChunkSpec, *, root: tuple[str, ...] = ()) -> list[Chunk]:
     """`root` là đường dẫn tổ tiên KHÔNG có mặt trong `text`.
 
-    Dùng cho tên phân khu và tiêu đề tài liệu: đặt chúng vào `root` thay vì prepend một
+    Dùng cho tên sản phẩm và tiêu đề tài liệu: đặt chúng vào `root` thay vì prepend một
     dòng `#` vào nội dung, vì chữ bóc từ docx/xlsx đã mang sẵn `#`/`##` của chính nó —
     thêm một cấp vào text sẽ làm tiêu đề của tài liệu thành ANH EM với tiêu đề ta chèn,
     không phải con của nó.

@@ -1,8 +1,4 @@
-"""Thumbnail WebP do portal làm, không phải media_service (§14.3 phương án a).
-
-Phương án cấp presigned PUT cho service bị loại: nó phá §4.2a, và credential ghi đã gửi
-ra ngoài thì không thu lại được.
-"""
+"""Thumbnail WebP cho ảnh đã kéo về kho — giao diện chat tải bản nhỏ thay vì ảnh gốc nhiều MB."""
 
 import hashlib
 import threading
@@ -16,7 +12,7 @@ from portal.modules.kb import settings
 if TYPE_CHECKING:
     from portal.modules.kb.contracts import ObjectStore
 
-_THU_MUC_THUM_NGOAI = "kb-bds/thumb"
+_THU_MUC_THUM_NGOAI = "kb/anh/thumb"
 
 # Trần RIÊNG của ta, thay trần 178M của Pillow. 250M pixel ở 1/8 mẫu là ~4M pixel, an
 # toàn về RAM; vượt mức này thì ảnh gốc đã sai chứ không phải ta thiếu năng lực.
@@ -26,7 +22,7 @@ _KHOA_ANH_LON = threading.Semaphore(1)
 
 
 def thumb_key(media_key: str) -> str:
-    """`.../mb.jpg` → `.../mb.thumb.webp`. Cùng prefix tenant = cùng một IAM policy canh."""
+    """`.../mb.jpg` → `.../mb.thumb.webp` — cùng thư mục với ảnh gốc, cùng luật phát công khai."""
     tail = media_key.rsplit("/", 1)[-1]
     base = media_key.rsplit(".", 1)[0] if "." in tail else media_key
     return f"{base}{settings.THUMB_SUFFIX}"
@@ -54,28 +50,22 @@ def thumb_key_cho_media(*, media_url: str, content_hash: str) -> str:
 async def sinh_va_luu(
     store: "ObjectStore",
     *,
-    tenant_id: str,
     media_url: str,
     content_hash: str,
     tai_ve: "Callable[[], bytes | Awaitable[bytes]]",
 ) -> str:
     """Tải ảnh → WebP → ghi kho. Trả **KHOÁ**, không phải URL.
 
-    `put()` trả presigned URL TTL `PRESIGN_TTL_SEC` (300 giây); lưu giá trị đó vào
-    `media.thumb_url` là lưu một URL chết sau 5 phút. Khoá thì bền, và `nguonAnh()` ở
-    frontend biến khoá thành `/realestate/files?key=…` (có kiểm tiền tố tenant).
+    Khoá thì bền; URL (presigned) chết sau vài phút — `public_url_of()` biến khoá thành link.
 
-    `tai_ve` là hàm chứ không phải byte: chỗ gọi ở enrich lấy ảnh bằng httpx async,
+    `tai_ve` là hàm chứ không phải byte: chỗ gọi có thể lấy ảnh bằng httpx async,
     còn test lấy từ bộ nhớ — tiêm vào đây giữ hàm này không biết gì về mạng.
 
     `to_webp` chạy TRƯỚC `put`: byte không phải ảnh thì ném ở bước đổi định dạng và
     kho không có object rác nào, thay vì một khoá trỏ tới một tệp vỡ.
 
-    `to_webp` PHẢI qua `to_thread` (sửa 2026-08-14): nó mở ảnh bằng Pillow, resize LANCZOS
-    và encode WebP `method=6` — chính comment của `to_webp` gọi mức đó là "nén chậm nhất".
-    Trước đây đây là chỗ DUY NHẤT trong cả đường KB gọi Pillow mà không offload (hai chỗ
-    gọi `to_webp` khác đều đã `to_thread`), và worker chạy một việc một lúc nên một lời gọi
-    chặn là cả hàng đợi đứng.
+    `to_webp` PHẢI qua `to_thread`: Pillow resize LANCZOS + WebP `method=6` là CPU thuần,
+    chạy trong event loop là cả worker đứng.
     """
     import asyncio
     import inspect
@@ -84,10 +74,7 @@ async def sinh_va_luu(
     if inspect.isawaitable(goc):
         goc = await goc
     webp = await asyncio.to_thread(to_webp, goc)
-    khoa = store.key(
-        tenant_id=tenant_id,
-        path=thumb_key_cho_media(media_url=media_url, content_hash=content_hash),
-    )
+    khoa = store.key(path=thumb_key_cho_media(media_url=media_url, content_hash=content_hash))
     await store.put(key=khoa, data=webp, content_type="image/webp")
     return khoa
 
@@ -99,17 +86,16 @@ def to_webp(data: bytes, *, width: int = settings.THUMB_WIDTH) -> bytes:
     bản gốc, tức thumbnail phản tác dụng đúng ở chỗ nó tồn tại để giúp.
 
     `Image.thumbnail()` chứ không `resize()`: nó tự tính chiều còn lại theo tỉ lệ và
-    tự bỏ qua khi ảnh đã nhỏ hơn — hai hành vi trên đúng bằng một lời gọi. Mặt bằng
-    méo tỉ lệ là một bản vẽ sai số đo.
+    tự bỏ qua khi ảnh đã nhỏ hơn — hai hành vi trên đúng bằng một lời gọi. Ảnh
+    sản phẩm méo tỉ lệ là ảnh sai hình.
 
     Ném `ValueError` cho byte không phải ảnh: Pillow ném `UnidentifiedImageError`
     (con của `OSError`), lẫn vào cùng nhóm với lỗi mạng/đĩa ở tầng gọi.
     """
     from PIL import Image, UnidentifiedImageError
 
-    # Trần chống bom giải nén của Pillow (178M pixel) chặn ĐÚNG ảnh khách gửi: đo trên
-    # `aina_prod` có tấm 444M pixel. Ta tự chặn bằng `_TRAN_PIXEL` + `draft()` bên dưới,
-    # nên tắt trần của Pillow để nó thôi ném ngay ở `open()`.
+    # Trần chống bom giải nén của Pillow (178M pixel) chặn cả ảnh thật cỡ vài trăm M pixel.
+    # Ta tự chặn bằng `_TRAN_PIXEL` + `draft()` bên dưới, nên tắt trần của Pillow.
     Image.MAX_IMAGE_PIXELS = None
 
     try:
@@ -123,9 +109,8 @@ def to_webp(data: bytes, *, width: int = settings.THUMB_WIDTH) -> bytes:
     # 1/8 còn 7,5M pixel (~22 MB RAM) thay vì 1,4 GB. Không có tác dụng với PNG.
     im.draft("RGB", (width, width))
 
-    # Trần kiểm SAU khi giảm mẫu, không phải trước: đo trên `aina_prod` có ảnh 273M-477M
-    # pixel, và chúng là JPEG nên `draft()` đưa về vài triệu pixel — chặn trước là chặn oan
-    # đúng những tấm ta vừa dạy hệ thống đọc được. Trần còn tác dụng với PNG khổng lồ, nơi
+    # Trần kiểm SAU khi giảm mẫu: JPEG khổng lồ được `draft()` đưa về vài triệu pixel —
+    # chặn trước là chặn oan đúng những tấm đọc được. Trần còn tác dụng với PNG khổng lồ, nơi
     # `draft()` không làm gì và RAM là thật.
     pixel = im.size[0] * im.size[1]
     if pixel > _TRAN_PIXEL:

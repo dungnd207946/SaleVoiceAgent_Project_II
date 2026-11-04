@@ -35,36 +35,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 # /app/src. Nhờ vậy tầng runtime KHÔNG cần mang src/ theo — image cuối chỉ có
 # thư viện đã cài, không có mã nguồn nằm rời.
 COPY src ./src
-# Gói python `playwright` (nhỏ) nằm trong venv của MỌI vai; Chromium (nặng) chỉ
-# cài ở tầng `crawl` bên dưới. Vai serve/worker không bao giờ import nó.
 RUN uv sync --frozen --no-dev --no-editable
-
-# ─── Tầng crawl (image RIÊNG cho vai crawl-worker/crawl) ──────────────────────
-# `docker build --target crawl` → tag `<tag>-crawl`. Chỉ khác tầng runtime ở Chromium
-# + thư viện hệ thống cho Playwright (~400 MB) — image serve/worker không mang nó.
-FROM python:3.13-slim-bookworm AS crawl
-
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/app/.venv/bin:$PATH" \
-    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-
-RUN groupadd --gid 10001 odyssey \
- && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin odyssey
-
-WORKDIR /app
-COPY --from=build --chown=root:root /app/.venv /app/.venv
-COPY alembic.ini ./
-COPY migrations ./migrations
-COPY deploy/entrypoint.sh /usr/local/bin/odyssey-entrypoint
-RUN chmod 0755 /usr/local/bin/odyssey-entrypoint \
- && playwright install --with-deps chromium \
- && rm -rf /var/lib/apt/lists/* \
- && chmod -R a+rX /ms-playwright
-
-USER odyssey
-ENTRYPOINT ["/usr/local/bin/odyssey-entrypoint"]
-CMD ["crawl-worker"]
 
 # ─── Tầng runtime ─────────────────────────────────────────────────────────────
 # python:3.13-slim-bookworm phải khớp python3.13-bookworm-slim ở trên: venv trỏ

@@ -10,92 +10,29 @@ dependencies = [
     "sqlalchemy>=2.0",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.34",
+    # Hạ tầng giữ sẵn (compose có redis) — chưa module nào dùng; core/redis.py là factory.
     "redis>=5.2",
-    "argon2-cffi>=23.1",
-    # async vì publish có upload nằm trên đường người dùng chờ (spec §6.1).
-    # boto3 đồng bộ sẽ chặn event loop của uvicorn suốt lượt upload bundle.
+    # Kho tệp S3/MinIO (core/storage.py) — async vì upload nằm trên đường người dùng chờ.
     "aioboto3>=13.2",
-    # Bóc chữ tệp cho `clients/extract.py`: pypdf (PDF có lớp chữ) · python-docx · openpyxl.
-    # PDF không có lớp chữ đi đường khác — render trang rồi đẩy sang VLM.
+    # Bóc chữ «Tài liệu tra cứu» (kb/clients/extract.py): PDF có lớp chữ · DOCX · XLSX.
     "pypdf>=5.1",
     "python-docx>=1.1",
     "openpyxl>=3.1",
     "qdrant-client>=1.12",
-    # Avatar SVG tất định theo seed cho `core/avatar.py` (style initials). Sinh
-    # LOCAL, không gọi API ngoài — hai gói: core + định nghĩa style.
-    "dicebear-core>=10.6",
-    "dicebear-styles>=10.5",
-    # AES-GCM cho `core/bi_mat_luu.py` (mã hoá at-rest hai cột khoá thô). AEAD thì
-    # KHÔNG tự viết — khác `enrollment/qdrant_jwt.py`, chỗ đó chỉ là một lời gọi
-    # `hmac.new()` và phần dễ sai (verify) do Qdrant làm. Ở đây mình làm cả hai
-    # chiều, và nonce dùng lại một lần là mất sạch bảo đảm của GCM.
-    "cryptography>=44.0",
-    # `clients/extract.py` gọi THẲNG `pypdfium2` (đếm trang + render trang PNG cho nhánh
-    # PDF scan). Khai tường minh, không dựa vào dep bắc cầu của ai — cùng lý lẽ `pyyaml`
-    # bên dưới: thiếu một gói chỉ dùng ở nhánh hiếm là lỗi lúc CHẠY, ở production.
-    "pypdfium2>=5.12",
-    # `storage/thumbnail.py` sinh thumbnail WebP. Portal tự làm chứ không cấp presigned
-    # PUT cho service ngoài (spec §14.3a) — nên Pillow là dep của CHÍNH tiến trình này,
-    # không phải của một service khác.
+    # Thumbnail WebP cho ảnh kéo về kho (kb/storage/thumbnail.py).
     "pillow>=10.2",
-    #
-    # ⚠️ ĐÃ THỬ DOCLING RỒI BỎ (2026-08-10) — ghi lại để không ai đề xuất lại mà không
-    # biết giá. Docling xuất Markdown có cấu trúc (heading, bảng), khớp đúng chunk
-    # `structured_md` của documents, nên nó là lựa chọn hiển nhiên. Nhưng đo thật:
-    # ruột docling 9 MB, phụ thuộc nó kéo theo 1.35 GB — torch 734M · scipy 86M ·
-    # opencv 81M · transformers 58M · pandas 50M · numpy 34M · docling_parse 33M.
-    # Và KHÔNG tổ hợp extras nào tránh được torch: `docling.document_converter` import
-    # cứng `StandardPdfPipeline` ở top-level bất kể định dạng, pipeline đó import cứng
-    # `docling_ibm_models`, gói ấy khai `torch`/`torchvision`/`accelerate` là dependency
-    # THẲNG. API và worker dùng chung một image (`docker-compose.dev.yml`), nên bản API
-    # cũng mang 1.35 GB nó không bao giờ chạm tới. Chủ dự án chốt: không đáng.
-    # prompts.yaml. KHÔNG dựa vào dep bắc cầu của nhóm dev: `uv sync --no-dev` cho image
-    # production sẽ thiếu, và vì loader chạy lúc import module thì app KHÔNG khởi động
-    # được — không phải hỏng một endpoint. Đúng cách `minio` từng hỏng.
-    "pyyaml>=6.0",
-    # Upload tài liệu là multipart/form-data. FastAPI KHÔNG kéo theo, và thiếu nó
-    # thì endpoint upload nổ RuntimeError lúc chạy chứ không phải lúc import —
-    # tức là ở production, không phải ở CI của người thêm endpoint.
+    # FastAPI cần để đọc multipart (POST /kb/files) — không import trực tiếp.
     "python-multipart>=0.0.20",
-    # Client quản trị MinIO — `HaTang` (modules/enrollment/ha_tang.py) cấp access
-    # key theo tiền tố cho từng tenant lúc cấp phát workspace.
-    #
-    # VÌ SAO NẰM Ở ĐÂY, KHÔNG PHẢI Ở `dev`: trước bản này `minio` chỉ tới gián
-    # tiếp qua `testcontainers[…minio…]` của nhóm dev. Nên `make api` chạy tốt
-    # còn image production (`uv sync --no-dev`) thiếu hẳn nó — và app KHÔNG khởi
-    # động được, không phải hỏng một endpoint: `api/registry.py` tự nạp router
-    # của mọi module, `enrollment/router.py` import `ha_tang` ở top-level, nên
-    # thiếu package là ModuleNotFoundError ngay lúc import. Phát hiện lúc chạy
-    # `docker compose --profile app up`, tức là trước khi devops đụng nó ở lần
-    # deploy đầu.
-    #
-    # ⚠️ CĂNG THẲNG ĐÃ BIẾT với deploy/README.md §7.2: §7.2 chốt production dùng
-    # IAM role, KHÔNG có access key nào trong env — tức đường MinIO của `HaTang`
-    # là đường của dev. Khai ở đây là chọn "image khởi động được" thay vì "image
-    # chỉ mang đúng thứ production dùng". Khi M9 dựng nhánh S3/IAM thật thì xem
-    # lại dòng này: chỗ đúng của nó lúc đó có thể là một extra tuỳ chọn.
-    "minio>=7.2",
-    # Đường ra duy nhất của repo: embed service, DashScope, Gemini. Trước bản này httpx
-    # chỉ có ở nhóm dev, nên clients/base.py phải để NotImplementedError("cần dep httpx").
     "httpx>=0.28",
-    "aiosmtplib>=3.0",
-    "trafilatura>=2.0",
-    # Gói python nhỏ, mọi vai đều cài; Chromium (nặng) chỉ cài ở tầng `crawl` của Dockerfile.
-    "playwright>=1.47",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=1.0",
-    # [redis] vì phiên đăng nhập ở Redis: tests/api dựng cả postgres và redis container.
-    # [minio] vì kho tệp là seam thật của M3: bundle + con trỏ LIVE. Mock S3 sẽ
-    # xanh cho cả một thứ tự ghi sai, mà thứ tự ghi CHÍNH LÀ cổng 2.
-    "testcontainers[postgres,redis,minio,qdrant]>=4.15",
+    # Postgres thật (chạy migration) — dịch vụ ngoài khác (embed, Qdrant, S3) được fake trong test.
+    "testcontainers[postgres]>=4.15",
     "ruff>=0.8",
-    # CHỈ để sinh fixture PDF cho test (scripts/gen_fixtures.py). Không phải dep
-    # production: portal chỉ ĐỌC pdf, không bao giờ ghi.
-    "fpdf2>=2.8",
 ]
 
 [build-system]
@@ -108,34 +45,15 @@ packages = ["src/portal"]
 [tool.ruff]
 line-length = 120
 src = ["src", "tests"]
-# ruff >= 0.16 format cả code Python trong markdown. docs/ thời monorepo nằm ở
-# root, ngoài cây con backend mà lint quét, nên chưa từng bị lint — tách repo đưa
-# vào cùng root với src/. Loại trừ để giữ đúng phạm vi cũ.
-#
-# Không phải chỉ để cho xanh: `docs/contracts/isolation.md` căn cột thủ công các
-# comment `# ✅ txn + SET LOCAL` / `# ❌ ngoài giao dịch` để đối lập đúng-sai đọc
-# là thấy. ruff dồn chúng lại, phá đúng cái tương phản mà tài liệu tồn tại để nói.
-# Và plan M1 là biên bản việc đã làm — Task 6 giữ nó nguyên văn.
 extend-exclude = ["docs"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
 
 [tool.ruff.lint.flake8-bugbear]
-# B008 ("đừng gọi hàm trong argument default") bắt đúng một lớp bug thật: default
-# là mutable dựng MỘT LẦN lúc định nghĩa hàm rồi dùng chung mọi lượt gọi. Nhưng
-# FastAPI cố ý xây trên đúng cơ chế đó — `Depends(...)` trong default LÀ cách khai
-# dependency, và giá trị nó trả về là marker bất biến, không phải state dùng chung.
-#
-# Khai các tên này là miễn trừ chứ không tắt luật: B008 vẫn bắt mọi chỗ khác.
-# `require` phải có mặt vì nó trả về `Depends(...)` — cùng bản chất.
-#
-# `fastapi.Query` cùng lý lẽ, nhưng CHỈ lộ ra khi kiểu tham số không nằm trong
-# danh sách "kiểu bất biến" mà ruff tự nhận diện (str/int/bool thì ruff đã bỏ
-# qua sẵn, không cần khai) — `date | None` (module billing, lọc theo khoảng
-# ngày `from`/`to`) thì không, nên B008 bắt nhầm một FieldInfo bất biến của
-# FastAPI thành default mutable.
-extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "portal.core.auth.require.require"]
+# B008 bắt default là lời gọi hàm (mutable dựng một lần). FastAPI cố ý dùng đúng cơ chế đó:
+# `Depends(...)`/`Query(...)`/`File(...)`/`Form(...)` trả marker bất biến — miễn trừ, không tắt luật.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.File", "fastapi.Form"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
