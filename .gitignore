@@ -1,0 +1,30 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Thư viện / cache
+.venv/
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Dataset, checkpoint, audio — giữ ở local, không đẩy lên
+tts-data/dataset/
+tts-data/eval_compare/
+tts-data/parts/
+tts-data/texts.jsonl
+*.wav
+*.mp3
+*.flac
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.bin
+*.log
+*.bak
