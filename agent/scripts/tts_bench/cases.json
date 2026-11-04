@@ -1,0 +1,22 @@
+[
+  {
+    "id": "greet",
+    "label": "Câu chào hotline (ngắn, đo TTFB)",
+    "text": "Dạ em xin nghe, đây là tổng đài Noblex, em có thể giúp gì cho mình ạ?"
+  },
+  {
+    "id": "alnum",
+    "label": "Số, mã đơn, tiền, số hotline",
+    "text": "Đơn hàng NBX-4728 của mình sẽ giao vào ngày 21 tháng 8, phí thu hộ là 1.250.000 đồng. Nếu cần hỗ trợ thêm mình gọi 1900 6885 nhé."
+  },
+  {
+    "id": "mixed",
+    "label": "Trộn Anh - Việt, thuật ngữ kỹ thuật",
+    "text": "Mình vào Odyssey Portal, chọn tab Workspace rồi bấm Deploy nhé. Hệ thống sẽ chạy pipeline CI/CD và gửi webhook về Google Chat trong khoảng năm phút."
+  },
+  {
+    "id": "long",
+    "label": "Đoạn dài (đo RTF, độ ổn định giọng)",
+    "text": "Em xin xác nhận lại thông tin đăng ký dịch vụ của mình. Gói cước hiện tại là gói doanh nghiệp, bao gồm ba nghìn phút thoại mỗi tháng và hỗ trợ kỹ thuật trong giờ hành chính. Nếu mình muốn nâng lên gói cao hơn thì sẽ có thêm phần giám sát hệ thống hai mươi bốn trên bảy, cùng với báo cáo chất lượng cuộc gọi gửi hàng tuần. Mức phí chênh lệch là hai triệu tám trăm nghìn đồng mỗi tháng, và bên em sẽ kích hoạt trong vòng một ngày làm việc kể từ khi mình xác nhận."
+  }
+]

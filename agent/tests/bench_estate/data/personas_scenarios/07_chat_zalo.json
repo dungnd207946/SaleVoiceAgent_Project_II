@@ -1,0 +1,43 @@
+{
+  "case_id": "S-7",
+  "title": "Chat Zalo/Messenger",
+  "setup": "Khách hàng không rõ tên nhắn tin Zalo lúc 8:30 sáng hỏi về tình trạng căn A.18.05. Kênh giao tiếp là chat text, không phải voice — tone cần ngắn gọn, có CTA, không viết tường text. DISC type: I (ảnh hưởng, thích phản hồi nhanh, cảm xúc).",
+  "turns": [
+    {
+      "speaker": "KH",
+      "text": "Em ơi căn này còn không?"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: phản hồi nhanh (trong 2 phút); xác nhận còn duy nhất 1 căn A.18.05 — scarcity; gửi ngay link video flycam + bảng giá PDF; CTA nhẹ: 'anh xem qua rồi cho em biết cảm nhận'"
+    },
+    {
+      "speaker": "KH",
+      "text": "(15 phút sau, không trả lời)"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: follow-up chủ động sau 15 phút im lặng; hỏi cảm nhận ngắn gọn; CTA cụ thể: xin 5 phút điện thoại; đưa 2 lựa chọn giờ gọi (11h hay 14h)"
+    }
+  ],
+  "rubric_checkpoints": [
+    [
+      "phản hồi nhanh ≤2 phút — tốc độ quan trọng trên kênh chat",
+      "scarcity rõ ràng: 'còn duy nhất 1 căn' — không nói chung chung",
+      "gửi tài liệu đính kèm ngay: link flycam + PDF bảng giá",
+      "tone ngắn gọn phù hợp chat — không viết tường text dài như email",
+      "CTA nhẹ không áp lực: hỏi cảm nhận thay vì ép mua ngay"
+    ],
+    [
+      "follow-up chủ động sau im lặng — không bỏ mặc KH",
+      "hỏi cảm nhận trước khi đề xuất gọi điện — không nhảy thẳng vào bán",
+      "xin cụ thể '5 phút điện thoại' — không hỏi 'anh có rảnh không'",
+      "choice close giờ gọi: 11h hay 14h — giảm ma sát ra quyết định",
+      "tone thân thiện phù hợp Zalo — không formal quá mức"
+    ]
+  ],
+  "judge_extras": "Sales rubric kênh chat — đánh giá tone phù hợp text chat ngắn (vs voice dài). Tập trung M1 (phản hồi nhanh + tài liệu đính kèm ngay) + M5 (follow-up + choice close giờ gọi). Phạt nếu viết tin nhắn quá dài hoặc không follow-up sau 15 phút im lặng.",
+  "max_extra_turns": 0,
+  "points": 20.0,
+  "delivery_mode": "scripted_multiturn"
+}

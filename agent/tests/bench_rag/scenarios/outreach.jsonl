@@ -1,0 +1,6 @@
+{"id": "o1", "query": "cho mình xin map quy hoạch dự án", "project": "NCLB", "expected_tool": "send_via_app", "expected_keywords": ["chờ em", "gửi"], "note": "INQ_RICH_CONTENT — map quy hoạch"}
+{"id": "o2", "query": "có brochure Noble Crystal Tây Hồ không gửi mình với", "project": "NCTH", "expected_tool": "send_via_app", "expected_keywords": ["chờ em"], "note": "INQ_RICH_CONTENT — brochure"}
+{"id": "o3", "query": "gửi mình bản vẽ căn hai phòng ngủ với", "project": "NCLB", "expected_tool": "send_via_app", "expected_keywords": ["chờ em"], "note": "INQ_RICH_CONTENT — bản vẽ"}
+{"id": "o4", "query": "giá tổng quan dự án bao nhiêu", "project": "NCLB", "expected_tool": null, "expected_keywords": ["tỷ"], "note": "NEGATIVE — voice trả lời tốt, không gọi send_via_app"}
+{"id": "o5", "query": "dự án bàn giao khi nào", "project": "NCTH", "expected_tool": null, "expected_keywords": ["bàn giao"], "note": "NEGATIVE — tiến độ, không cần outreach"}
+{"id": "o6", "query": "có những loại căn nào ở dự án", "project": "NCLB", "expected_tool": "search_units", "expected_keywords": [], "note": "DISCRIMINATOR — phải gọi search_units, không phải send_via_app"}

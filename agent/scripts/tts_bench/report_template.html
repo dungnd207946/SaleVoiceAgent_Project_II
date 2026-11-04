@@ -1,0 +1,593 @@
+<title>Soniox v2 vs ElevenLabs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@600;700;800&family=Literata:opsz,wght@7..72,400;7..72,500;7..72,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+:root {
+  /* Bộ sáng — xám lệch lục về phía accent teal, không phải xám trung tính */
+  --ground: #F1F3F2;
+  --surface: #FFFFFF;
+  --surface-2: #E9EDEB;
+  --ink: #101816;
+  --ink-2: #33403C;
+  --muted: #59645F;
+  --rule: #D3DAD7;
+  --rule-strong: #B6C0BC;
+
+  /* Hai series — đã kiểm định (ΔE thường 26.3, CVD 13.0 trên nền sáng) */
+  --sx: #00897B;
+  --sx-soft: #DCEFEC;
+  --el: #C2410C;
+  --el-soft: #F7E4DA;
+
+  /* Trạng thái — tách khỏi màu series, luôn kèm nhãn */
+  --good: #2E7D32;
+  --warn: #9A6400;
+  --crit: #B3261E;
+  --good-soft: #E3EFE4;
+  --warn-soft: #F7EEDA;
+  --crit-soft: #F7E3E1;
+
+  --shadow: 0 1px 2px rgba(16, 24, 22, .05), 0 8px 24px -16px rgba(16, 24, 22, .18);
+
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .15vw, 1.08rem);
+  --step-1: clamp(1.2rem, 1.13rem + .35vw, 1.4rem);
+  --step-2: clamp(1.5rem, 1.36rem + .7vw, 1.95rem);
+  --step-3: clamp(2rem, 1.7rem + 1.5vw, 3rem);
+
+  --measure: 68ch;
+  --pad: clamp(1.1rem, .7rem + 2vw, 2.5rem);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0E1211;
+    --surface: #161C1A;
+    --surface-2: #1E2624;
+    --ink: #E4EAE7;
+    --ink-2: #C2CCC8;
+    --muted: #97A29D;
+    --rule: #2A3331;
+    --rule-strong: #3D4844;
+    --sx: #26A69A;
+    --sx-soft: #143430;
+    --el: #E1701A;
+    --el-soft: #3A2313;
+    --good: #6FBF73;
+    --warn: #D8A33A;
+    --crit: #E8837A;
+    --good-soft: #16291A;
+    --warn-soft: #2E2413;
+    --crit-soft: #331A18;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px -18px rgba(0, 0, 0, .8);
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: #0E1211;
+  --surface: #161C1A;
+  --surface-2: #1E2624;
+  --ink: #E4EAE7;
+  --ink-2: #C2CCC8;
+  --muted: #97A29D;
+  --rule: #2A3331;
+  --rule-strong: #3D4844;
+  --sx: #26A69A;
+  --sx-soft: #143430;
+  --el: #E1701A;
+  --el-soft: #3A2313;
+  --good: #6FBF73;
+  --warn: #D8A33A;
+  --crit: #E8837A;
+  --good-soft: #16291A;
+  --warn-soft: #2E2413;
+  --crit-soft: #331A18;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px -18px rgba(0, 0, 0, .8);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: Literata, Georgia, "Times New Roman", serif;
+  font-size: var(--step-0);
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 74rem;
+  margin: 0 auto;
+  padding: var(--pad);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2.5rem, 1.5rem + 3vw, 4.5rem);
+}
+
+h1, h2, h3, .eyebrow, .num, th, .chip, button, .tab {
+  font-family: Chivo, "Helvetica Neue", Arial, sans-serif;
+}
+
+h1 {
+  font-size: var(--step-3);
+  font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1.02;
+  margin: 0;
+  text-wrap: balance;
+}
+
+h2 {
+  font-size: var(--step-2);
+  font-weight: 700;
+  letter-spacing: -.015em;
+  line-height: 1.12;
+  margin: 0;
+  text-wrap: balance;
+}
+
+h3 {
+  font-size: var(--step-1);
+  font-weight: 700;
+  letter-spacing: -.01em;
+  margin: 0;
+  text-wrap: balance;
+}
+
+p { margin: 0; max-width: var(--measure); }
+
+.eyebrow {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: var(--step--1);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: var(--muted);
+  margin: 0;
+}
+
+.mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+a { color: var(--sx); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+:focus-visible { outline: 2px solid var(--sx); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- kết cấu chung ---------- */
+section { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.sec-head { display: flex; flex-direction: column; gap: .4rem; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: clamp(1rem, .7rem + 1.2vw, 1.75rem);
+  box-shadow: var(--shadow);
+}
+
+.scroll-x { overflow-x: auto; }
+
+/* ---------- chốt khuyến nghị ---------- */
+.verdict {
+  display: grid;
+  gap: clamp(1.25rem, .8rem + 1.6vw, 2.25rem);
+  grid-template-columns: 1fr;
+  border-left: 3px solid var(--ink);
+  background: var(--surface);
+  border-radius: 0 4px 4px 0;
+  padding: clamp(1.1rem, .8rem + 1.4vw, 2rem);
+  box-shadow: var(--shadow);
+}
+@media (min-width: 60rem) { .verdict { grid-template-columns: 1.1fr .9fr; } }
+
+.verdict-body { display: flex; flex-direction: column; gap: .9rem; }
+.verdict-body p { max-width: 56ch; }
+
+.split {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  border-top: 1px solid var(--rule);
+  padding-top: .9rem;
+}
+@media (min-width: 60rem) { .split { border-top: 0; border-left: 1px solid var(--rule); padding: 0 0 0 clamp(1rem, 2vw, 2rem); } }
+
+.lane { display: flex; gap: .7rem; align-items: flex-start; }
+.lane-mark {
+  flex: none; width: 2.1rem; height: 2.1rem; border-radius: 3px;
+  display: grid; place-items: center;
+  font-family: "IBM Plex Mono", monospace; font-size: .8rem; font-weight: 600;
+}
+.lane-sx { background: var(--sx-soft); color: var(--sx); }
+.lane-el { background: var(--el-soft); color: var(--el); }
+.lane-txt { display: flex; flex-direction: column; gap: .1rem; }
+.lane-txt strong { font-family: Chivo, sans-serif; font-size: .95rem; letter-spacing: -.005em; }
+.lane-txt span { font-size: var(--step--1); color: var(--muted); line-height: 1.45; }
+
+/* ---------- ô số liệu ---------- */
+.tiles { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
+.tile { background: var(--surface); padding: 1.1rem 1.15rem; display: flex; flex-direction: column; gap: .35rem; }
+.tile-label { font-family: "IBM Plex Mono", monospace; font-size: .7rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.tile-row { display: flex; align-items: baseline; gap: .5rem; flex-wrap: wrap; }
+.num { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; font-size: var(--step-2); font-weight: 600; letter-spacing: -.03em; line-height: 1; }
+.num-sx { color: var(--sx); }
+.num-el { color: var(--el); }
+.tile-note { font-size: var(--step--1); color: var(--muted); line-height: 1.45; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em;
+  padding: .18rem .45rem; border-radius: 3px; white-space: nowrap;
+}
+.chip-good { background: var(--good-soft); color: var(--good); }
+.chip-warn { background: var(--warn-soft); color: var(--warn); }
+.chip-crit { background: var(--crit-soft); color: var(--crit); }
+.chip-sx { background: var(--sx-soft); color: var(--sx); }
+.chip-el { background: var(--el-soft); color: var(--el); }
+
+/* ---------- bảng ---------- */
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); }
+caption { text-align: left; font-size: var(--step--1); color: var(--muted); padding-bottom: .55rem; }
+th, td { text-align: right; padding: .5rem .6rem; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th {
+  font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--muted); border-bottom: 1px solid var(--rule-strong);
+}
+tbody td { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+tbody td:first-child { font-family: Chivo, sans-serif; font-weight: 600; }
+tbody tr:hover td { background: var(--surface-2); }
+td.win { color: var(--good); font-weight: 600; }
+td.lose { color: var(--muted); }
+
+/* ---------- phòng nghe ---------- */
+.case { display: flex; flex-direction: column; gap: .85rem; }
+.case-text {
+  font-size: var(--step-0); line-height: 1.55; margin: 0; max-width: 62ch;
+  padding-left: .85rem; border-left: 2px solid var(--rule-strong); color: var(--ink-2);
+}
+.clips { display: grid; gap: .8rem; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
+.clip { display: flex; flex-direction: column; gap: .45rem; padding: .8rem; border: 1px solid var(--rule); border-radius: 4px; background: var(--surface); }
+.clip-sx { border-left: 3px solid var(--sx); }
+.clip-el { border-left: 3px solid var(--el); }
+.clip-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.clip-name { font-family: Chivo, sans-serif; font-weight: 700; font-size: .9rem; letter-spacing: -.005em; }
+.clip-meta { font-family: "IBM Plex Mono", monospace; font-size: .7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+audio { width: 100%; height: 2.1rem; display: block; }
+.clip-hyp { font-size: .74rem; color: var(--muted); line-height: 1.4; font-family: "IBM Plex Mono", monospace; }
+
+/* ---------- biểu đồ ---------- */
+figure { margin: 0; display: flex; flex-direction: column; gap: .75rem; }
+figcaption { font-size: var(--step--1); color: var(--muted); max-width: var(--measure); }
+.legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: var(--step--1); }
+.legend-item { display: inline-flex; align-items: center; gap: .4rem; color: var(--ink-2); }
+.swatch { width: .7rem; height: .7rem; border-radius: 2px; flex: none; }
+svg { display: block; max-width: 100%; height: auto; overflow: visible; }
+svg text { font-family: "IBM Plex Mono", ui-monospace, monospace; fill: var(--muted); font-variant-numeric: tabular-nums; }
+svg text.lbl { fill: var(--ink-2); }
+.grid-line { stroke: var(--rule); stroke-width: 1; }
+.axis-line { stroke: var(--rule-strong); stroke-width: 1; }
+
+details { border-top: 1px solid var(--rule); padding-top: .7rem; }
+summary { cursor: pointer; font-family: Chivo, sans-serif; font-weight: 600; font-size: var(--step--1); color: var(--muted); }
+summary:hover { color: var(--ink); }
+details > *:not(summary) { margin-top: .8rem; }
+
+.note-list { display: flex; flex-direction: column; gap: .7rem; margin: 0; padding: 0; list-style: none; max-width: var(--measure); }
+.note-list li { display: flex; gap: .6rem; font-size: var(--step--1); line-height: 1.5; color: var(--ink-2); }
+.note-list li > span { flex: 1; }
+.note-list li::before { content: ""; flex: none; width: .3rem; height: .3rem; margin-top: .55rem; border-radius: 50%; background: var(--rule-strong); }
+
+footer { border-top: 1px solid var(--rule); padding-top: 1.2rem; font-size: var(--step--1); color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<script id="bench-data" type="application/json">__DATA__</script>
+
+<div class="wrap">
+
+  <header class="sec-head">
+    <p class="eyebrow">Bàn thử TTS tiếng Việt &middot; odyssey-agent &middot; <span id="m-date"></span></p>
+    <h1>Soniox TTS v2 đối đầu ElevenLabs</h1>
+    <p>Soniox vừa phát hành <span class="mono">tts-rt-v2</span>. Hotline của odyssey-agent đang chạy
+      ElevenLabs <span class="mono">eleven_flash_v2_5</span> với giọng Việt <em>Ánh Viên</em>. Bài thử này
+      gọi thẳng cả hai API bằng cùng câu thoại tiếng Việt, cùng định dạng mp3 44.1&nbsp;kHz 128&nbsp;kbps,
+      rồi đo độ trễ, tốc độ sinh, độ dễ hiểu và chi phí thực.</p>
+  </header>
+
+  <section class="verdict">
+    <div class="verdict-body">
+      <p class="eyebrow">Kết luận</p>
+      <h2>Giữ ElevenLabs trên luồng gọi trực tiếp. Chuyển Soniox cho audio dựng trước.</h2>
+      <p>Với hotline realtime, yếu tố quyết định là biên phát lại: ElevenLabs sinh xong cả câu
+        trước khi phát được một phần ba, còn Soniox sinh <em>chậm hơn</em> nhịp phát ở câu ngắn —
+        đúng loại câu chiếm phần lớn một cuộc gọi. Ngược lại, ở audio dựng sẵn (lời chào IVR,
+        thông báo, câu xác nhận) thì độ trễ không còn quan trọng và Soniox rẻ hơn 4,5 lần.</p>
+      <p>Một điều bài thử này <strong>không</strong> trả lời được: giọng nào nghe tự nhiên hơn với
+        người Việt. Soniox không có giọng Việt bản địa trong 70 giọng sẵn, còn Ánh Viên là giọng
+        Việt chuyên nghiệp đã clone. Hãy nghe phần A/B bên dưới rồi tự quyết.</p>
+    </div>
+    <div class="split">
+      <p class="eyebrow">Chia luồng đề xuất</p>
+      <div class="lane">
+        <span class="lane-mark lane-el">EL</span>
+        <span class="lane-txt"><strong>Luồng gọi trực tiếp</strong>
+          <span>Giữ Flash v2.5 + Ánh Viên. TTFB 0,21&nbsp;s và biên phát lại dư 3&nbsp;s là thứ Soniox chưa đạt.</span></span>
+      </div>
+      <div class="lane">
+        <span class="lane-mark lane-sx">SX</span>
+        <span class="lane-txt"><strong>Audio dựng trước</strong>
+          <span>Chuyển sang tts-rt-v2 với <span class="mono">reduce_silence</span> + <span class="mono">speed 1.15</span>. Tiết kiệm 4,5x, đọc số chính xác hơn.</span></span>
+      </div>
+      <div class="lane">
+        <span class="lane-mark lane-sx">SX</span>
+        <span class="lane-txt"><strong>Việc cần làm trước khi xét đổi realtime</strong>
+          <span>Clone giọng Việt trên Soniox, rồi đo lại biên phát lại kèm jitter buffer thật.</span></span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Số liệu đầu bảng</p>
+      <h2>Mỗi bên thắng ở một mặt khác nhau</h2>
+    </div>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Phòng nghe A/B</p>
+      <h2>Nghe cùng một câu, hai nhà cung cấp</h2>
+      <p>Đây là phần bài thử không thay bạn quyết định được. Mỗi khối là cùng một câu thoại,
+        sinh bằng các cấu hình khác nhau. <span class="mono">CER</span> là sai số ký tự khi cho
+        Soniox <span class="mono">stt-async-v5</span> phiên âm lại chính audio đó — đo độ rõ, không đo độ tự nhiên.</p>
+    </div>
+    <div id="listen" style="display:flex; flex-direction:column; gap:2rem;"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Độ trễ</p>
+      <h2>Biên phát lại là nơi rủi ro thật nằm</h2>
+      <p>Mỗi làn dưới đây là một lần sinh qua kết nối streaming. Phần mờ là thời gian chờ tới
+        byte audio đầu tiên; phần đậm là lúc audio đang phát. Vạch đứng là lúc server sinh xong.
+        Vạch nằm <em>trước</em> mép phải của thanh nghĩa là an toàn; nằm <em>sau</em> nghĩa là
+        người nghe sẽ gặp khoảng lặng giữa câu.</p>
+    </div>
+    <figure class="card">
+      <div class="legend" id="tl-legend"></div>
+      <div class="scroll-x"><div id="timeline"></div></div>
+      <figcaption id="tl-cap"></figcaption>
+    </figure>
+    <details>
+      <summary>Số liệu độ trễ đầy đủ (REST, 3 lần lặp, lấy giá trị tốt nhất)</summary>
+      <div class="scroll-x"><table id="tbl-latency"></table></div>
+    </details>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Độ dễ hiểu</p>
+      <h2>Đọc số là chỗ khác biệt duy nhất đo được</h2>
+      <p>Cho Soniox <span class="mono">stt-async-v5</span> phiên âm lại chính audio TTS rồi so với
+        văn bản gốc. Ở câu chào, câu trộn Anh&ndash;Việt và đoạn dài, <strong>cả hai đều không sai từ nào</strong>.
+        Khác biệt chỉ xuất hiện ở câu có mã đơn, ngày, số tiền và số hotline — nên tôi sinh lại câu đó
+        5 lần cho mỗi bên và kiểm từng con số.</p>
+    </div>
+    <figure class="card">
+      <div class="legend" id="dig-legend"></div>
+      <div class="scroll-x"><div id="dig-matrix"></div></div>
+      <figcaption id="dig-cap"></figcaption>
+    </figure>
+    <details>
+      <summary>Bảng CER/WER mọi cấu hình, mọi câu</summary>
+      <div class="scroll-x"><table id="tbl-stt"></table></div>
+    </details>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Chi phí</p>
+      <h2>Soniox rẻ hơn 4,5 lần trên mỗi giờ audio</h2>
+      <p>Soniox tính theo giờ audio sinh ra ($0,70/giờ). ElevenLabs tính theo ký tự đầu vào
+        ($0,05/1.000 ký tự cho Flash). Để so được, tôi quy đổi bằng tỉ lệ ký tự trên giây
+        audio đo thực tế trên chính văn bản tiếng Việt này.</p>
+    </div>
+    <div class="scroll-x card"><table id="tbl-cost"></table></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Biểu cảm</p>
+      <h2>Audio tag: Soniox làm được ở model realtime, ElevenLabs thì không</h2>
+      <p>Soniox nhận tag như <span class="mono">[excited]</span>, <span class="mono">[sad]</span>,
+        <span class="mono">[laughing]</span> ngay trên <span class="mono">tts-rt-v2</span>.
+        Ở ElevenLabs, audio tag chỉ hoạt động trên <span class="mono">eleven_v3</span> — model có
+        TTFB khoảng 3&nbsp;s, quá chậm cho hotline. Flash v2.5 đọc tag như văn bản thường.
+        Nghe thử để thấy khác biệt.</p>
+    </div>
+    <div id="emotion" style="display:flex; flex-direction:column; gap:2rem;"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Phương pháp &amp; điểm hạn chế</p>
+      <h2>Đọc số liệu này với các điều kiện sau</h2>
+    </div>
+    <ul class="note-list" id="notes"></ul>
+  </section>
+
+  <footer>
+    <p>Đo từ máy đặt tại chỗ làm, RTT tới <span class="mono">tts-rt.soniox.com</span> 53&nbsp;ms và
+      <span class="mono">api.elevenlabs.io</span> 19–25&nbsp;ms. Chênh lệch mạng ~30&nbsp;ms không giải
+      thích được khoảng cách TTFB 276&nbsp;ms, nên khác biệt đến từ model và hạ tầng, không phải vị trí.</p>
+  </footer>
+</div>
+
+<script>
+const D = JSON.parse(document.getElementById("bench-data").textContent);
+const $ = (id) => document.getElementById(id);
+const fx = (n, d = 2) => n == null ? "—" : n.toFixed(d).replace(".", ",");
+
+$("m-date").textContent = D.meta.date;
+
+/* ---------- ô số liệu ---------- */
+$("tiles").innerHTML = D.tiles.map((t) => `
+  <div class="tile">
+    <span class="tile-label">${t.label}</span>
+    <div class="tile-row">
+      <span class="num num-${t.winner}">${t.value}</span>
+      <span class="chip chip-${t.winner}">${t.winner === "sx" ? "Soniox" : "ElevenLabs"}</span>
+    </div>
+    <span class="tile-note">${t.note}</span>
+  </div>`).join("");
+
+/* ---------- phòng nghe ---------- */
+const clipHTML = (c) => `
+  <div class="clip clip-${c.provider}">
+    <div class="clip-head">
+      <span class="clip-name">${c.label}</span>
+      <span class="clip-meta">${fx(c.audio_s, 2)}s</span>
+    </div>
+    <audio controls preload="none" src="data:audio/mpeg;base64,${c.b64}"></audio>
+    <span class="clip-hyp">${c.cer == null ? "CER —" : `CER ${fx(c.cer, 2)}% · WER ${fx(c.wer, 2)}%`}</span>
+  </div>`;
+
+const caseHTML = (k) => `
+  <div class="case">
+    <h3>${k.label}</h3>
+    <p class="case-text">${k.text}</p>
+    <div class="clips">${k.clips.map(clipHTML).join("")}</div>
+  </div>`;
+
+$("listen").innerHTML = D.cases.map(caseHTML).join("");
+$("emotion").innerHTML = D.emotion.map(caseHTML).join("");
+
+/* ---------- bảng dùng chung ---------- */
+function table(el, cap, cols, rows) {
+  el.innerHTML = `<caption>${cap}</caption><thead><tr>${
+    cols.map((c) => `<th scope="col">${c}</th>`).join("")
+  }</tr></thead><tbody>${
+    rows.map((r) => `<tr>${r.map((c) => typeof c === "object"
+      ? `<td class="${c.cls || ""}">${c.v}</td>` : `<td>${c}</td>`).join("")}</tr>`).join("")
+  }</tbody>`;
+}
+
+table($("tbl-latency"), "REST, mp3 44.1 kHz 128 kbps. RTF < 1 nghĩa là sinh nhanh hơn nhịp phát.",
+  ["Cấu hình", "Câu", "Ký tự", "TTFB (s)", "Sinh xong (s)", "Audio (s)", "RTF"],
+  D.latency.map((r) => [r.config, r.case, r.chars, fx(r.ttfb), fx(r.total), fx(r.audio), fx(r.rtf)]));
+
+table($("tbl-stt"), `Phiên âm lại bằng ${D.meta.stt_model}. Càng thấp càng tốt.`,
+  ["Cấu hình", "Câu", "CER %", "WER %"],
+  D.stt.map((r) => [r.config, r.case, fx(r.cer), fx(r.wer)]));
+
+table($("tbl-cost"), "Quy đổi theo tỉ lệ ký tự/giây audio đo thực tế trên văn bản tiếng Việt của bài thử.",
+  ["Cấu hình", "Ký tự/giây audio", "Ký tự/giờ audio", "USD/giờ audio", "So với rẻ nhất"],
+  D.cost.map((r) => [r.config, fx(r.cps, 2), Math.round(r.cps * 3600).toLocaleString("vi-VN"),
+    { v: "$" + fx(r.usd, 2), cls: r.usd === D.cost_min ? "win" : "lose" },
+    fx(r.usd / D.cost_min, 2) + "x"]));
+
+/* ---------- sơ đồ timeline ---------- */
+function timeline(rows) {
+  const W = 800, laneH = 34, padL = 214, padR = 62, padT = 26, padB = 30;
+  const H = padT + rows.length * laneH + padB;
+  const maxT = Math.max(...rows.map((r) => Math.max(r.ttfb + r.audio, r.total))) * 1.06;
+  const x = (t) => padL + (t / maxT) * (W - padL - padR);
+  const ticks = [];
+  const step = maxT > 12 ? 5 : 1;
+  for (let t = 0; t <= maxT; t += step) ticks.push(t);
+
+  const lanes = rows.map((r, i) => {
+    const y = padT + i * laneH;
+    const barY = y + 6, barH = 16;
+    const underrun = r.margin < 0;
+    return `
+      <g>
+        <text x="${padL - 10}" y="${barY + 12}" text-anchor="end" class="lbl" font-size="11">${r.label}</text>
+        <rect x="${x(0)}" y="${barY}" width="${x(r.ttfb) - x(0)}" height="${barH}" rx="2"
+              fill="var(--${r.provider})" opacity=".22"></rect>
+        <rect x="${x(r.ttfb) + 1}" y="${barY}" width="${Math.max(x(r.ttfb + r.audio) - x(r.ttfb) - 1, 2)}"
+              height="${barH}" rx="2" fill="var(--${r.provider})"></rect>
+        <line x1="${x(r.total)}" y1="${barY - 5}" x2="${x(r.total)}" y2="${barY + barH + 5}"
+              stroke="var(--${underrun ? "crit" : "good"})" stroke-width="2"></line>
+        <text x="${x(Math.max(r.ttfb + r.audio, r.total)) + 8}" y="${barY + 12}" font-size="10"
+              fill="var(--${underrun ? "crit" : "good"})">${underrun ? "hụt " : "dư "}${fx(Math.abs(r.margin), 2)}s</text>
+        <title>${r.label}: chờ ${fx(r.ttfb)}s, phát ${fx(r.audio)}s, sinh xong ${fx(r.total)}s</title>
+      </g>`;
+  }).join("");
+
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" role="img"
+      aria-label="Sơ đồ thời gian: thời gian chờ, thời gian phát và lúc sinh xong của từng cấu hình">
+    ${ticks.map((t) => `<line class="grid-line" x1="${x(t)}" y1="${padT - 6}" x2="${x(t)}" y2="${H - padB + 2}"></line>
+      <text x="${x(t)}" y="${H - padB + 16}" text-anchor="middle" font-size="10">${t}s</text>`).join("")}
+    <line class="axis-line" x1="${padL}" y1="${padT - 6}" x2="${padL}" y2="${H - padB + 2}"></line>
+    ${lanes}
+  </svg>`;
+}
+
+$("tl-legend").innerHTML = `
+  <span class="legend-item"><span class="swatch" style="background:var(--sx)"></span>Soniox tts-rt-v2</span>
+  <span class="legend-item"><span class="swatch" style="background:var(--el)"></span>ElevenLabs Flash v2.5</span>
+  <span class="legend-item"><span class="swatch" style="background:var(--sx);opacity:.22"></span>Đang chờ audio đầu tiên</span>
+  <span class="legend-item"><span class="swatch" style="background:var(--good);width:2px;height:.9rem"></span>Sinh xong (an toàn)</span>
+  <span class="legend-item"><span class="swatch" style="background:var(--crit);width:2px;height:.9rem"></span>Sinh xong (hụt nhịp)</span>`;
+
+$("timeline").innerHTML = D.timeline.map((g) =>
+  `<p class="eyebrow" style="margin:.9rem 0 .3rem">${g.title}</p>${timeline(g.rows)}`).join("");
+$("tl-cap").textContent = D.meta.timeline_caption;
+
+/* ---------- ma trận lần chạy đọc số ---------- */
+function digitMatrix(groups) {
+  const cell = 30, gap = 7, padL = 218, padT = 30, rowH = 46;
+  const n = Math.max(...groups.map((g) => g.runs.length));
+  const W = padL + n * (cell + gap) + 150;
+  const H = padT + groups.length * rowH + 14;
+
+  const heads = Array.from({ length: n }, (_, i) =>
+    `<text x="${padL + i * (cell + gap) + cell / 2}" y="${padT - 12}" text-anchor="middle"
+       font-size="10">#${i + 1}</text>`).join("");
+
+  const rows = groups.map((g, gi) => {
+    const y = padT + gi * rowH;
+    const bad = g.runs.filter((r) => !r.ok).length;
+    const cells = g.runs.map((r, i) => {
+      const x = padL + i * (cell + gap);
+      const fill = r.ok ? `var(--${g.provider})` : "var(--crit)";
+      return `<g><rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="3"
+          fill="${fill}" opacity="${r.ok ? 1 : 1}"></rect>
+        ${r.ok ? "" : `<text x="${x + cell / 2}" y="${y + cell / 2 + 4}" text-anchor="middle"
+          font-size="13" font-weight="600" fill="var(--surface)">!</text>`}
+        <title>Lần ${i + 1} — ${r.ok ? "mọi số đọc đúng" : "sai: " + r.missing.join(", ")}
+&#10;số đọc được: ${r.digits}</title></g>`;
+    }).join("");
+    return `<text x="${padL - 14}" y="${y + cell / 2 + 4}" text-anchor="end" class="lbl"
+        font-size="11">${g.label}</text>${cells}
+      <text x="${padL + n * (cell + gap) + 8}" y="${y + cell / 2 + 4}" font-size="11"
+        fill="var(--${bad ? "crit" : "good"})">${bad ? bad + "/" + g.runs.length + " lần sai số" : "đúng cả " + g.runs.length + " lần"}</text>`;
+  }).join("");
+
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" role="img"
+      aria-label="Ma trận kiểm tra đọc số: mỗi ô là một lần sinh, ô đánh dấu là lần đọc sai">
+    ${heads}${rows}
+  </svg>`;
+}
+
+$("dig-legend").innerHTML = `
+  <span class="legend-item"><span class="swatch" style="background:var(--sx)"></span>Soniox đọc đúng</span>
+  <span class="legend-item"><span class="swatch" style="background:var(--el)"></span>ElevenLabs đọc đúng</span>
+  <span class="legend-item"><span class="swatch" style="background:var(--crit)"></span>Đọc sai số</span>`;
+$("dig-matrix").innerHTML = digitMatrix(D.digits);
+$("dig-cap").innerHTML = D.meta.digits_caption;
+
+table($("tbl-stt"), `Phiên âm lại bằng ${D.meta.stt_model}. Cột "CER từ" đã loại chênh lệch chữ-số vs chữ-viết của STT; cột "CER thô" chỉ có nghĩa ở câu alnum, nơi văn bản gốc vốn viết bằng chữ số.`,
+  ["Cấu hình", "Câu", "CER từ %", "CER thô %", "WER từ %"],
+  D.stt.map((r) => [r.config, r.case, fx(r.cer_words), fx(r.cer), fx(r.wer_words)]));
+
+$("notes").innerHTML = D.notes.map((n) => `<li><span>${n}</span></li>`).join("");
+</script>

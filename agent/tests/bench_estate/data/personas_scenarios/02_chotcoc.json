@@ -1,0 +1,43 @@
+{
+  "case_id": "S-2",
+  "title": "Chốt cọc giữ chỗ",
+  "setup": "Anh Đức đã xem căn A.18.05 tại Vinhomes Green Paradise Cần Giờ, tỏ ra ưng ý nhưng đang đắn đo chưa ký cọc. DISC type: S (ổn định, ngại rủi ro, cần cảm giác an toàn trước khi hành động). Sale cần vượt qua rào cản 'suy nghĩ thêm' bằng scarcity + cam kết hoàn cọc 100%.",
+  "turns": [
+    {
+      "speaker": "KH",
+      "text": "Anh thấy ổn rồi, để anh suy nghĩ thêm vài hôm."
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: đồng cảm với quyết định lớn; scarcity — 2 khách Hà Nội xem chiều mai; đề xuất cọc giữ chỗ 50 triệu có biên nhận kế toán Vinhomes; nhấn mạnh hoàn lại 100% trong 7 ngày nếu đổi ý; hỏi lựa chọn chuyển khoản hay đến văn phòng"
+    },
+    {
+      "speaker": "KH",
+      "text": "50 triệu hoàn được thật à?"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: xác nhận cam kết hoàn cọc bằng bằng chứng cụ thể (gửi ảnh quy chế giữ chỗ của Vinhomes ngay); dẫn đến hành động: làm nhanh 10 phút; lại đưa choice close (chuyển khoản hay đến văn phòng)"
+    }
+  ],
+  "rubric_checkpoints": [
+    [
+      "M4 đồng cảm trước — không phản bác ngay lời 'suy nghĩ thêm'",
+      "scarcity có chi tiết cụ thể: 2 khách Hà Nội, xem chiều mai — không bịa chung chung",
+      "M5 chốt giả định: đặt giữ chỗ trước rồi suy nghĩ — giảm áp lực quyết định lớn",
+      "xử lý risk aversion: nêu điều kiện hoàn 100% + biên nhận kế toán CĐT",
+      "choice close: chuyển khoản hay đến văn phòng — không hỏi 'anh có muốn không'"
+    ],
+    [
+      "M3 bằng chứng cụ thể: gửi ảnh quy chế giữ chỗ ngay trong cuộc hội thoại",
+      "commitment & consistency: 10 phút là đủ — giảm cảm giác 'việc lớn'",
+      "lặp lại choice close để chốt bước hành động tiếp theo",
+      "không tạo áp lực quá mức — tone bình tĩnh, đồng hành",
+      "không để KH kết thúc hội thoại mà không có cam kết hành động cụ thể"
+    ]
+  ],
+  "judge_extras": "Sales rubric P5 — tập trung M5 (scarcity close + assumptive close) + M4 (xử lý 'suy nghĩ thêm' bằng risk reversal). Phạt nếu không cung cấp bằng chứng hoàn cọc khi KH hỏi.",
+  "max_extra_turns": 0,
+  "points": 20.0,
+  "delivery_mode": "scripted_multiturn"
+}

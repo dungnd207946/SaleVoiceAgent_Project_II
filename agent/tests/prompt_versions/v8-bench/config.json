@@ -1,0 +1,44 @@
+{
+  "agents": {
+    "router": {
+      "id": "router",
+      "display_name": "Luna Router",
+      "files": ["SOUL.md", "IDENTITY.md"],
+      "skills": ["noble-router"],
+      "tools": ["switch_agent", "update_customer"],
+      "max_iterations": 1,
+      "temperature": 0.0
+    },
+    "consultant": {
+      "id": "consultant",
+      "display_name": "Luna Consultant",
+      "files": ["SOUL.md", "IDENTITY.md"],
+      "skills": ["consultant-info", "consultant-pricing", "consultant-advisor", "consultant-booking"],
+      "tools": [
+        "noble_search", "list_projects", "get_project_overview",
+        "get_project_financial", "search_units", "match_projects",
+        "check_availability", "schedule_viewing",
+        "get_booking_state", "update_booking_info",
+        "list_bookings", "modify_booking", "validate_phone",
+        "update_customer", "switch_agent"
+      ],
+      "max_iterations": 3,
+      "temperature": 0.2
+    },
+    "support": {
+      "id": "support",
+      "display_name": "Luna Support",
+      "files": ["SOUL.md", "IDENTITY.md"],
+      "skills": ["support-crm", "support-escalation"],
+      "tools": [
+        "crm_lookup", "verify_identity", "support_ticket",
+        "get_certificate_status", "escalate",
+        "noble_search", "update_customer", "switch_agent"
+      ],
+      "max_iterations": 3,
+      "temperature": 0.2
+    }
+  },
+  "default_agent": "router",
+  "shared_files": ["RULES.md", "PROJECTS.md", "FAQ_INSTRUCTION.md"]
+}

@@ -1,0 +1,58 @@
+name: odyssey-agent
+
+x-agent-image: &agent-image 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-agent:${IMAGE_TAG:-dev-latest}
+
+x-common: &common
+  image: *agent-image
+  env_file: .env
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  restart: unless-stopped
+
+services:
+  # Pin aiortc để TRANSPORT_BACKEND dùng chung không đổi route service này. Cũng là
+  # đích reverse-proxy chat của gateway (ws://agent:8766/chat).
+  agent:
+    <<: *common
+    environment:
+      - TRANSPORT_BACKEND=aiortc
+    ports:
+      - "8766:8766" # bỏ nếu chỉ vào qua gateway
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./models:/app/models # sherpa STT model, không nằm trong image
+
+  agent-lk:
+    <<: *common
+    environment:
+      - TRANSPORT_BACKEND=livekit
+    command: ["noble-agent", "--transport", "livekit", "start"]
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./models:/app/models
+    depends_on:
+      - agent
+    # Bật nếu TTS/STT chạy LOCAL trên GPU trong container (không remote):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
+
+  gateway:
+    <<: *common
+    command: ["noble-gateway"]
+    environment:
+      - TENANT_STORE_ENABLED=true
+      - WORKER_CHAT_INTERNAL_URL_TEMPLATE=ws://agent:8766/chat
+    ports:
+      - "9200:9200" # reverse-proxy TLS 443 forward vào đây
+    depends_on:
+      - agent
+      - agent-lk
+
+networks:
+  default:
+    name: odyssey-network
+    external: true

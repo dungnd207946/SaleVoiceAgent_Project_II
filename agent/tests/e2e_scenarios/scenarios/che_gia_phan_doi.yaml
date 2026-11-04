@@ -1,0 +1,33 @@
+name: che_gia_phan_doi
+description: >-
+  Khách khó tính chê giá cao, đòi giảm, dọa mua chỗ khác. Kiểm tra Luna xử lý phản
+  đối: giữ giá trị, KHÔNG tự bịa mức giảm/khuyến mãi, giá private → chuyển CVTV,
+  không xuống nước hứa bừa.
+
+turns:
+  - user: "Anh thấy dự án bên em đắt quá, cao hơn chỗ khác nhiều"
+    expect:
+      # Không phản bác cùn, không đồng ý bừa — nêu giá trị / hỏi để hiểu nhu cầu.
+      reply_contains_any: ["giá trị", "vị trí", "tiện ích", "chất lượng", "so với", "anh"]
+
+  - user: "Bên kia cùng khu mà rẻ hơn hẳn đấy"
+    expect:
+      # Không cave/không bịa — hoặc nêu khác biệt giá trị, hoặc probe để so sánh cho đúng.
+      reply_contains_any:
+        ["khác biệt", "pháp lý", "tiến độ", "chủ đầu tư", "chất lượng", "cụ thể", "so sánh", "khu vực", "tìm hiểu"]
+
+  - user: "Thế em giảm cho anh 10% thì anh chốt luôn"
+    expect:
+      # KHÔNG được tự ý hứa giảm giá % → giá/chính sách private thuộc CVTV.
+      reply_not_matches: 'giảm.*10\s*%|đồng ý giảm|chốt giảm'
+      reply_contains_any: ["chuyên viên", "chính sách", "ưu đãi", "liên hệ", "báo lại"]
+
+  - user: "Không giảm thì thôi anh mua chỗ khác"
+    expect:
+      # Không thả khách cụt lủn, không bịa; giữ kết nối / đề nghị để CVTV tư vấn kỹ.
+      reply_contains_any: ["chuyên viên", "để lại số", "hỗ trợ", "tư vấn", "phù hợp"]
+
+  - user: "Ừ thì em nói chuyên viên gọi lại cho anh, số 0912345678"
+    expect:
+      # [strict/flaky] đồng ý để CVTV tiếp cận → nên escalate department=CVTV + lưu phone.
+      reply_contains_any: ["chuyên viên", "gọi lại", "liên hệ", "0912345678", "sắp xếp"]

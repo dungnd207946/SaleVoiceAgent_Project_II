@@ -1,0 +1,834 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luồng billing — đo tiêu thụ không chạm latency</title>
+<style>
+/* ── tokens ─────────────────────────────────────────────────────────────── */
+:root{
+  --ground:#F2F4F3; --panel:#FFFFFF; --panel-2:#E9EDEC; --panel-3:#DFE5E3;
+  --ink:#16211F; --ink-soft:#54625E; --ink-faint:#8A9793;
+  --rule:#D2D9D7; --rule-strong:#B7C2BF;
+  --hot:#C2591B; --hot-ink:#8A3D0F; --hot-wash:#F7E7DA;
+  --cold:#1E6B70; --cold-ink:#124B4F; --cold-wash:#DCEBEB;
+  --ok:#3B7A45; --warn:#9A7000; --bad:#A83232;
+  --ok-wash:#DDEBDE; --warn-wash:#F5EBCF; --bad-wash:#F3DEDE;
+  --shadow:0 1px 0 rgba(22,33,31,.05), 0 8px 24px -16px rgba(22,33,31,.35);
+  --mono:ui-monospace,"SF Mono","Cascadia Mono","JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --step:220ms;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1413; --panel:#161E1D; --panel-2:#1D2726; --panel-3:#243030;
+    --ink:#E4EAE8; --ink-soft:#9BA9A5; --ink-faint:#6B7975;
+    --rule:#2A3634; --rule-strong:#3B4A48;
+    --hot:#E8873F; --hot-ink:#F2AB77; --hot-wash:#33210F;
+    --cold:#4FBFC4; --cold-ink:#8AD7DA; --cold-wash:#102E2F;
+    --ok:#6BB86B; --warn:#D9A82C; --bad:#E06B6B;
+    --ok-wash:#152A18; --warn-wash:#2E2510; --bad-wash:#2E1616;
+    --shadow:0 1px 0 rgba(0,0,0,.3), 0 10px 28px -18px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1413; --panel:#161E1D; --panel-2:#1D2726; --panel-3:#243030;
+  --ink:#E4EAE8; --ink-soft:#9BA9A5; --ink-faint:#6B7975;
+  --rule:#2A3634; --rule-strong:#3B4A48;
+  --hot:#E8873F; --hot-ink:#F2AB77; --hot-wash:#33210F;
+  --cold:#4FBFC4; --cold-ink:#8AD7DA; --cold-wash:#102E2F;
+  --ok:#6BB86B; --warn:#D9A82C; --bad:#E06B6B;
+  --ok-wash:#152A18; --warn-wash:#2E2510; --bad-wash:#2E1616;
+  --shadow:0 1px 0 rgba(0,0,0,.3), 0 10px 28px -18px rgba(0,0,0,.9);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--sans); font-size:15px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:28px 20px 72px}
+
+/* ── masthead ───────────────────────────────────────────────────────────── */
+.masthead{display:flex; align-items:flex-start; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:26px}
+.masthead__id{display:flex; flex-direction:column; gap:6px}
+.eyebrow{
+  font-family:var(--sans); font-weight:600; font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink-faint);
+}
+h1{
+  font-family:var(--sans); font-weight:680; font-size:clamp(21px,3.2vw,29px);
+  margin:0; letter-spacing:-.015em; text-wrap:balance;
+}
+.masthead p{margin:2px 0 0; color:var(--ink-soft); max-width:62ch; font-size:14.5px}
+.themebtn{
+  font-family:var(--sans); font-weight:600; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  background:var(--panel); color:var(--ink-soft); border:1px solid var(--rule);
+  padding:8px 12px; cursor:pointer; border-radius:2px; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--rule-strong); color:var(--ink)}
+:is(button,a):focus-visible{outline:2px solid var(--cold); outline-offset:2px}
+
+/* ── scene bar ──────────────────────────────────────────────────────────── */
+.scenebar{display:flex; gap:1px; background:var(--rule); border:1px solid var(--rule); margin-bottom:14px; overflow-x:auto}
+.scenechip{
+  flex:1 1 0; min-width:132px; background:var(--panel); border:0; cursor:pointer; text-align:left;
+  padding:9px 11px; font-family:var(--sans); color:var(--ink-faint); font-size:11.5px; line-height:1.35;
+  display:flex; flex-direction:column; gap:3px; transition:background var(--step),color var(--step);
+}
+.scenechip b{font-family:var(--mono); font-weight:600; font-size:10px; letter-spacing:.1em}
+.scenechip span{color:var(--ink-soft); font-size:11.5px}
+.scenechip:hover{background:var(--panel-2)}
+.scenechip[aria-current="true"]{background:var(--ink); color:var(--ground)}
+.scenechip[aria-current="true"] span{color:var(--ground); opacity:.82}
+
+/* ── stage ──────────────────────────────────────────────────────────────── */
+.stage{border:1px solid var(--rule); background:var(--panel); padding:22px 18px 18px; position:relative}
+.lanetag{
+  position:absolute; right:12px; font-family:var(--sans); font-weight:600; font-size:9.5px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-faint);
+}
+.lanetag--hot{top:8px}
+
+/* signal chain */
+.chain{display:flex; align-items:stretch; gap:0; overflow-x:auto; padding-bottom:6px}
+.node{
+  flex:1 1 0; min-width:118px; border:1px solid var(--rule); background:var(--panel);
+  padding:9px 10px 10px; display:flex; flex-direction:column; gap:7px;
+  transition:border-color var(--step),background var(--step),box-shadow var(--step);
+}
+.node.is-active{border-color:var(--hot); background:var(--hot-wash); box-shadow:inset 0 0 0 1px var(--hot)}
+.node.is-cut{border-color:var(--bad); background:var(--bad-wash); box-shadow:inset 0 0 0 1px var(--bad)}
+.node__name{font-family:var(--mono); font-size:12px; font-weight:600; letter-spacing:.04em; display:flex; align-items:center; gap:6px}
+.node__sub{font-family:var(--sans); font-size:10px; color:var(--ink-faint); letter-spacing:.02em; margin-top:-4px}
+.node__read{font-family:var(--sans); font-size:11.5px; color:var(--ink-soft); font-variant-numeric:tabular-nums; display:flex; flex-direction:column; gap:2px}
+.node__read b{font-family:var(--mono); color:var(--ink); font-weight:600}
+.link{
+  flex:0 0 26px; align-self:center; height:2px; background:var(--rule-strong); position:relative; overflow:hidden;
+}
+.link::after{
+  content:""; position:absolute; inset:0; transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,var(--hot),transparent);
+}
+.link.is-sweep::after{animation:sweep 620ms linear}
+@keyframes sweep{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+
+/* token bars */
+.tokens{display:grid; gap:3px; margin-top:2px}
+.tokrow{display:grid; grid-template-columns:26px 1fr 52px; gap:6px; align-items:center;
+  font-family:var(--mono); font-size:9.5px; color:var(--ink-faint); font-variant-numeric:tabular-nums}
+.tokrow em{font-style:normal; letter-spacing:.06em; text-transform:uppercase}
+.tokbar{height:5px; background:var(--panel-3); position:relative}
+.tokbar i{position:absolute; inset:0 auto 0 0; background:var(--hot); width:0; transition:width var(--step) ease-out}
+.tokrow b{text-align:right; color:var(--ink); font-weight:600}
+.tokrow.is-zero i{background:var(--rule-strong)}
+
+/* boundary */
+.boundary{position:relative; margin:20px 0 0; border-top:2px dashed var(--rule-strong); height:0}
+.boundary__label{
+  position:absolute; left:0; top:-9px; background:var(--panel); padding-right:12px;
+  font-family:var(--sans); font-weight:600; font-size:10px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--ink-faint); white-space:nowrap;
+}
+.boundary__label--r{left:auto; right:0; padding-right:0; padding-left:12px}
+
+/* cold zone */
+.cold{display:flex; flex-direction:column; align-items:center; gap:0}
+.card{border:1px solid var(--rule); background:var(--panel); width:100%}
+.card__head{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 11px;
+  border-bottom:1px solid var(--rule); font-family:var(--sans); font-size:12px;
+}
+.card__head b{font-family:var(--mono); font-weight:600; font-size:11.5px}
+.card__head em{font-style:normal; font-weight:600; color:var(--ink-faint); font-size:10.5px}
+
+.meter{max-width:640px; margin-top:-19px; z-index:2; box-shadow:var(--shadow); border-color:var(--rule-strong)}
+.meter__body{padding:10px 11px; display:flex; flex-direction:column; gap:9px}
+.chips{display:flex; flex-wrap:wrap; gap:5px; min-height:24px; align-content:flex-start}
+.chip{
+  font-family:var(--mono); font-size:10.5px; padding:3px 7px; border:1px solid var(--hot);
+  color:var(--hot-ink); background:var(--hot-wash); white-space:nowrap;
+  animation:pop 240ms ease-out;
+}
+.chip.is-held{border-style:dashed; border-color:var(--warn); color:var(--warn); background:var(--warn-wash)}
+.chip--empty{border:1px dashed var(--rule-strong); color:var(--ink-faint); background:transparent; animation:none}
+@keyframes pop{from{opacity:0; transform:translateY(-4px)}to{opacity:1; transform:none}}
+.cum{display:flex; flex-wrap:wrap; gap:14px; font-family:var(--sans); font-size:11.5px; color:var(--ink-faint); font-variant-numeric:tabular-nums; border-top:1px dotted var(--rule); padding-top:8px}
+.cum b{font-family:var(--mono); color:var(--ink); font-weight:600}
+.cum u{font-family:var(--mono); text-decoration:none; color:var(--cold)}
+
+/* flush track */
+.track{position:relative; width:2px; height:58px; background:var(--rule); margin:0}
+.drop{
+  position:absolute; left:50%; top:0; width:11px; height:11px; margin-left:-5.5px;
+  background:var(--cold); border-radius:50%; opacity:0;
+  transition:transform 560ms cubic-bezier(.5,0,.6,1), opacity 160ms, background 160ms;
+}
+.drop.is-go{opacity:1; transform:translateY(47px)}
+.drop.is-back{opacity:1; transform:translateY(0); background:var(--bad)}
+.track__note{
+  position:absolute; left:16px; top:16px; width:max-content; max-width:420px;
+  font-family:var(--sans); font-size:11.5px; color:var(--ink-faint); opacity:0; transition:opacity var(--step);
+}
+.track__note.is-on{opacity:1}
+.track__note.is-bad{color:var(--bad)}
+.track__note.is-ok{color:var(--ok)}
+
+/* ledger */
+.pg{border-color:var(--cold); box-shadow:inset 0 0 0 1px var(--cold-wash)}
+.ledger{max-height:186px; overflow-y:auto; overflow-x:auto; padding:6px 0 8px}
+.lrow{
+  display:grid; grid-template-columns:34px 34px 100px 104px 1fr 46px; gap:10px; align-items:baseline;
+  padding:3px 11px; font-family:var(--sans); font-size:11.5px; font-variant-numeric:tabular-nums;
+  color:var(--ink-soft); animation:print 300ms ease-out;
+}
+.lrow--head{color:var(--ink-faint); font-size:10px; letter-spacing:.12em; text-transform:uppercase; border-bottom:1px solid var(--rule); padding-bottom:5px; animation:none; position:sticky; top:0; z-index:2; background:var(--panel)}
+.lrow b{font-family:var(--mono); color:var(--ink); font-weight:600; font-size:11px}
+.lrow .flag{color:var(--ok)}
+.lrow.is-inexact .flag{color:var(--warn)}
+.node__name .flag{font-family:var(--mono); font-weight:600; font-size:9.5px;
+  letter-spacing:.06em; color:var(--warn)}
+.lrow.is-dupe{color:var(--ink-faint); opacity:.6}
+.lrow.is-dupe .flag{color:var(--ink-faint)}
+@keyframes print{from{opacity:0; transform:translateY(-6px)}to{opacity:1; transform:none}}
+.ledger__empty{padding:14px 11px; font-family:var(--sans); font-size:12.5px; color:var(--ink-faint)}
+
+/* portal */
+.portal{
+  margin-top:14px; border:1px solid var(--rule); background:var(--panel-2);
+  padding:11px 12px; display:none; animation:pop 320ms ease-out;
+}
+.portal.is-on{display:block}
+.portal__flow{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-family:var(--sans); font-size:12.5px}
+.portal__box{border:1px solid var(--rule-strong); background:var(--panel); padding:5px 9px}
+.portal__box.is-money{border-color:var(--ok); color:var(--ok); background:var(--ok-wash)}
+.portal__arrow{color:var(--ink-faint)}
+.portal__note{margin:8px 0 0; font-size:13px; color:var(--ink-soft)}
+
+/* ── transport ──────────────────────────────────────────────────────────── */
+.transport{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  border:1px solid var(--rule); border-top:0; background:var(--panel-2); padding:9px 12px;
+}
+.tbtn{
+  font-family:var(--sans); font-weight:600; font-size:11.5px; letter-spacing:.06em; background:var(--panel);
+  border:1px solid var(--rule-strong); color:var(--ink); padding:6px 12px; cursor:pointer; border-radius:2px;
+}
+.tbtn:hover{background:var(--panel-3)}
+.tbtn--primary{background:var(--ink); color:var(--ground); border-color:var(--ink)}
+.tbtn--primary:hover{opacity:.88; background:var(--ink)}
+.progress{flex:1 1 160px; height:3px; background:var(--rule); min-width:120px}
+.progress i{display:block; height:100%; background:var(--cold); width:0}
+.tmeta{font-family:var(--sans); font-weight:600; font-size:10.5px; color:var(--ink-faint); letter-spacing:.08em; white-space:nowrap}
+
+/* ── narration ──────────────────────────────────────────────────────────── */
+.narration{border:1px solid var(--rule); border-top:0; background:var(--panel); padding:16px 18px 18px}
+.narration h2{font-family:var(--sans); font-size:17px; margin:0 0 6px; font-weight:600; letter-spacing:-.01em}
+.narration p{margin:0; color:var(--ink-soft); max-width:76ch; font-size:14.5px}
+.callout{
+  margin-top:12px; border-left:2px solid var(--hot); padding:2px 0 2px 12px;
+  font-size:14px; color:var(--ink); max-width:76ch;
+}
+.callout--cold{border-left-color:var(--cold)}
+.callout--warn{border-left-color:var(--warn)}
+.callout b{font-weight:600}
+code{font-family:var(--mono); font-size:.9em; background:var(--panel-2); padding:1px 4px; border-radius:2px}
+
+/* ── notes ──────────────────────────────────────────────────────────────── */
+.notes{display:grid; grid-template-columns:repeat(auto-fit,minmax(258px,1fr)); gap:1px; background:var(--rule); border:1px solid var(--rule); border-top:0}
+.note{background:var(--panel); padding:14px 16px 16px}
+.note h3{font-family:var(--sans); font-size:11px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-faint); margin:0 0 8px; font-weight:600}
+.note p{margin:0 0 8px; font-size:13.5px; color:var(--ink-soft)}
+.note p:last-child{margin-bottom:0}
+.note dl{margin:0; display:grid; grid-template-columns:auto 1fr; gap:4px 10px; font-size:13px}
+.note dt{font-family:var(--sans); font-weight:600; font-size:12.5px; color:var(--ink); white-space:nowrap}
+.note dd{margin:0; color:var(--ink-soft)}
+.swatch{display:inline-block; width:9px; height:9px; margin-right:5px; vertical-align:baseline}
+.swatch--hot{background:var(--hot)} .swatch--cold{background:var(--cold)}
+
+footer{margin-top:22px; font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); letter-spacing:.04em}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:1ms !important; transition-duration:1ms !important}
+}
+@media (max-width:720px){
+  .lrow{grid-template-columns:30px 30px 88px 92px 1fr 40px; font-size:10px; gap:7px}
+  .chain{padding-bottom:10px}
+}
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="masthead__id">
+      <div class="eyebrow">Noble Voice Agent · thiết kế đo tiêu thụ để tính tiền</div>
+      <h1>Luồng billing: đo mà không chạm vào độ trễ</h1>
+      <p>Agent chỉ <em>đếm</em> token và thời lượng. Việc quy đổi ra tiền nằm hoàn toàn ở Portal.
+         Trang này diễn lại sáu tình huống để kiểm chứng thiết kế trước khi viết code.</p>
+    </div>
+    <button class="themebtn" id="theme" type="button">Đổi nền sáng / tối</button>
+  </header>
+
+  <nav class="scenebar" id="scenebar" aria-label="Các cảnh"></nav>
+
+  <div class="stage">
+    <div class="lanetag lanetag--hot">Đường nóng — trong lượt</div>
+
+    <div class="chain" id="chain">
+      <div class="node" data-node="mic">
+        <div class="node__name">MIC</div>
+        <div class="node__sub">48k → 16k</div>
+        <div class="node__read"><span>cuộc gọi <b id="r-call">0,0</b> s</span></div>
+      </div>
+      <div class="link" data-link="0"></div>
+
+      <div class="node" data-node="vad">
+        <div class="node__name">VAD</div>
+        <div class="node__sub">Silero, liên tục</div>
+        <div class="node__read">
+          <span>đã quét <b id="r-vad">0,0</b> s</span>
+          <span>cpu <b id="r-vadms">0</b> ms</span>
+        </div>
+      </div>
+      <div class="link" data-link="1"></div>
+
+      <div class="node" data-node="stt">
+        <div class="node__name">STT</div>
+        <div class="node__sub">soniox</div>
+        <div class="node__read">
+          <span>audio thật <b id="r-stt">0,0</b> s</span>
+          <span>stream mở <b id="r-sttms">0,0</b> s</span>
+        </div>
+      </div>
+      <div class="link" data-link="2"></div>
+
+      <div class="node" data-node="llm">
+        <div class="node__name">LLM <span id="r-exact" class="flag"></span></div>
+        <div class="node__sub">anthropic · <span id="r-calls">0</span> lời gọi</div>
+        <div class="tokens">
+          <div class="tokrow"><em>in</em><div class="tokbar"><i id="b-in"></i></div><b id="r-in">0</b></div>
+          <div class="tokrow"><em>out</em><div class="tokbar"><i id="b-out"></i></div><b id="r-out">0</b></div>
+          <div class="tokrow"><em>c·w</em><div class="tokbar"><i id="b-cw"></i></div><b id="r-cw">0</b></div>
+          <div class="tokrow"><em>c·r</em><div class="tokbar"><i id="b-cr"></i></div><b id="r-cr">0</b></div>
+        </div>
+      </div>
+      <div class="link" data-link="3"></div>
+
+      <div class="node" data-node="tts">
+        <div class="node__name">TTS</div>
+        <div class="node__sub">vieneu</div>
+        <div class="node__read">
+          <span>audio sinh <b id="r-tts">0,0</b> s</span>
+          <span>ký tự <b id="r-chars">0</b></span>
+        </div>
+      </div>
+      <div class="link" data-link="4"></div>
+
+      <div class="node" data-node="spk">
+        <div class="node__name">LOA</div>
+        <div class="node__sub">+ speaker verify</div>
+        <div class="node__read">
+          <span>sv <b id="r-sv">0,0</b> s</span>
+          <span>lần embed <b id="r-svn">0</b></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="boundary">
+      <span class="boundary__label">Ranh giới I/O</span>
+      <span class="boundary__label boundary__label--r">Đường lạnh — sau lượt</span>
+    </div>
+
+    <div class="cold">
+      <div class="card meter">
+        <div class="card__head">
+          <b>UsageMeter — RAM</b>
+          <em id="m-state">trống</em>
+        </div>
+        <div class="meter__body">
+          <div class="chips" id="chips"></div>
+          <div class="cum">
+            <span>lượt <b id="m-turn">0</b></span>
+            <span>seq kế tiếp <b id="m-seq">0</b></span>
+            <span>VAD tích luỹ <b id="m-vadtot">0,0</b> s · đã ghi <u id="m-vaddr">0,0</u> s</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="track">
+        <div class="drop" id="drop"></div>
+        <div class="track__note" id="tracknote"></div>
+      </div>
+
+      <div class="card pg">
+        <div class="card__head">
+          <b>billing.usage_events — Postgres (Portal sở hữu)</b>
+          <em id="pg-state">chờ</em>
+        </div>
+        <div class="ledger" id="ledger">
+          <div class="ledger__empty">Chưa có dòng nào.</div>
+        </div>
+      </div>
+
+      <div class="portal" id="portal">
+        <div class="portal__flow">
+          <span class="portal__box">VIEW usage_by_session</span>
+          <span class="portal__arrow">→</span>
+          <span class="portal__box">SUM theo component</span>
+          <span class="portal__arrow">→</span>
+          <span class="portal__box">× bảng giá của Portal</span>
+          <span class="portal__arrow">→</span>
+          <span class="portal__box is-money">hoá đơn</span>
+        </div>
+        <p class="portal__note">Ba bước sau cùng nằm ngoài agent. Agent không biết đơn giá, nên đổi bảng giá
+          không viết lại được số liệu tiêu thụ đã ghi.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="transport">
+    <button class="tbtn tbtn--primary" id="play" type="button">▶ Chạy</button>
+    <button class="tbtn" id="prev" type="button">↤ Cảnh trước</button>
+    <button class="tbtn" id="next" type="button">Cảnh sau ↦</button>
+    <button class="tbtn" id="speed" type="button">1×</button>
+    <div class="progress"><i id="bar"></i></div>
+    <div class="tmeta" id="tmeta">cảnh 1 / 6</div>
+  </div>
+
+  <section class="narration">
+    <h2 id="n-title">—</h2>
+    <p id="n-body">—</p>
+    <div class="callout" id="n-callout" hidden></div>
+  </section>
+
+  <div class="notes">
+    <div class="note">
+      <h3>Đọc bảng màu</h3>
+      <dl>
+        <dt><span class="swatch swatch--hot"></span>hổ phách</dt>
+        <dd>Việc chạy <em>trong</em> lượt. Chỉ được phép cộng số trong RAM.</dd>
+        <dt><span class="swatch swatch--cold"></span>lam lục</dt>
+        <dd>Việc chạy <em>sau</em> lượt. Được phép chạm mạng và đĩa.</dd>
+      </dl>
+      <p style="margin-top:10px">Không có mũi tên nào đi xuống qua đường kẻ đứt trong lúc lượt đang chạy — đó là toàn bộ luận điểm của thiết kế.</p>
+    </div>
+    <div class="note">
+      <h3>Bốn cột token rời nhau</h3>
+      <p><code>in</code> vào không cache · <code>out</code> sinh ra · <code>c·w</code> ghi cache (đắt hơn in) · <code>c·r</code> đọc cache (rẻ hơn in nhiều).</p>
+      <p>Vì bật prompt caching nên phần lớn đầu vào mỗi lượt rơi vào <code>c·r</code>. Cộng bốn cột lại rồi nhân một đơn giá duy nhất sẽ ra sai số lớn.</p>
+    </div>
+    <div class="note">
+      <h3>Hai loại thời gian</h3>
+      <p><b>audio_sec</b> — số giây âm thanh, chỉ phụ thuộc nội dung cuộc gọi. Đây là con số đi vào hoá đơn vì nó tái lập được.</p>
+      <p><b>wall_ms</b> — thời gian xử lý thực, phụ thuộc tải máy chủ. Chỉ dùng theo dõi giá vốn; tính cho khách theo số này nghĩa là khách trả nhiều hơn khi server đang bận.</p>
+    </div>
+  </div>
+
+  <footer>docs/billing-flow-animation.html · đi kèm docs/handoff/agent-postgres-billing-write-contract.md · 2026-08-18</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ── helpers ──────────────────────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+const nodes = {}, links = [];
+document.querySelectorAll("[data-node]").forEach(n => nodes[n.dataset.node] = n);
+document.querySelectorAll("[data-link]").forEach(l => links[+l.dataset.link] = l);
+
+const num = (v, d) => {
+  const s = (d === 0 ? Math.round(v).toString() : v.toFixed(d).replace(".", ","));
+  return d === 0 ? s.replace(/\B(?=(\d{3})+(?!\d))/g, " ") : s;
+};
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* peak values used to scale the token bars */
+const PEAK = { in: 2600, out: 320, cw: 2600, cr: 15000 };
+
+/* ── state ────────────────────────────────────────────────────────────── */
+let S;
+let lastChipSig = null, lastLedSig = null;
+function blank(){
+  return {
+    call:0, vad:0, vadms:0, vadTot:0, vadDrained:0,
+    stt:0, sttms:0, tts:0, chars:0, sv:0, svn:0,
+    tok:{in:0,out:0,cw:0,cr:0}, calls:0, exact:true,
+    turn:0, seq:0, pending:[], held:false,
+    rows:[], drop:"", note:"", noteKind:"",
+    active:null, cut:false, mstate:"trống", pgstate:"chờ", portal:false
+  };
+}
+
+/* ── render ───────────────────────────────────────────────────────────── */
+function render(){
+  $("r-call").textContent = num(S.call,1);
+  $("r-vad").textContent  = num(S.vad,1);
+  $("r-vadms").textContent= num(S.vadms,0);
+  $("r-stt").textContent  = num(S.stt,1);
+  $("r-sttms").textContent= num(S.sttms,1);
+  $("r-tts").textContent  = num(S.tts,1);
+  $("r-chars").textContent= num(S.chars,0);
+  $("r-sv").textContent   = num(S.sv,1);
+  $("r-svn").textContent  = num(S.svn,0);
+  $("r-calls").textContent= S.calls;
+
+  for (const k of ["in","out","cw","cr"]){
+    $("r-"+k).textContent = num(S.tok[k],0);
+    $("b-"+k).style.width = Math.min(100, S.tok[k]/PEAK[k]*100) + "%";
+    $("b-"+k).parentElement.parentElement.classList.toggle("is-zero", S.tok[k] === 0);
+  }
+  $("r-exact").textContent = S.exact ? "" : "exact=false";
+
+  for (const k in nodes){
+    nodes[k].classList.toggle("is-active", S.active === k);
+    nodes[k].classList.toggle("is-cut", S.cut && k === "llm");
+  }
+
+  $("m-turn").textContent   = S.turn;
+  $("m-seq").textContent    = S.seq;
+  $("m-vadtot").textContent = num(S.vadTot,1);
+  $("m-vaddr").textContent  = num(S.vadDrained,1);
+  $("m-state").textContent  = S.mstate;
+  $("pg-state").textContent = S.pgstate;
+
+  const chips = $("chips");
+  const chipSig = S.pending.join("|") + (S.held ? "#held" : "");
+  if (chipSig !== lastChipSig){
+  lastChipSig = chipSig;
+  chips.innerHTML = "";
+  if (!S.pending.length){
+    const e = document.createElement("span");
+    e.className = "chip chip--empty";
+    e.textContent = "đã rỗng — không còn gì chờ ghi";
+    chips.appendChild(e);
+  } else {
+    S.pending.forEach(p => {
+      const c = document.createElement("span");
+      c.className = "chip" + (S.held ? " is-held" : "");
+      c.textContent = p;
+      chips.appendChild(c);
+    });
+  }
+  }
+
+  const d = $("drop");
+  d.className = "drop" + (S.drop ? " is-" + S.drop : "");
+  const tn = $("tracknote");
+  tn.textContent = S.note;
+  tn.className = "track__note" + (S.note ? " is-on" : "") + (S.noteKind ? " is-" + S.noteKind : "");
+
+  const led = $("ledger");
+  const ledSig = S.rows.map(r => r.seq + r.comp + r.detail + r.exact + (r.dupe ? "d" : "")).join("|");
+  if (ledSig !== lastLedSig){
+  lastLedSig = ledSig;
+  if (!S.rows.length){
+    led.innerHTML = '<div class="ledger__empty">Chưa có dòng nào.</div>';
+  } else {
+    let html = '<div class="lrow lrow--head"><span>seq</span><span>lượt</span><span>component</span><span>purpose</span><span>số đo</span><span>exact</span></div>';
+    S.rows.forEach(r => {
+      html += '<div class="lrow' + (r.exact ? "" : " is-inexact") + (r.dupe ? " is-dupe" : "") + '">'
+        + "<span>" + r.seq + "</span>"
+        + "<span>" + (r.turn === null ? "—" : r.turn) + "</span>"
+        + "<b>" + r.comp + "</b>"
+        + "<span>" + r.purpose + "</span>"
+        + "<span>" + r.detail + "</span>"
+        + '<span class="flag">' + (r.dupe ? "bỏ qua" : (r.exact ? "true" : "false")) + "</span>"
+        + "</div>";
+    });
+    led.innerHTML = html;
+    led.scrollTop = led.scrollHeight;
+  }
+  }
+
+  $("portal").classList.toggle("is-on", S.portal);
+}
+
+function sweep(i){
+  if (reduced) return;
+  const l = links[i]; if (!l) return;
+  l.classList.remove("is-sweep");
+  void l.offsetWidth;
+  l.classList.add("is-sweep");
+}
+
+/* ── scenes ───────────────────────────────────────────────────────────── */
+/* Every scene declares the exact state it starts from, so jumping around
+   the timeline is deterministic instead of a replay of everything before. */
+
+const T1 = { vad:12.4, vadms:41, stt:4.2, sttms:12.4, tts:6.1, chars:138, sv:1.5,
+             tok:{in:2140,out:214,cw:0,cr:11800}, calls:3 };
+
+function afterTurn1(s){
+  s.call=12.4; s.vadTot=12.4; s.vadDrained=12.4; s.turn=1; s.seq=1;
+  s.rows=[
+    {seq:0,turn:0,comp:"llm",  purpose:"conversation",detail:"in 2 140 · c·r 11 800 · out 214 · ×3",exact:true},
+    {seq:0,turn:0,comp:"stt",  purpose:"conversation",detail:"4,2 s audio · 12,4 s stream",exact:true},
+    {seq:0,turn:0,comp:"tts",  purpose:"conversation",detail:"6,1 s audio · 138 ký tự",exact:true},
+    {seq:0,turn:0,comp:"vad",  purpose:"conversation",detail:"12,4 s quét · 41 ms cpu",exact:true},
+    {seq:0,turn:0,comp:"speaker_verify",purpose:"conversation",detail:"1,5 s · 1 lần embed",exact:true}
+  ];
+  return s;
+}
+
+const scenes = [
+{
+  key:"Lượt 1",
+  tag:"đường nóng chạy, không ai chạm đĩa",
+  title:"Lượt 1 — mọi phép đo chỉ là cộng số trong RAM",
+  body:"Âm thanh đi qua VAD, STT, LLM rồi TTS. Mỗi chặng tự cộng phần tiêu thụ của mình vào một đối tượng nằm trong bộ nhớ. Không có lời gọi mạng nào, không có ghi đĩa nào, không có khoá nào.",
+  callout:"Theo dõi vùng dưới đường kẻ đứt: suốt cả cảnh này nó <b>không hề động đậy</b>. Chi phí đo trên đường nóng đúng bằng một phép cộng số nguyên.",
+  init(){ S = blank(); },
+  steps:[
+    {dur:900, tick(dt){ S.call+=dt/1000; S.vad+=dt/1000; S.vadTot+=dt/1000; S.vadms+=dt/300; },
+      enter(){ S.active="mic"; S.mstate="đang gom"; }},
+    {dur:1500, tick(dt){ S.call+=dt/1000; S.vad+=dt/1000; S.vadTot+=dt/1000; S.vadms+=dt/300; },
+      enter(){ S.active="vad"; sweep(0); }},
+    {dur:1800, tick(dt){ S.call+=dt/1000; S.vad+=dt/1000; S.vadTot+=dt/1000; S.vadms+=dt/300;
+                         S.stt=Math.min(T1.stt, S.stt+dt/700); S.sttms=S.vad; },
+      enter(){ S.active="stt"; sweep(1); S.pending=["vad 12,4s","stt 4,2s"]; }},
+    {dur:900, tick(dt){ S.call+=dt/1000; S.vad+=dt/1000; S.vadTot+=dt/1000;
+                        S.sv=Math.min(T1.sv,S.sv+dt/900); },
+      enter(){ S.active="spk"; S.svn=1; S.pending=["vad 12,4s","stt 4,2s","speaker_verify 1,5s"]; }},
+    {dur:2400, tick(dt){ S.call+=dt/1000; S.vad+=dt/1000; S.vadTot+=dt/1000;
+                         S.tok.in=Math.min(T1.tok.in, S.tok.in+dt*1.5);
+                         S.tok.cr=Math.min(T1.tok.cr, S.tok.cr+dt*8);
+                         S.tok.out=Math.min(T1.tok.out, S.tok.out+dt*0.14); },
+      enter(){ S.active="llm"; sweep(2); S.calls=1;
+               S.pending=["vad 12,4s","stt 4,2s","speaker_verify 1,5s","llm ×1"]; }},
+    {dur:1400, enter(){ S.calls=3; S.pending=["vad 12,4s","stt 4,2s","speaker_verify 1,5s","llm ×3"];
+               Object.assign(S.tok,T1.tok); }},
+    {dur:2000, tick(dt){ S.call+=dt/1000; S.vad+=dt/1000; S.vadTot+=dt/1000;
+                         S.tts=Math.min(T1.tts,S.tts+dt/330); S.chars=Math.min(T1.chars, S.chars+dt/14); },
+      enter(){ S.active="tts"; sweep(3); }},
+    {dur:1200, enter(){ S.active="spk"; sweep(4); Object.assign(S,{tts:T1.tts,chars:T1.chars,vad:T1.vad,call:12.4,vadTot:12.4});
+               S.pending=["vad 12,4s","stt 4,2s","speaker_verify 1,5s","llm ×3","tts 6,1s/138"]; }}
+  ]
+},
+{
+  key:"Chốt lượt",
+  tag:"save_all xong mới được ghi",
+  title:"Chốt lượt — gộp rồi ghi một lần, ngoài luồng",
+  body:"Sau khi lượt lưu trạng thái thành công, meter được rút cạn. Năm lời gọi LLM của một lượt gộp lại thành một dòng duy nhất mang units = 3. Lệnh INSERT chạy theo kiểu bắn-rồi-quên, không ai chờ nó.",
+  callout:"Đây là <b>lần duy nhất</b> có thứ gì đi xuống qua ranh giới, và nó xảy ra khi lượt đã kết thúc. Nếu tiến trình chết trước thời điểm này, phần tiêu thụ của lượt đang dở sẽ mất — đánh đổi có chủ đích để đường nóng sạch I/O.",
+  init(){ S = blank(); Object.assign(S,{call:12.4,vad:T1.vad,vadms:T1.vadms,stt:T1.stt,sttms:12.4,
+          tts:T1.tts,chars:T1.chars,sv:T1.sv,svn:1,tok:Object.assign({},T1.tok),calls:3,
+          vadTot:12.4,turn:0,seq:0,
+          pending:["vad 12,4s","stt 4,2s","speaker_verify 1,5s","llm ×3","tts 6,1s/138"],mstate:"5 mục chờ"}); },
+  steps:[
+    {dur:1200, enter(){ S.active=null; S.mstate="save_all xong → drain()"; }},
+    {dur:900,  enter(){ S.drop="go"; S.note="INSERT … ON CONFLICT DO NOTHING (bắn-rồi-quên)"; S.noteKind=""; }},
+    {dur:1400, enter(){ S.drop=""; S.pgstate="đang ghi"; afterTurn1(S); S.pending=[]; S.mstate="đã rỗng";
+                        S.note="5 dòng, seq = 0"; S.noteKind="ok"; }},
+    {dur:1800, enter(){ S.pgstate="5 dòng"; S.note=""; S.vadDrained=12.4; }}
+  ]
+},
+{
+  key:"Lượt 2",
+  tag:"đồng hồ đo chỉ ghi phần tăng",
+  title:"Lượt 2 — VAD là đồng hồ đo, không phải sự kiện",
+  body:"VAD chạy liên tục trên toàn bộ âm thanh, kể cả lúc im lặng, nên nó không thuộc về lượt nào. Meter giữ một số tích luỹ và mỗi lần rút chỉ ghi ra phần tăng thêm kể từ lần rút trước.",
+  callout:"Tích luỹ chạm 23,4 s nhưng dòng ghi ra chỉ mang <b>11,0 s</b> — đúng phần phát sinh trong lượt này. Ghi thẳng số tích luỹ sẽ tính tiền hai lần cho cùng một quãng âm thanh.",
+  init(){ S = afterTurn1(blank()); Object.assign(S,{vad:T1.vad,vadms:T1.vadms,stt:T1.stt,sttms:12.4,
+          tts:T1.tts,chars:T1.chars,sv:T1.sv,svn:1,tok:Object.assign({},T1.tok),calls:3,mstate:"đã rỗng"}); },
+  steps:[
+    {dur:2400, tick(dt){ S.call+=dt/1000; S.vadTot+=dt/1000; S.vad+=dt/1000; },
+      enter(){ S.active="stt"; S.mstate="đang gom"; S.stt=0; S.tok={in:0,out:0,cw:0,cr:0}; S.calls=0;
+               S.tts=0; S.chars=0; S.pending=["vad Δ…","stt 3,6s"]; }},
+    {dur:2200, tick(dt){ S.call+=dt/1000; S.vadTot+=dt/1000; S.vad+=dt/1000;
+                         S.stt=Math.min(3.6,S.stt+dt/700);
+                         S.tok.in=Math.min(980,S.tok.in+dt*0.8); S.tok.cr=Math.min(13200,S.tok.cr+dt*9);
+                         S.tok.out=Math.min(156,S.tok.out+dt*0.1); },
+      enter(){ S.active="llm"; sweep(2); S.calls=1; }},
+    {dur:1600, tick(dt){ S.call+=dt/1000; S.vadTot+=dt/1000; S.vad+=dt/1000;
+                         S.tts=Math.min(4.7,S.tts+dt/340); S.chars=Math.min(104,S.chars+dt/16); },
+      enter(){ S.active="tts"; sweep(3); S.stt=3.6; S.tok={in:980,out:156,cw:0,cr:13200};
+               S.pending=["vad Δ…","stt 3,6s","llm ×1","tts 4,7s/104"]; }},
+    {dur:1000, enter(){ S.active=null; S.vadTot=23.4; S.vad=11.0; S.call=23.4;
+               S.mstate="drain() — VAD lấy Δ = 23,4 − 12,4"; }},
+    {dur:900,  enter(){ S.drop="go"; S.note="vad.audio_sec = 11,0 (Δ), không phải 23,4"; S.noteKind=""; }},
+    {dur:2000, enter(){ S.drop=""; S.pending=[]; S.mstate="đã rỗng"; S.vadDrained=23.4; S.turn=1; S.seq=2;
+      S.rows=S.rows.concat([
+        {seq:1,turn:1,comp:"llm",purpose:"conversation",detail:"in 980 · c·r 13 200 · out 156 · ×1",exact:true},
+        {seq:1,turn:1,comp:"stt",purpose:"conversation",detail:"3,6 s audio · 11,0 s stream",exact:true},
+        {seq:1,turn:1,comp:"tts",purpose:"conversation",detail:"4,7 s audio · 104 ký tự",exact:true},
+        {seq:1,turn:null,comp:"vad",purpose:"conversation",detail:"11,0 s quét (Δ) · 36 ms cpu",exact:true}
+      ]);
+      S.pgstate="9 dòng"; S.note="Δ đã ghi — tích luỹ chuyển thành mốc mới"; S.noteKind="ok"; }}
+  ]
+},
+{
+  key:"Ngắt lời",
+  tag:"exact=false thay vì đoán bừa",
+  title:"Khách ngắt lời — số output token không còn tin được",
+  body:"Khi khách chen ngang, agent đóng stream LLM ngay lập tức. Gói tin mang số token sinh ra chưa kịp về. Đầu vào vẫn chính xác vì nó đến từ sự kiện mở đầu, còn đầu ra thì không ai biết.",
+  callout:"Agent ghi <b>exact = false</b> và để output bằng 0, <b>không ước lượng</b>. Hệ quả thẳng thắn: với voice bật chen ngang, output token bị đếm thiếu một cách có hệ thống, và mức thiếu tỉ lệ với tần suất khách ngắt lời. Cột <code>exact</code> tồn tại để đo chính mức thiếu đó.",
+  init(){ S = afterTurn1(blank()); Object.assign(S,{turn:1,seq:2,vadTot:23.4,vadDrained:23.4,call:23.4,mstate:"đang gom"}); },
+  steps:[
+    {dur:1800, tick(dt){ S.call+=dt/1000; S.vadTot+=dt/1000;
+                         S.tok.in=Math.min(1460,S.tok.in+dt*1.1); S.tok.cr=Math.min(14100,S.tok.cr+dt*10);
+                         S.tok.out=Math.min(180,S.tok.out+dt*0.12); },
+      enter(){ S.active="llm"; S.tok={in:0,out:0,cw:0,cr:0}; S.calls=1; S.stt=2.9; S.tts=0; S.chars=0;
+               S.pending=["vad Δ…","stt 2,9s"]; }},
+    {dur:1500, enter(){ S.active="mic"; S.cut=true; S.tok.out=0; S.exact=false;
+               S.note="khách chen ngang → đóng stream"; S.noteKind="bad";
+               S.mstate="message_delta chưa về"; }},
+    {dur:1800, enter(){ S.cut=false; S.active=null; S.tok={in:1460,out:0,cw:0,cr:14100};
+               S.pending=["vad Δ…","stt 2,9s","llm ×1 · exact=false"]; S.note=""; S.noteKind=""; }},
+    {dur:900,  enter(){ S.drop="go"; S.note="ghi nguyên trạng, không bù số"; }},
+    {dur:2200, enter(){ S.drop=""; S.pending=[]; S.mstate="đã rỗng"; S.seq=3; S.pgstate="11 dòng";
+      S.rows=S.rows.concat([
+        {seq:2,turn:2,comp:"llm",purpose:"conversation",detail:"in 1 460 · c·r 14 100 · out — · ×1",exact:false},
+        {seq:2,turn:2,comp:"stt",purpose:"conversation",detail:"2,9 s audio · 7,8 s stream",exact:true}
+      ]); S.note="dòng exact=false vẫn được ghi — biết là đã xảy ra"; S.noteKind="ok"; }}
+  ]
+},
+{
+  key:"Ghi hỏng",
+  tag:"giữ lại, thử lại, không nhân đôi",
+  title:"Ghi hỏng — thử lại với đúng seq cũ",
+  body:"Postgres nhận được lệnh nhưng phản hồi thất lạc. Agent không biết là đã ghi hay chưa, nên giữ nguyên các mục trong RAM và thử lại ở lượt sau bằng đúng seq của lần trước.",
+  callout:"Ràng buộc duy nhất <code>usage_events_idem</code> khiến lần thử lại rơi vào <b>DO NOTHING</b> thay vì sinh dòng mới. Thiếu ràng buộc đó, đúng tình huống này sẽ tính tiền khách hai lần — và nó là lý do mục §4 của contract quan trọng hơn mọi mục còn lại.",
+  init(){ S = afterTurn1(blank()); Object.assign(S,{turn:2,seq:3,vadTot:31.2,vadDrained:31.2,call:31.2,
+          vad:7.8,vadms:26,stt:3.1,sttms:7.8,tts:5.2,chars:121,sv:1.2,svn:1,calls:2,
+          tok:{in:1210,out:189,cw:0,cr:15400},
+          pending:["vad Δ…","stt 3,1s","llm ×2","tts 5,2s/121"],mstate:"4 mục chờ"});
+          S.rows=S.rows.concat([
+            {seq:1,turn:1,comp:"llm",purpose:"conversation",detail:"in 980 · c·r 13 200 · out 156 · ×1",exact:true},
+            {seq:2,turn:2,comp:"llm",purpose:"conversation",detail:"in 1 460 · c·r 14 100 · out — · ×1",exact:false}
+          ]); },
+  steps:[
+    {dur:900,  enter(){ S.drop="go"; S.note="INSERT seq = 3 …"; S.noteKind=""; }},
+    {dur:1400, enter(){ S.drop=""; S.pgstate="đã ghi (nhưng agent chưa biết)";
+      S.rows=S.rows.concat([
+        {seq:3,turn:3,comp:"llm",purpose:"conversation",detail:"in 1 210 · c·r 15 400 · out 189 · ×2",exact:true},
+        {seq:3,turn:3,comp:"tts",purpose:"conversation",detail:"5,2 s audio · 121 ký tự",exact:true}
+      ]); }},
+    {dur:1700, enter(){ S.drop="back"; S.note="mất phản hồi — timeout"; S.noteKind="bad";
+               S.held=true; S.mstate="giữ lại 4 mục, seq vẫn = 3"; }},
+    {dur:1900, enter(){ S.drop=""; S.note="log error lần đầu: SQLSTATE, current_user"; S.noteKind="bad"; }},
+    {dur:900,  enter(){ S.drop="go"; S.note="lượt sau: thử lại đúng seq = 3"; S.noteKind=""; }},
+    {dur:2400, enter(){ S.drop=""; S.held=false; S.pending=[]; S.mstate="đã rỗng"; S.seq=4;
+      S.rows=S.rows.concat([
+        {seq:3,turn:3,comp:"llm",purpose:"conversation",detail:"trùng khoá → không ghi thêm",exact:true,dupe:true},
+        {seq:3,turn:3,comp:"tts",purpose:"conversation",detail:"trùng khoá → không ghi thêm",exact:true,dupe:true}
+      ]);
+      S.pgstate="không nhân dòng"; S.note="ON CONFLICT DO NOTHING — hoá đơn giữ nguyên"; S.noteKind="ok"; }}
+  ]
+},
+{
+  key:"Đóng phiên",
+  tag:"agent dừng ở số lượng, Portal làm phần tiền",
+  title:"Đóng phiên — bàn giao cho Portal",
+  body:"Lần rút cuối cùng ghi thời lượng cuộc gọi thành một dòng riêng, không thuộc lượt nào. Đến đây phần việc của agent kết thúc: nó chưa từng đọc lại bảng và không biết một giây hay một token đáng bao nhiêu tiền.",
+  callout:"Bảng giá nằm ở Portal chứ không ở agent, nên <b>đổi giá không viết lại được quá khứ</b>. Số lượng đã tiêu thụ là bất biến; đơn giá là thứ thay đổi theo hợp đồng. Trộn hai thứ vào một bảng là cách chắc chắn nhất để hoá đơn cũ tự đổi số.",
+  init(){ S = afterTurn1(blank()); Object.assign(S,{turn:3,seq:4,vadTot:38.6,vadDrained:38.6,call:38.6,
+          vad:7.4,vadms:24,stt:3.1,sttms:7.4,tts:5.2,chars:121,sv:1.2,svn:1,calls:2,
+          tok:{in:1210,out:189,cw:0,cr:15400},mstate:"đã rỗng"});
+          S.rows=S.rows.concat([
+            {seq:1,turn:1,comp:"llm",purpose:"conversation",detail:"in 980 · c·r 13 200 · out 156 · ×1",exact:true},
+            {seq:2,turn:2,comp:"llm",purpose:"conversation",detail:"in 1 460 · c·r 14 100 · out — · ×1",exact:false},
+            {seq:3,turn:3,comp:"llm",purpose:"conversation",detail:"in 1 210 · c·r 15 400 · out 189 · ×2",exact:true}
+          ]); },
+  steps:[
+    {dur:1300, enter(){ S.active="mic"; S.mstate="phiên kết thúc → drain lần cuối";
+               S.pending=["call 38,6s","vad Δ 7,4s"]; }},
+    {dur:900,  enter(){ S.active=null; S.drop="go"; S.note="dòng cuối: component = call, turn_idx = NULL"; }},
+    {dur:1600, enter(){ S.drop=""; S.pending=[]; S.mstate="đã rỗng"; S.seq=5; S.pgstate="đóng sổ phiên";
+      S.rows=S.rows.concat([
+        {seq:4,turn:null,comp:"vad",purpose:"conversation",detail:"7,4 s quét (Δ)",exact:true},
+        {seq:4,turn:null,comp:"call",purpose:"session",detail:"38,6 s thời lượng cuộc gọi",exact:true}
+      ]); S.note=""; }},
+    {dur:2600, enter(){ S.portal=true; S.note="hết phạm vi agent"; S.noteKind="ok"; }}
+  ]
+}
+];
+
+/* ── engine ───────────────────────────────────────────────────────────── */
+let si = 0, pi = 0, acc = 0, playing = false, speed = 1, last = 0;
+
+function enterScene(i, autoplay){
+  si = Math.max(0, Math.min(scenes.length - 1, i));
+  pi = 0; acc = 0;
+  lastChipSig = null; lastLedSig = null;
+  scenes[si].init();
+  const sc = scenes[si];
+  $("n-title").textContent = sc.title;
+  $("n-body").textContent  = sc.body;
+  const co = $("n-callout");
+  if (sc.callout){ co.innerHTML = sc.callout; co.hidden = false; } else co.hidden = true;
+  co.className = "callout" + (si === 1 || si === 5 ? " callout--cold" : (si === 3 || si === 4 ? " callout--warn" : ""));
+  $("tmeta").textContent = "cảnh " + (si + 1) + " / " + scenes.length;
+  [...$("scenebar").children].forEach((c, n) => c.setAttribute("aria-current", n === si ? "true" : "false"));
+  if (sc.steps[0].enter) sc.steps[0].enter();
+  playing = !!autoplay;
+  syncPlayBtn();
+  render();
+}
+
+function advance(){
+  const sc = scenes[si];
+  pi++;
+  if (pi >= sc.steps.length){
+    if (si < scenes.length - 1){ enterScene(si + 1, true); }
+    else { playing = false; pi = sc.steps.length - 1; syncPlayBtn(); }
+    return;
+  }
+  acc = 0;
+  if (sc.steps[pi].enter) sc.steps[pi].enter();
+}
+
+function frame(ts){
+  if (!last) last = ts;
+  const dt = Math.min(80, ts - last) * speed;
+  last = ts;
+  if (playing){
+    const st = scenes[si].steps[pi];
+    if (st.tick) st.tick(dt);
+    acc += dt;
+    if (acc >= st.dur) advance();
+  }
+  const sc = scenes[si];
+  const total = sc.steps.reduce((a, s) => a + s.dur, 0);
+  const done  = sc.steps.slice(0, pi).reduce((a, s) => a + s.dur, 0) + acc;
+  $("bar").style.width = Math.min(100, done / total * 100) + "%";
+  render();
+  requestAnimationFrame(frame);
+}
+
+function syncPlayBtn(){ $("play").textContent = playing ? "❙❙ Dừng" : "▶ Chạy"; }
+
+/* ── controls ─────────────────────────────────────────────────────────── */
+const bar = $("scenebar");
+scenes.forEach((sc, i) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "scenechip";
+  b.innerHTML = "<b>" + String(i + 1).padStart(2, "0") + " · " + sc.key + "</b><span>" + sc.tag + "</span>";
+  b.addEventListener("click", () => enterScene(i, true));
+  bar.appendChild(b);
+});
+
+$("play").addEventListener("click", () => {
+  const sc = scenes[si];
+  if (!playing && pi >= sc.steps.length - 1 && acc >= sc.steps[pi].dur - 1) enterScene(si, true);
+  else { playing = !playing; syncPlayBtn(); }
+});
+$("prev").addEventListener("click", () => enterScene(si - 1, true));
+$("next").addEventListener("click", () => enterScene(si + 1, true));
+$("speed").addEventListener("click", () => {
+  speed = speed === 1 ? 1.75 : speed === 1.75 ? 0.5 : 1;
+  $("speed").textContent = (speed === 1.75 ? "1,75" : speed === 0.5 ? "0,5" : "1") + "×";
+});
+$("theme").addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");
+});
+addEventListener("keydown", e => {
+  if (e.key === " "){ e.preventDefault(); $("play").click(); }
+  else if (e.key === "ArrowRight") $("next").click();
+  else if (e.key === "ArrowLeft")  $("prev").click();
+});
+
+enterScene(0, !reduced);
+requestAnimationFrame(frame);
+})();
+</script>

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "KH001",
+    "name": "Minh",
+    "full_name": "Phạm Đức Minh",
+    "gender": "M",
+    "phone": "0912345678"
+  },
+  {
+    "id": "KH002",
+    "name": "Mai Anh",
+    "full_name": "Nguyễn Thị Mai Anh",
+    "gender": "F",
+    "phone": "0987654321"
+  },
+  {
+    "id": "KH003",
+    "name": "Hùng",
+    "full_name": "Trần Văn Hùng",
+    "gender": "M",
+    "phone": "0355667788"
+  },
+  {
+    "id": "KH004",
+    "name": "Linh",
+    "full_name": "Lê Thị Thuỳ Linh",
+    "gender": "F",
+    "phone": "0901122334"
+  },
+  {
+    "id": "KH005",
+    "name": "Tuấn",
+    "full_name": "Hoàng Anh Tuấn",
+    "gender": "M",
+    "phone": "0778899001"
+  }
+]

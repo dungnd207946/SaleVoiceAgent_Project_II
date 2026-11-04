@@ -1,0 +1,10 @@
+{"id":"f1","query":"Số tiền đặt cọc mua căn hộ tại Noble Crystal Long Biên là bao nhiêu","project":"NCLB","expected_tool":null,"expected_keywords":["ba trăm triệu","300"],"note":"deposit amount — in NCLB FAQ"}
+{"id":"f2","query":"Chủ đầu tư dự án NPLB có thu tiền mặt không","project":"NPLB","expected_tool":null,"expected_keywords":["không","tài khoản"],"note":"cash payment policy in FAQ"}
+{"id":"f3","query":"Phí bảo trì căn hộ tại Noble là mấy phần trăm","project":"NCLB","expected_tool":null,"expected_keywords":["2%","hai phần trăm","bảo trì"],"note":"maintenance fee in COMMON FAQ"}
+{"id":"f4","query":"Giá bán căn hộ Noble Crystal Long Biên đã bao gồm VAT chưa","project":"NCLB","expected_tool":null,"expected_keywords":["vat","thuế"],"note":"VAT inclusion in COMMON FAQ"}
+{"id":"f5","query":"Ký hợp đồng mua bán Noble trước hay nộp tiền trước","project":"NCLB","expected_tool":null,"expected_keywords":["nộp tiền","trước khi ký"],"note":"payment sequence in FAQ"}
+{"id":"f6","query":"Hotline Noble là số điện thoại nào","project":"","expected_tool":null,"expected_keywords":["1800","hotline"],"note":"hotline in COMMON FAQ"}
+{"id":"f7","query":"Đơn vị quản lý vận hành tòa nhà Noble Crystal Long Biên là đơn vị nào","project":"NCLB","expected_tool":null,"expected_keywords":["worldhotels","vận hành"],"note":"property management in NCLB FAQ"}
+{"id":"f8","query":"Giấy chứng nhận quyền sở hữu căn hộ Noble là sổ đỏ hay sổ hồng","project":"NCLB","expected_tool":null,"expected_keywords":["sổ hồng"],"note":"ownership certificate in NCLB FAQ"}
+{"id":"f9","query":"Noble có những dự án nào ở Hà Nội","project":"","expected_tool":null,"expected_keywords":["long biên","tây hồ","tây thăng long"],"note":"project list in COMMON FAQ"}
+{"id":"f10","query":"Phí quản lý dịch vụ hàng tháng cho dự án Noble Palace Long Biên","project":"NPLB","expected_tool":null,"expected_keywords":["30.000","m2","phí quản lý"],"note":"management fee in NPLB FAQ"}

@@ -1,0 +1,88 @@
+{
+  "versions": {
+    "v5-bench": {
+      "name": "v5 bench compat (flat→nested remap)",
+      "description": "v5 content (positive voice + emergent routing + trimmed duplication) in v0-v3 structure for bench_llm.py",
+      "changes": [
+        "positive voice style in shared/RULES.md",
+        "emergent skill routing (no trigger_keywords)",
+        "natural-language use_when per skill",
+        "trimmed IDENTITY duplication"
+      ],
+      "base": "v5",
+      "expected_tokens": {
+        "router": 3200,
+        "consultant": 7500,
+        "support": 4800
+      }
+    },
+    "v6-bench": {
+      "name": "v6 bench compat — DVKH + soft-handoff + reframing",
+      "description": "v6 (Noble DVKH alignment + soft-handoff default + sensitive info reframing) in v0-v3 structure",
+      "changes": [
+        "positive voice style in shared/RULES.md",
+        "emergent skill routing (no trigger_keywords)",
+        "natural-language use_when per skill",
+        "trimmed IDENTITY duplication"
+      ],
+      "base": "v6",
+      "expected_tokens": {
+        "router": 3200,
+        "consultant": 7500,
+        "support": 4800
+      }
+    },
+    "v7-bench": {
+      "name": "v7 bench — v6 prompts + code patches A1+A2+A3+A4",
+      "description": "Same prompts as v6-bench. Adds runtime patches (no src change): _COMMON.md inject, phonetic aliases, history scan, Tier 1 auto-set project_interest.",
+      "changes": [
+        "A1: inject _COMMON.md into system prompt always",
+        "A2: expand _PROJECT_FAQ_MAP with phonetic aliases",
+        "A3: scan last-5 messages for project_interest inference",
+        "A4: Tier 1 auto-set after check_availability/schedule_viewing/update_booking_info"
+      ],
+      "base": "v6-bench",
+      "expected_tokens": {
+        "router": 3300,
+        "consultant": 8000,
+        "support": 5000
+      }
+    },
+    "v8-bench": {
+      "name": "v8 bench — prompt cleanup + FAQ search inject",
+      "description": "v7 prompts with <portfolio>/<organization> deduplicated into PROJECTS.md. Runtime patches A2+A3+A4+A5 (A1 removed, FAQ via searched top-K at prompt tail).",
+      "changes": [
+        "Removed <portfolio> and <organization> blocks from RULES.md (single source in PROJECTS.md)",
+        "Added shared/FAQ_INSTRUCTION.md — 3-line FAQ priority rule",
+        "A1 removed: no _COMMON.md prepend",
+        "A2: phonetic aliases (kept)",
+        "A3: history scan for project inference (kept)",
+        "A4: Tier 1 auto-set after action tools (kept)",
+        "A5: layout reorder — customer context + FAQ to prompt tail"
+      ],
+      "base": "v7-bench",
+      "expected_tokens": {
+        "router": 2000,
+        "consultant": 5500,
+        "support": 3500
+      }
+    },
+    "v9-bench": {
+      "name": "v9 bench — production-clean + outreach activation",
+      "description": "Snapshot of src/agent/definitions/ AFTER DRY cleanup of send_via_app workflow (channel rules deduplicated into TOOL.md). 4 agents (incl. outbound_callback), 19 tools (incl. send_via_app). No runtime patches — production code paths only.",
+      "changes": [
+        "consultant-info INQ_RICH_CONTENT: 13→5 lines, channel rules delegated to send_via_app/TOOL.md",
+        "support-escalation post_transfer_followup: 14→8 lines, same delegation",
+        "Bench infra: send_via_app entry in _FAKE_TOOL_RESPONSES",
+        "Bench infra: outreach.jsonl scenario set (3 positive + 3 negative/discriminator)"
+      ],
+      "base": null,
+      "expected_tokens": {
+        "router": 2000,
+        "consultant": 5500,
+        "support": 3500
+      }
+    }
+  },
+  "default": "v9-bench"
+}

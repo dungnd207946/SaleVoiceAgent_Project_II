@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mẫu form chuẩn của Provider</title>
+<style>
+  :root {
+    --bg: #f7f8fa; --card: #fff; --ink: #1a1d21; --muted: #6b7280;
+    --line: #e5e7eb; --accent: #2563eb; --req: #dc2626; --opt: #6b7280;
+    --chip: #eef2ff; --chipink: #3730a3; --code: #f1f5f9; --warn-bg:#fff7ed; --warn-line:#fdba74;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0f1115; --card:#171a21; --ink:#e6e8eb; --muted:#9aa3af;
+      --line:#2a2f3a; --accent:#60a5fa; --req:#f87171; --opt:#9aa3af;
+      --chip:#1e2540; --chipink:#c7d2fe; --code:#1c2029; --warn-bg:#2a1f12; --warn-line:#a86432;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.6 -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+  header h1 { font-size: 28px; margin: 0 0 6px; }
+  header p { color: var(--muted); margin: 0 0 24px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 18px 0 8px; font-size: 14px; }
+  .legend b { font-weight: 600; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }
+  .req { color: #fff; background: var(--req); }
+  .opt { color: var(--opt); border: 1px solid var(--line); }
+  nav { position: sticky; top: 0; background: var(--bg); padding: 12px 0; border-bottom: 1px solid var(--line);
+        display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 13.5px; z-index: 5; margin-bottom: 20px; }
+  nav a { color: var(--accent); text-decoration: none; padding: 2px 8px; border-radius: 6px; background: var(--chip); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 18px 6px; margin: 18px 0; }
+  .card h2 { font-size: 20px; margin: 0 0 2px; scroll-margin-top: 70px; }
+  .card .py { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; color: var(--muted); }
+  .card > .desc { margin: 8px 0 14px; }
+  .tbl-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 560px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .03em; }
+  td code, .desc code, li code { font-family: ui-monospace, Menlo, monospace; font-size: 13px;
+        background: var(--code); padding: 1px 5px; border-radius: 5px; }
+  .chip { display:inline-block; background: var(--chip); color: var(--chipink); border-radius: 6px;
+          padding: 0 6px; font-size: 12.5px; font-weight: 600; margin-left: 4px; }
+  .note { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 10px; padding: 12px 16px; margin: 16px 0; }
+  .note b { display:block; margin-bottom: 4px; }
+  .intro { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  h3.sub { margin: 34px 0 4px; font-size: 15px; letter-spacing:.05em; text-transform: uppercase; color: var(--muted); }
+  footer { color: var(--muted); font-size: 13px; margin-top: 40px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Mẫu form chuẩn của Provider</h1>
+  <p>Danh sách các "form" (DTO) mà provider phải điền — nguồn: <code>data/providers/base.py</code></p>
+</header>
+
+<div class="intro">
+  <p><b>Đọc thế nào?</b> Mỗi provider là một "người phiên dịch". Nó đọc dữ liệu thô
+  của nguồn (Mongo/API…) rồi <b>điền vào các form dưới đây</b>. Luna chỉ đọc form,
+  không quan tâm nguồn gốc. Nhiệm vụ của bạn = map field thô → đúng ô trong form,
+  theo đúng đơn vị.</p>
+  <ul>
+    <li><span class="pill req">bắt buộc</span> — ô này luôn phải có giá trị.</li>
+    <li><span class="pill opt">tuỳ chọn</span> — nguồn không có thì để <code>None</code> (đừng bịa).</li>
+    <li>Ô ghi <span class="chip">VND</span> = số đồng nguyên; <span class="chip">m²</span> = số thực;
+        <span class="chip">enum</span> = chỉ vài giá trị cố định.</li>
+  </ul>
+</div>
+
+<nav>
+  <a href="#contract">Hàm hợp đồng</a>
+  <a href="#unit">Unit ⭐</a>
+  <a href="#overview">ProjectOverview</a>
+  <a href="#summary">ProjectSummary</a>
+  <a href="#list">ProjectList</a>
+  <a href="#discovery">ProjectDiscovery</a>
+  <a href="#pricing">Pricing</a>
+  <a href="#inventory">Inventory</a>
+  <a href="#recommend">Recommendation</a>
+  <a href="#registry">RegistryRow</a>
+  <a href="#queries">Query (input)</a>
+  <a href="#extras">Extras / ToolParam</a>
+</nav>
+
+<div class="note">
+  <b>3 quy tắc dịch không bao giờ được sai:</b>
+  1) Giá → <b>số đồng</b> (nguồn để tỷ thì ×1&nbsp;000&nbsp;000&nbsp;000).
+  2) <code>status</code> chỉ được là <code>available / sold / booked / unknown</code>.
+  3) Nguồn thiếu field → <code>None</code>, tuyệt đối không suy đoán số liệu.
+</div>
+
+<!-- CONTRACT -->
+<div class="card">
+  <h2 id="contract">Hàm hợp đồng (Protocol) — bạn PHẢI viết những hàm này</h2>
+  <div class="py">class DataProvider(Protocol) — base.py</div>
+  <p class="desc">Đây là "hợp đồng": danh sách hàm + <b>tên + tham số + form trả về</b> cố định.
+  Muốn biết viết hàm nào → copy đúng danh sách này rồi điền thân. <b>Tên hàm công khai không được đổi</b>
+  (có người gọi đích danh); <b>thân hàm thì tự do</b>. Nguồn không có một capability → vẫn viết hàm đó
+  nhưng trả <code>None</code>.</p>
+
+  <h3 class="sub">4 thuộc tính (khai báo, không phải hàm)</h3>
+  <div class="tbl-scroll"><table>
+    <tr><th>Thuộc tính</th><th>Kiểu</th><th>Chức năng</th></tr>
+    <tr><td><code>name</code></td><td>str</td><td>Tên nguồn — phải trùng giá trị <code>NOBLE_DATA_SOURCE</code> (vd "nbx")</td></tr>
+    <tr><td><code>capabilities</code></td><td>frozenset[Capability]</td><td>Khai báo nguồn có capability nào (LISTING, PRICING, INVENTORY…)</td></tr>
+    <tr><td><code>extra_specs</code></td><td>tuple[ExtraFieldSpec]</td><td>Field phụ cho Luna THẤY (mặc định <code>()</code> — tuỳ chọn)</td></tr>
+    <tr><td><code>tool_params</code></td><td>tuple[ToolParamSpec]</td><td>Param lọc phụ cho Luna DÙNG (mặc định <code>()</code> — tuỳ chọn)</td></tr>
+  </table></div>
+
+  <h3 class="sub">Nhóm 1 — Lấy dữ liệu (7 hàm, đều async)</h3>
+  <div class="tbl-scroll"><table>
+    <tr><th>Hàm</th><th>Trả về form</th><th>Chức năng</th></tr>
+    <tr><td><code>list_projects(*, region="")</code></td><td>ProjectList | None</td><td>Liệt kê dự án, có thể lọc theo vùng. Dùng cho câu hỏi "có những dự án nào".</td></tr>
+    <tr><td><code>discover_projects(query)</code></td><td>ProjectDiscovery | None</td><td>Phễu khám phá: lọc + xếp hạng (hot trước) + cắt <b>một trang</b>. Trả kèm <code>total</code> để phân trang.</td></tr>
+    <tr><td><code>get_overview(project_code)</code></td><td>ProjectOverview | None</td><td>Tổng quan một dự án (chủ đầu tư, quy mô, mô tả…).</td></tr>
+    <tr><td><code>get_pricing(project_code, *, unit_type="", max_price_vnd=0)</code></td><td>PricingTable | None</td><td>Bảng giá gộp theo loại căn (min/max giá, diện tích, số căn còn).</td></tr>
+    <tr><td><code>search_units(query)</code></td><td>list[Unit] | None</td><td>Tìm danh sách căn cụ thể theo bộ lọc (loại, giá, hướng, diện tích…).</td></tr>
+    <tr><td><code>recommend_units(query)</code></td><td>UnitRecommendation | None</td><td>Gợi ý căn (xuyên dự án hoặc 1 dự án). Trả <b>RAW</b> — tool layer mới rank feng-shui + cắt số lượng.</td></tr>
+    <tr><td><code>get_inventory_summary(project_code)</code></td><td>InventorySummary | None</td><td>Tóm tắt tồn kho: còn/hết, đếm theo loại &amp; theo hướng. KHÔNG phải danh sách căn.</td></tr>
+  </table></div>
+
+  <h3 class="sub">Nhóm 2 — Chính sách (4 hàm async) · nguồn thường không có → trả None</h3>
+  <div class="tbl-scroll"><table>
+    <tr><th>Hàm</th><th>Trả về</th><th>Chức năng</th></tr>
+    <tr><td><code>get_payment_plans(project_code)</code></td><td>None</td><td>Phương thức thanh toán. Không có nguồn cấu trúc → <code>None</code> (tool tự escalate cho chuyên viên).</td></tr>
+    <tr><td><code>get_loan_policies(project_code)</code></td><td>None</td><td>Chính sách vay.</td></tr>
+    <tr><td><code>get_promotions(project_code)</code></td><td>None</td><td>Khuyến mãi.</td></tr>
+    <tr><td><code>get_project_fees(project_code)</code></td><td>None</td><td>Phí (quản lý, sang tên…).</td></tr>
+  </table></div>
+  <p class="desc" style="font-size:14px;color:var(--muted)">Nếu nguồn của bạn CÓ mấy dữ liệu này, bạn có thể mở rộng để trả DTO thật — nhưng hiện các provider đều trả <code>None</code> và để chuyên viên xử lý.</p>
+
+  <h3 class="sub">Nhóm 3 — Sổ đăng ký dự án (5 hàm) · nuôi enum mã + bảng prompt</h3>
+  <div class="tbl-scroll"><table>
+    <tr><th>Hàm</th><th>Async?</th><th>Trả về</th><th>Chức năng</th></tr>
+    <tr><td><code>warm()</code></td><td>async</td><td>None</td><td>Nạp cache "sổ đăng ký" (mã↔tên↔vùng↔loại) từ nguồn lúc khởi động. <b>Phải nuốt mọi lỗi</b> để boot không sập.</td></tr>
+    <tr><td><code>warm_if_stale(ttl_sec)</code></td><td>async</td><td>None</td><td>Làm mới cache nếu quá hạn TTL (gọi đầu mỗi cuộc gọi). Bọc <code>warm()</code>.</td></tr>
+    <tr><td><code>registry_rows()</code></td><td>sync</td><td>list[ProjectRegistryRow]</td><td>Trả cache dạng danh sách dòng — dùng dựng bảng dự án trong prompt.</td></tr>
+    <tr><td><code>cached_codes()</code></td><td>sync</td><td>list[str]</td><td>Trả danh sách mã dự án hợp lệ (để validate/enum).</td></tr>
+    <tr><td><code>code_to_name()</code></td><td>sync</td><td>dict[str, str]</td><td>Bản đồ mã → tên dự án.</td></tr>
+  </table></div>
+
+  <div class="note" style="margin-top:16px">
+    <b>Phân biệt hàm công khai vs hàm phụ:</b>
+    16 hàm ở trên (không có gạch dưới) = <b>khoá tên</b>, phải khớp Protocol từng chữ.
+    Còn các hàm bắt đầu bằng <code>_</code> trong provider (vd <code>_unit_from</code>, <code>_hot_sort_key</code>,
+    <code>_region_matches</code>) là <b>helper riêng của bạn</b> — đặt tên tuỳ ý, thêm/bớt thoải mái, vì không ai bên ngoài gọi.
+  </div>
+</div>
+
+<!-- UNIT -->
+<div class="card">
+  <h2 id="unit">Unit ⭐ <span class="chip">quan trọng nhất</span></h2>
+  <div class="py">class Unit — một căn hộ / sản phẩm bán</div>
+  <p class="desc">Form được dùng nhiều nhất: kết quả của <code>search_units</code>,
+  <code>recommend_units</code>. Đây là nơi hay dịch sai đơn vị nhất.</p>
+  <div class="tbl-scroll"><table>
+    <tr><th>Ô (field)</th><th>Kiểu</th><th>Ý nghĩa</th><th></th></tr>
+    <tr><td><code>project_code</code></td><td>str</td><td>Mã dự án <b>canonical</b> (đã chuẩn hoá — không phải id/slug thô)</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>project_name</code></td><td>str</td><td>Tên dự án hiển thị</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>unit_code</code></td><td>str</td><td>Mã căn (vd "A-12.05")</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>unit_type</code></td><td>str</td><td>Loại căn (vd "2PN", "Studio")</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>unit_type_group</code></td><td>str</td><td>Nhóm sản phẩm (vd "Căn hộ", "Shophouse")</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>bedrooms</code></td><td>int | None</td><td>Số phòng ngủ (Studio = 0)</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>area_m2</code> <span class="chip">m²</span></td><td>float | None</td><td>Diện tích thông thuỷ (dùng chính)</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>wall_area_m2</code> <span class="chip">m²</span></td><td>float | None</td><td>Diện tích tim tường (nguồn không tách → None)</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>price_vnd</code> <span class="chip">VND</span></td><td>int | None</td><td>Giá bán chính</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>price_per_m2_vnd</code> <span class="chip">VND</span></td><td>int | None</td><td>Đơn giá / m²</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>price_early_vnd</code> <span class="chip">VND</span></td><td>int | None</td><td>Giá thanh toán sớm</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>price_progress_vnd</code> <span class="chip">VND</span></td><td>int | None</td><td>Giá theo tiến độ</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>price_loan_vnd</code> <span class="chip">VND</span></td><td>int | None</td><td>Giá khi vay</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>direction</code></td><td>str | None</td><td>Hướng (vd "Đông Nam")</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>floor</code></td><td>str | None</td><td>Tầng</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>view</code></td><td>str | None</td><td>View</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>status</code> <span class="chip">enum</span></td><td>str</td><td><code>available</code> / <code>sold</code> / <code>booked</code> / <code>unknown</code></td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>max_discount_pct</code> <span class="chip">%</span></td><td>float | None</td><td>Chiết khấu tối đa</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>image_url</code></td><td>str | None</td><td>Ảnh căn</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>extras</code></td><td>dict</td><td>Túi field phụ ngoài form chuẩn (xem cuối trang)</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+  </table></div>
+</div>
+
+<!-- OVERVIEW -->
+<div class="card">
+  <h2 id="overview">ProjectOverview</h2>
+  <div class="py">class ProjectOverview — tổng quan 1 dự án</div>
+  <p class="desc">Kết quả của <code>get_project_overview</code>. Hầu hết là mô tả dạng chữ; thiếu thì để <code>None</code>.</p>
+  <div class="tbl-scroll"><table>
+    <tr><th>Ô</th><th>Kiểu</th><th>Ý nghĩa</th><th></th></tr>
+    <tr><td><code>code</code></td><td>str</td><td>Mã dự án canonical</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>name</code></td><td>str</td><td>Tên dự án</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>region</code></td><td>str | None</td><td>Vùng/miền</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>district</code></td><td>str | None</td><td>Vị trí/quận</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>type</code></td><td>str | None</td><td>Loại hình dự án</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>investor</code></td><td>str | None</td><td>Chủ đầu tư</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>total_units</code></td><td>str | None</td><td>Tổng số căn (dạng chữ)</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>management</code></td><td>str | None</td><td>Đơn vị quản lý</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>ownership</code></td><td>str | None</td><td>Hình thức sở hữu</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>handover</code></td><td>str | None</td><td>Bàn giao</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>land_area</code></td><td>str | None</td><td>Quy mô/diện tích đất (dạng chữ)</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>total_investment_vnd</code> <span class="chip">VND</span></td><td>int | None</td><td>Tổng vốn đầu tư</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>description</code></td><td>str | None</td><td>Mô tả</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>product</code></td><td>str | None</td><td>Loại sản phẩm</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>extras</code></td><td>dict</td><td>Túi field phụ</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+  </table></div>
+</div>
+
+<!-- SUMMARY -->
+<div class="card">
+  <h2 id="summary">ProjectSummary</h2>
+  <div class="py">class ProjectSummary — một dòng dự án trong danh sách</div>
+  <p class="desc">Phần tử con của <code>ProjectList</code> và <code>ProjectDiscovery</code>.</p>
+  <div class="tbl-scroll"><table>
+    <tr><th>Ô</th><th>Kiểu</th><th>Ý nghĩa</th><th></th></tr>
+    <tr><td><code>code</code></td><td>str</td><td>Mã dự án</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>name</code></td><td>str</td><td>Tên</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>region</code></td><td>str</td><td>Vùng/miền</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>type</code></td><td>str</td><td>Loại hình</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>investor</code></td><td>str</td><td>Chủ đầu tư (mặc định "")</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>price_from_vnd</code> <span class="chip">VND</span></td><td>int | None</td><td>Giá từ (nếu nguồn có giá cấp dự án)</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>hot</code></td><td>bool</td><td>Dự án hot/ưu tiên (mặc định False)</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+  </table></div>
+</div>
+
+<!-- LIST -->
+<div class="card">
+  <h2 id="list">ProjectList</h2>
+  <div class="py">class ProjectList — kết quả list_projects</div>
+  <div class="tbl-scroll"><table>
+    <tr><th>Ô</th><th>Kiểu</th><th>Ý nghĩa</th><th></th></tr>
+    <tr><td><code>count</code></td><td>int</td><td>Số dự án trong danh sách</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>projects</code></td><td>list[ProjectSummary]</td><td>Danh sách dự án</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>region</code></td><td>str</td><td>Vùng đã lọc (nếu có)</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>note</code></td><td>str</td><td>Ghi chú (vd "không tìm thấy khu vực")</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+  </table></div>
+</div>
+
+<!-- DISCOVERY -->
+<div class="card">
+  <h2 id="discovery">ProjectDiscovery</h2>
+  <div class="py">class ProjectDiscovery — kết quả discover_projects (đã rank + phân trang)</div>
+  <p class="desc">Provider tự sắp xếp (hot trước) và cắt <b>một trang</b>. Phần "gợi ý thu hẹp" là việc của tool layer, không phải provider.</p>
+  <div class="tbl-scroll"><table>
+    <tr><th>Ô</th><th>Kiểu</th><th>Ý nghĩa</th><th></th></tr>
+    <tr><td><code>total</code></td><td>int</td><td>Tổng số dự án khớp <b>trước khi</b> cắt trang</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>projects</code></td><td>list[ProjectSummary]</td><td>Trang hiện tại: đã rank + cắt <code>[offset, offset+limit)</code></td><td><span class="pill req">bắt buộc</span></td></tr>
+  </table></div>
+</div>
+
+<!-- PRICING -->
+<div class="card">
+  <h2 id="pricing">PricingTable + UnitTypePricing</h2>
+  <div class="py">kết quả get_project_financial (info_type=pricing) — gộp giá theo loại căn</div>
+  <h3 class="sub">PricingTable</h3>
+  <div class="tbl-scroll"><table>
+    <tr><th>Ô</th><th>Kiểu</th><th>Ý nghĩa</th><th></th></tr>
+    <tr><td><code>project_code</code></td><td>str</td><td>Mã dự án</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>results</code></td><td>list[UnitTypePricing]</td><td>Các dòng giá theo loại căn</td><td><span class="pill req">bắt buộc</span></td></tr>
+  </table></div>
+  <h3 class="sub">UnitTypePricing (một dòng)</h3>
+  <div class="tbl-scroll"><table>
+    <tr><th>Ô</th><th>Kiểu</th><th>Ý nghĩa</th><th></th></tr>
+    <tr><td><code>unit_type</code></td><td>str</td><td>Loại căn</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>group</code></td><td>str</td><td>Nhóm sản phẩm</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>area_min_m2</code> / <code>area_max_m2</code> <span class="chip">m²</span></td><td>float | None</td><td>Khoảng diện tích</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>price_from_vnd</code> / <code>price_to_vnd</code> <span class="chip">VND</span></td><td>int | None</td><td>Khoảng giá</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>price_per_m2_from_vnd</code> / <code>..._to_vnd</code> <span class="chip">VND</span></td><td>int | None</td><td>Khoảng đơn giá/m²</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>total_units</code></td><td>int</td><td>Tổng số căn loại này</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>available_units</code></td><td>int | None</td><td>Số căn còn</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+    <tr><td><code>price_early_from_vnd</code> / <code>..._to_vnd</code> <span class="chip">VND</span></td><td>int | None</td><td>Khoảng giá thanh toán sớm</td><td><span class="pill opt">tuỳ chọn</span></td></tr>
+  </table></div>
+</div>
+
+<!-- INVENTORY -->
+<div class="card">
+  <h2 id="inventory">InventorySummary</h2>
+  <div class="py">kết quả check_inventory — bản tóm tắt còn/hết, KHÔNG phải danh sách căn</div>
+  <div class="tbl-scroll"><table>
+    <tr><th>Ô</th><th>Kiểu</th><th>Ý nghĩa</th><th></th></tr>
+    <tr><td><code>project_code</code></td><td>str</td><td>Mã dự án</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>total</code></td><td>int</td><td>Tổng số căn</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>available</code></td><td>int</td><td>Tổng số căn còn</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>by_unit_type</code></td><td>list[InventoryByType]</td><td>Đếm theo loại căn: <code>unit_type, total, available, price_from_vnd, price_to_vnd</code></td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>by_direction</code></td><td>list[InventoryByDirection]</td><td>Đếm theo hướng: <code>direction, available</code></td><td><span class="pill req">bắt buộc</span></td></tr>
+  </table></div>
+</div>
+
+<!-- RECOMMEND -->
+<div class="card">
+  <h2 id="recommend">UnitRecommendation</h2>
+  <div class="py">kết quả recommend_units — bọc list[Unit]</div>
+  <div class="tbl-scroll"><table>
+    <tr><th>Ô</th><th>Kiểu</th><th>Ý nghĩa</th><th></th></tr>
+    <tr><td><code>units</code></td><td>list[Unit]</td><td>Các căn gợi ý — trả <b>RAW</b> (không sort, không giới hạn). Tool layer mới rank feng-shui + cắt.</td><td><span class="pill req">bắt buộc</span></td></tr>
+  </table></div>
+</div>
+
+<!-- REGISTRY -->
+<div class="card">
+  <h2 id="registry">ProjectRegistryRow</h2>
+  <div class="py">một dòng trong "sổ đăng ký" dự án — nuôi enum mã + bảng prompt</div>
+  <p class="desc">Provider build cache này trong <code>warm()</code>; 3 hàm sync <code>registry_rows()</code>/<code>cached_codes()</code>/<code>code_to_name()</code> đọc ra.</p>
+  <div class="tbl-scroll"><table>
+    <tr><th>Ô</th><th>Kiểu</th><th>Ý nghĩa</th><th></th></tr>
+    <tr><td><code>code</code></td><td>str</td><td>Mã canonical</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>name</code></td><td>str</td><td>Tên</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>region</code></td><td>str</td><td>Vùng</td><td><span class="pill req">bắt buộc</span></td></tr>
+    <tr><td><code>type</code></td><td>str</td><td>Loại hình</td><td><span class="pill req">bắt buộc</span></td></tr>
+  </table></div>
+</div>
+
+<!-- QUERIES -->
+<div class="card">
+  <h2 id="queries">Query — form ĐẦU VÀO (Luna gửi cho provider)</h2>
+  <div class="py">UnitQuery / DiscoverQuery / RecommendQuery — đã ở đơn vị canonical</div>
+  <p class="desc">Đây không phải form trả về, mà là tham số Luna đưa vào. Mọi giá trị đã chuẩn hoá sẵn (giá = VND, vùng/loại = enum). Bạn chỉ đọc để lọc.</p>
+  <h3 class="sub">UnitQuery — cho search_units</h3>
+  <div class="tbl-scroll"><table>
+    <tr><th>Ô</th><th>Mặc định</th><th>Ý nghĩa</th></tr>
+    <tr><td><code>project_code</code></td><td>—</td><td>Dự án cần tìm</td></tr>
+    <tr><td><code>unit_type</code></td><td>""</td><td>Lọc loại căn</td></tr>
+    <tr><td><code>max_price_vnd</code> <span class="chip">VND</span></td><td>0 = bỏ qua</td><td>Trần giá</td></tr>
+    <tr><td><code>direction</code></td><td>""</td><td>Lọc hướng</td></tr>
+    <tr><td><code>floor</code> / <code>tower</code> / <code>unit_code</code></td><td>0 / "" / ""</td><td>Lọc tầng/toà/mã căn</td></tr>
+    <tr><td><code>status</code></td><td>"available"</td><td>Trạng thái muốn lấy</td></tr>
+    <tr><td><code>min_area_m2</code> <span class="chip">m²</span></td><td>0.0</td><td>Sàn diện tích</td></tr>
+    <tr><td><code>custom_params</code></td><td>{}</td><td>Param lọc phụ do provider khai báo (Tier-2)</td></tr>
+  </table></div>
+  <h3 class="sub">DiscoverQuery — cho discover_projects</h3>
+  <div class="tbl-scroll"><table>
+    <tr><th>Ô</th><th>Mặc định</th><th>Ý nghĩa</th></tr>
+    <tr><td><code>region</code></td><td>""</td><td>Vùng</td></tr>
+    <tr><td><code>budget_max_vnd</code> <span class="chip">VND</span></td><td>0</td><td>Ngân sách (một số nguồn bỏ qua ở tầng dự án)</td></tr>
+    <tr><td><code>product_type</code></td><td>""</td><td>Loại sản phẩm (enum)</td></tr>
+    <tr><td><code>purpose</code></td><td>""</td><td>Mục đích — chỉ tư vấn, không lọc</td></tr>
+    <tr><td><code>investor</code></td><td>""</td><td>Chủ đầu tư</td></tr>
+    <tr><td><code>offset</code> / <code>limit</code></td><td>0 / 5</td><td>Phân trang</td></tr>
+  </table></div>
+  <h3 class="sub">RecommendQuery — cho recommend_units</h3>
+  <div class="tbl-scroll"><table>
+    <tr><th>Ô</th><th>Mặc định</th><th>Ý nghĩa</th></tr>
+    <tr><td><code>region</code></td><td>""</td><td>Vùng</td></tr>
+    <tr><td><code>budget_max_vnd</code> <span class="chip">VND</span></td><td>0</td><td>Ngân sách</td></tr>
+    <tr><td><code>bedrooms</code></td><td>0</td><td>Số phòng ngủ</td></tr>
+    <tr><td><code>good_directions</code></td><td>∅</td><td>Tập hướng hợp (feng-shui do tool tính sẵn)</td></tr>
+    <tr><td><code>limit</code></td><td>6</td><td>Số lượng (tool cắt, không phải provider)</td></tr>
+    <tr><td><code>project_code</code></td><td>""</td><td>"" = xuyên dự án; có giá trị = giới hạn 1 dự án</td></tr>
+  </table></div>
+</div>
+
+<!-- EXTRAS -->
+<div class="card">
+  <h2 id="extras">Extras &amp; ToolParam — khi nguồn "giàu" hơn form chuẩn</h2>
+  <p class="desc">Hai công cụ <b>tuỳ chọn</b> cho field mà form chuẩn không có. Chỉ dùng khi cần.</p>
+  <h3 class="sub">ExtraFieldSpec — cho Luna THẤY field phụ (Tier-1)</h3>
+  <div class="tbl-scroll"><table>
+    <tr><th>Ô</th><th>Ý nghĩa</th></tr>
+    <tr><td><code>key</code></td><td>Key trong túi <code>extras</code> của DTO</td></tr>
+    <tr><td><code>label</code></td><td>Nhãn tiếng Việt Luna đọc (vd "Loại quỹ căn")</td></tr>
+    <tr><td><code>entity</code></td><td>"unit" | "project" | "pricing"</td></tr>
+    <tr><td><code>type</code></td><td>int | number | string | bool | enum</td></tr>
+    <tr><td><code>unit</code></td><td>"vnd" | "m2" | "pct" | "" — tự thêm hậu tố nhãn</td></tr>
+    <tr><td><code>description</code> / <code>enum</code></td><td>Mô tả / tập giá trị (nếu enum)</td></tr>
+  </table></div>
+  <h3 class="sub">ToolParamSpec — cho Luna LỌC theo field phụ (Tier-2)</h3>
+  <div class="tbl-scroll"><table>
+    <tr><th>Ô</th><th>Ý nghĩa</th></tr>
+    <tr><td><code>tool</code></td><td>Tool đích (vd "search_units")</td></tr>
+    <tr><td><code>name</code></td><td>Tên param Luna điền (vd "fund_type")</td></tr>
+    <tr><td><code>type</code></td><td>int | number | string | bool | enum</td></tr>
+    <tr><td><code>description</code></td><td>Mô tả cho LLM biết khi nào truyền</td></tr>
+    <tr><td><code>maps_to</code></td><td>Key trong <code>extras</code> để so khớp</td></tr>
+    <tr><td><code>match</code></td><td><code>eq</code> | <code>substring</code> | <code>gte</code> | <code>lte</code> | <code>exists</code> | <code>contains</code></td></tr>
+  </table></div>
+  <div class="note" style="margin-top:16px">
+    <b>Ghi nhớ:</b> khai báo <code>extras</code>/<code>tool_params</code> ngay trong class provider của bạn.
+    Serializer và schema tự lo phần render + lọc — bạn <b>không</b> sửa tool hay core.
+  </div>
+</div>
+
+<footer>Nguồn chân lý: <code>src/noble_agent/data/providers/base.py</code> · provider mẫu: <code>nbx_mongo.py</code></footer>
+</div>
+</body>
+</html>

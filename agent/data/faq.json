@@ -1,0 +1,477 @@
+[
+  {
+    "id": "faq_003",
+    "category": "chung",
+    "question": "Hotline tư vấn Noble là bao nhiêu?",
+    "answer": "Cảm ơn Quý khách đã quan tâm đến Noble! Đường dây hỗ trợ tư vấn của chúng tôi là 1800 xxxx — hoàn toàn miễn phí, phục vụ từ 08h00 đến 17h30, Thứ 2 đến Thứ 7. Ngoài ra, nếu Quý khách để lại số điện thoại, đội ngũ chuyên viên của Noble sẽ chủ động liên hệ lại trong thời gian sớm nhất. Chúng tôi luôn sẵn lòng đồng hành cùng Quý khách!"
+  },
+  {
+    "id": "faq_004",
+    "category": "chung",
+    "question": "Website chính thức của Noble là gì?",
+    "answer": "Website chính thức của Noble là noble.com.vn — nơi Quý khách có thể tìm hiểu đầy đủ thông tin về các dự án, chính sách bán hàng, tiến độ xây dựng và đăng ký nhận tư vấn trực tiếp. Chúng tôi thường xuyên cập nhật thông tin mới nhất để Quý khách luôn nắm bắt được cơ hội tốt nhất. Trân trọng mời Quý khách ghé thăm!"
+  },
+  {
+    "id": "faq_005",
+    "category": "chung",
+    "question": "Văn phòng bán hàng / showroom Noble ở đâu?",
+    "answer": "Văn phòng bán hàng của Noble hiện đặt tại khu vực Tây Hồ, Hà Nội. Để nhận địa chỉ showroom cụ thể của từng dự án và đặt lịch tham quan nhà mẫu, Quý khách vui lòng liên hệ hotline 1800 xxxx. Chuyên viên của chúng tôi sẽ hướng dẫn đường đi và sắp xếp đón tiếp Quý khách chu đáo nhất!"
+  },
+  {
+    "id": "faq_006",
+    "category": "gia_chinh_sach",
+    "question": "Chính sách thanh toán mua căn hộ Noble như thế nào?",
+    "answer": "Noble áp dụng chính sách thanh toán linh hoạt, được thiết kế để phù hợp với kế hoạch tài chính của từng Quý khách. Thông thường, quy trình gồm: đặt cọc 5–10% khi ký Hợp đồng Mua bán, sau đó thanh toán theo tiến độ xây dựng với mỗi đợt từ 10–30%, và phần còn lại sẽ thanh toán khi nhận bàn giao. Noble cũng hỗ trợ vay ngân hàng lên đến 70% giá trị căn hộ với lãi suất ưu đãi. Quý khách có muốn chúng tôi tư vấn phương án thanh toán phù hợp nhất không?"
+  },
+  {
+    "id": "faq_007",
+    "category": "gia_chinh_sach",
+    "question": "Noble có hỗ trợ vay ngân hàng không?",
+    "answer": "Dạ có, Noble hỗ trợ Quý khách vay ngân hàng tối đa 70% giá trị căn hộ với thời hạn vay lên đến 25–30 năm. Noble đã ký kết hợp tác chặt chẽ với nhiều ngân hàng uy tín, giúp Quý khách hoàn thiện hồ sơ nhanh chóng và được hưởng mức lãi suất ưu đãi trong 12–24 tháng đầu. Đội ngũ chuyên viên của chúng tôi sẽ tận tình hỗ trợ Quý khách trong toàn bộ quá trình vay vốn!"
+  },
+  {
+    "id": "faq_008",
+    "category": "gia_chinh_sach",
+    "question": "Ngân hàng nào đang hợp tác với Noble?",
+    "answer": "Hiện tại, Noble đang hợp tác với các ngân hàng lớn và uy tín, bao gồm: Vietcombank, Techcombank, MB Bank, VPBank và BIDV. Mỗi ngân hàng có gói vay với lãi suất và điều kiện riêng biệt, phù hợp với nhiều đối tượng khách hàng khác nhau. Chuyên viên của Noble sẽ tư vấn và so sánh chi tiết để giúp Quý khách lựa chọn được gói vay tối ưu nhất cho mình."
+  },
+  {
+    "id": "faq_009",
+    "category": "gia_chinh_sach",
+    "question": "Phí quản lý hàng tháng tại dự án Noble là bao nhiêu?",
+    "answer": "Phí quản lý tại các dự án Noble dao động từ 15.000 – 25.000 VNĐ/m²/tháng, tùy thuộc vào từng dự án và gói dịch vụ. Mức phí này bao gồm toàn bộ dịch vụ: vệ sinh khu vực chung, bảo vệ 24/7, bảo trì hệ thống kỹ thuật và khai thác các tiện ích cộng đồng — đảm bảo môi trường sống chất lượng và an toàn cho Quý cư dân. Mức phí chính xác sẽ được ghi rõ trong Hợp đồng Mua bán để Quý khách tiện theo dõi."
+  },
+  {
+    "id": "faq_011",
+    "category": "quy_trinh",
+    "question": "Quy trình đặt chỗ mua căn hộ Noble như thế nào?",
+    "answer": "Quy trình đặt chỗ tại Noble được thiết kế đơn giản và thuận tiện, gồm 4 bước: (1) Chọn căn hộ ưng ý và ký phiếu đặt chỗ giữ căn; (2) Nộp phí giữ chỗ trong vòng 24–48 giờ; (3) Ký Hợp đồng Mua bán (HĐMB) trong vòng 7–10 ngày làm việc; (4) Thực hiện thanh toán đợt đầu theo tiến độ hợp đồng. Trong suốt hành trình này, chuyên viên của Noble sẽ luôn đồng hành và hỗ trợ Quý khách từng bước một."
+  },
+  {
+    "id": "faq_012",
+    "category": "quy_trinh",
+    "question": "Phí giữ chỗ là bao nhiêu?",
+    "answer": "Phí giữ chỗ (đặt cọc giữ căn) tại các dự án Noble thường dao động từ 50 đến 100 triệu VNĐ, tùy thuộc vào từng dự án và loại căn hộ. Số tiền này sẽ được khấu trừ trực tiếp vào đợt thanh toán đầu tiên khi ký Hợp đồng Mua bán, nên Quý khách hoàn toàn yên tâm. Trong trường hợp Quý khách quyết định không tiếp tục, phí giữ chỗ sẽ được hoàn trả theo đúng điều khoản đã thỏa thuận."
+  },
+  {
+    "id": "faq_013",
+    "category": "quy_trinh",
+    "question": "Cần chuẩn bị giấy tờ gì để mua căn hộ Noble?",
+    "answer": "Để thủ tục mua căn hộ diễn ra thuận lợi nhất, Quý khách cần chuẩn bị các giấy tờ sau: (1) CMND/CCCD/Hộ chiếu còn hiệu lực (bản gốc và 2 bản sao công chứng); (2) Sổ hộ khẩu hoặc giấy xác nhận KT3 nếu cần; (3) Giấy đăng ký kết hôn hoặc xác nhận tình trạng độc thân (nếu có); (4) Hồ sơ chứng minh thu nhập trong trường hợp vay ngân hàng (sao kê lương 3–6 tháng gần nhất). Chuyên viên Noble sẽ hướng dẫn chi tiết và kiểm tra hồ sơ miễn phí cho Quý khách!"
+  },
+  {
+    "id": "faq_014",
+    "category": "quy_trinh",
+    "question": "Sau khi đặt chỗ bao lâu thì ký hợp đồng mua bán?",
+    "answer": "Sau khi đặt chỗ và hoàn tất nộp phí giữ căn, Noble sẽ chủ động sắp xếp lịch ký Hợp đồng Mua bán trong vòng 7–10 ngày làm việc. Thời gian có thể được điều chỉnh linh hoạt tùy theo tình trạng pháp lý của từng dự án. Quý khách sẽ được thông báo lịch ký cụ thể qua chuyên viên phụ trách để tiện sắp xếp công việc."
+  },
+  {
+    "id": "faq_015",
+    "category": "quy_trinh",
+    "question": "Căn hộ Noble có thể chuyển nhượng lại không?",
+    "answer": "Dạ có, căn hộ Noble hoàn toàn có thể chuyển nhượng (sang tên) sau khi Quý khách đã ký Hợp đồng Mua bán. Thủ tục chuyển nhượng được thực hiện minh bạch thông qua Noble với sự chứng kiến của cả hai bên. Các điều kiện và chi phí liên quan đến chuyển nhượng sẽ được quy định rõ ràng trong hợp đồng. Quý khách có nhu cầu tư vấn thêm, đừng ngại liên hệ với chúng tôi nhé!"
+  },
+  {
+    "id": "faq_016",
+    "category": "quy_trinh",
+    "question": "Noble có chính sách mua để cho thuê không?",
+    "answer": "Noble không áp dụng chính sách cho thuê lại bắt buộc, tuy nhiên chúng tôi hỗ trợ kết nối dịch vụ cho thuê chuyên nghiệp dành cho Quý khách có nhu cầu đầu tư. Các dự án Noble tọa lạc tại vị trí đắc địa ven hồ, gần trung tâm — là lợi thế lớn giúp gia tăng tiềm năng cho thuê, đặc biệt với phân khúc khách hàng quốc tế và chuyên gia. Quý khách quan tâm, hãy để chuyên viên Noble tư vấn chi tiết về tiềm năng đầu tư nhé!"
+  },
+  {
+    "id": "faq_017",
+    "category": "chung",
+    "question": "Noble là công ty gì?",
+    "answer": "Noble là chủ đầu tư bất động sản cao cấp tại Việt Nam, chuyên phát triển các dự án căn hộ và nhà ở tại những vị trí đắc địa — đặc biệt là khu vực ven hồ Hà Nội. Với phương châm kiến tạo không gian sống tinh tế và đẳng cấp, Noble hướng đến phân khúc khách hàng trung – cao cấp, mang đến sự kết hợp hoàn hảo giữa thiết kế sang trọng, tiện ích hiện đại và dịch vụ quản lý chuyên nghiệp. Chúng tôi rất vui được đồng hành cùng Quý khách!"
+  },
+  {
+    "id": "faq_019",
+    "category": "chung",
+    "question": "Tôi có thể đăng ký tham quan nhà mẫu ở đâu?",
+    "answer": "Quý khách có thể đăng ký tham quan nhà mẫu qua 3 hình thức thuận tiện: (1) Gọi trực tiếp hotline 1800 xxxx; (2) Đặt lịch booking xem nhà mẫu trên Noble App; (3) Nhắn tin qua Fanpage Facebook hoặc Zalo chính thức của Noble. Sau khi nhận đăng ký, chuyên viên sẽ xác nhận lịch hẹn và đón tiếp Quý khách chu đáo trong suốt buổi tham quan. Chúng tôi rất mong được gặp gỡ Quý khách!"
+  },
+  {
+    "id": "faq_020",
+    "category": "chung",
+    "question": "Noble có fanpage hoặc mạng xã hội chính thức không?",
+    "answer": "Dạ có, Noble hiện diện trên nhiều nền tảng mạng xã hội để Quý khách tiện theo dõi: Fanpage Facebook tại facebook.com/noble.vn, kênh Zalo Official Account và kênh YouTube Noble Vietnam. Quý khách có thể nhấn theo dõi để luôn cập nhật thông tin dự án mới nhất, sự kiện mở bán và các chương trình ưu đãi đặc biệt từ Noble. Chúng tôi luôn chào đón Quý khách!"
+  },
+  {
+    "id": "faq_021",
+    "category": "chung",
+    "question": "Tôi muốn nhận thông tin dự án mới từ Noble thì làm thế nào?",
+    "answer": "Để luôn nhận được thông tin dự án mới nhất từ Noble, Quý khách có thể: (1) Điền form đăng ký nhận tin tại noble.com.vn; (2) Để lại số điện thoại và email với chuyên viên tư vấn; (3) Nhấn \"Theo dõi\" trên các kênh mạng xã hội chính thức của Noble. Khi có dự án mới hoặc đợt mở bán tiếp theo, chúng tôi sẽ chủ động thông báo đến Quý khách ngay lập tức để không bỏ lỡ cơ hội tốt nhất!"
+  },
+  {
+    "id": "faq_022",
+    "category": "chung",
+    "question": "Noble có hỗ trợ tiếng Anh hay ngôn ngữ khác không?",
+    "answer": "Dạ có, Noble có đội ngũ chuyên viên tư vấn thành thạo tiếng Anh, sẵn sàng hỗ trợ Quý khách quốc tế và người nước ngoài đang sinh sống, làm việc tại Việt Nam. Quý khách chỉ cần đề xuất hỗ trợ bằng tiếng Anh khi liên hệ hotline hoặc để lại yêu cầu qua website, Noble sẽ ngay lập tức sắp xếp chuyên viên phù hợp. Chúng tôi rất vui được phục vụ Quý khách!"
+  },
+
+  {
+    "id": "faq_024",
+    "category": "du_an",
+    "question": "Căn hộ Noble có những loại diện tích nào?",
+    "answer": "Các dự án Noble cung cấp đa dạng loại căn hộ để đáp ứng nhu cầu của mọi Quý khách, từ studio/1 phòng ngủ (khoảng 45m²) cho đến căn hộ 3 phòng ngủ (trên 150m²). Một số dự án cao cấp còn có Penthouse và căn Duplex với thiết kế độc đáo, đẳng cấp. Chuyên viên Noble sẽ tư vấn mặt bằng và lựa chọn căn phù hợp nhất với nhu cầu sử dụng và ngân sách của Quý khách."
+  },
+  {
+    "id": "faq_025",
+    "category": "du_an",
+    "question": "Tiện ích nội khu tại các dự án Noble gồm những gì?",
+    "answer": "Noble kiến tạo hệ thống tiện ích nội khu đẳng cấp, mang đến trải nghiệm sống toàn diện cho Quý cư dân, bao gồm: hồ bơi trong nhà và ngoài trời, phòng gym & spa hiện đại, khu vui chơi trẻ em an toàn, vườn dạo bộ cảnh quan xanh mát, sảnh lobby 5 sao, hầm để xe thông minh, cùng hệ thống an ninh và camera giám sát 24/7. Danh sách tiện ích đầy đủ sẽ được thông báo chi tiết cho từng dự án cụ thể."
+  },
+  {
+    "id": "faq_026",
+    "category": "du_an",
+    "question": "Tiến độ bàn giao dự án Noble như thế nào?",
+    "answer": "Tiến độ bàn giao của từng dự án được ghi rõ ràng và minh bạch trong Hợp đồng Mua bán, Noble cam kết tuân thủ đúng lộ trình đã công bố. Trong trường hợp chậm bàn giao do lỗi từ phía Noble, Quý khách sẽ được bồi thường theo đúng quy định pháp luật hiện hành và điều khoản hợp đồng. Quý khách có thể yên tâm rằng quyền lợi của mình luôn được Noble đặt lên hàng đầu."
+  },
+  {
+    "id": "faq_027",
+    "category": "du_an",
+    "question": "Căn hộ Noble bàn giao hoàn thiện hay thô?",
+    "answer": "Tùy theo từng dự án, Noble có thể bàn giao căn hộ ở dạng hoàn thiện cơ bản (bao gồm sàn gỗ, hệ tủ bếp, sơn tường) hoặc hoàn thiện cao cấp (đầy đủ nội thất). Thông tin bàn giao cụ thể được nêu rõ trong hợp đồng mua bán và tài liệu giới thiệu dự án. Quý khách cũng có thể tham quan căn mẫu thực tế tại showroom để hình dung rõ hơn về chất lượng bàn giao. Chúng tôi rất vui được đón Quý khách!"
+  },
+  {
+    "id": "faq_028",
+    "category": "du_an",
+    "question": "Tình trạng pháp lý của các dự án Noble như thế nào?",
+    "answer": "Noble cam kết chỉ mở bán khi dự án đã đảm bảo đầy đủ hồ sơ pháp lý, bao gồm: Giấy phép xây dựng, phê duyệt quy hoạch 1/500 và đủ điều kiện huy động vốn theo Luật Kinh doanh Bất động sản hiện hành. Sau khi hoàn tất thủ tục, Quý khách sẽ được cấp Giấy chứng nhận quyền sở hữu (Sổ hồng) đầy đủ. Quý khách hoàn toàn có thể yên tâm về sự minh bạch pháp lý của các dự án Noble."
+  },
+  {
+    "id": "faq_029",
+    "category": "du_an",
+    "question": "Sổ hồng căn hộ Noble sẽ được cấp sau bao lâu?",
+    "answer": "Sau khi Quý khách nhận bàn giao căn hộ và hoàn tất nghĩa vụ tài chính, Noble sẽ hỗ trợ toàn diện thủ tục cấp Sổ hồng. Thông thường, thời gian cấp Sổ hồng mất khoảng 12–24 tháng kể từ ngày bàn giao, tùy thuộc vào tiến độ xử lý của cơ quan nhà nước. Noble cam kết hỗ trợ đầy đủ hồ sơ và theo dõi sát sao tiến độ để Quý khách nhận Sổ hồng trong thời gian sớm nhất."
+  },
+  {
+    "id": "faq_030",
+    "category": "gia_chinh_sach",
+    "question": "Giá căn hộ Noble dao động khoảng bao nhiêu?",
+    "answer": "Giá căn hộ tại các dự án Noble dao động tùy theo vị trí, tầng, hướng view và diện tích của từng căn. Nhìn chung, Noble phục vụ phân khúc trung – cao cấp với mức giá từ khoảng 3 tỷ đến hơn 15 tỷ đồng/căn. Để nhận báo giá chính xác và cập nhật nhất, Quý khách vui lòng liên hệ hotline 1800 xxxx hoặc để lại thông tin để chuyên viên tư vấn hỗ trợ ngay."
+  },
+  {
+    "id": "faq_031",
+    "category": "gia_chinh_sach",
+    "question": "Noble có chính sách chiết khấu hoặc ưu đãi không?",
+    "answer": "Noble thường xuyên có các chương trình ưu đãi hấp dẫn theo từng đợt mở bán, bao gồm: chiết khấu khi thanh toán sớm (2–5%), tặng gói nội thất cao cấp, miễn phí quản lý 1–2 năm đầu, hoặc hỗ trợ lãi suất vay ngân hàng. Vì chính sách thay đổi theo từng giai đoạn, Quý khách hãy liên hệ chuyên viên để nhận thông tin ưu đãi mới nhất và đừng bỏ lỡ cơ hội tốt!"
+  },
+  {
+    "id": "faq_032",
+    "category": "gia_chinh_sach",
+    "question": "Phí bảo trì tòa nhà là bao nhiêu và thanh toán như thế nào?",
+    "answer": "Phí bảo trì tòa nhà tại Noble là 2% giá trị hợp đồng (chưa bao gồm VAT), được nộp một lần duy nhất tại thời điểm nhận bàn giao căn hộ. Khoản phí này được đưa vào Quỹ Bảo trì chung của tòa nhà, do Ban Quản trị quản lý và sử dụng cho công tác bảo trì, sửa chữa các hạng mục chung theo đúng quy định của Luật Nhà ở — đảm bảo tòa nhà luôn được duy trì trong trạng thái tốt nhất cho Quý cư dân."
+  },
+  {
+    "id": "faq_033",
+    "category": "gia_chinh_sach",
+    "question": "Nếu tôi muốn hủy hợp đồng thì sao?",
+    "answer": "Chúng tôi hiểu rằng đôi khi Quý khách có thể gặp những thay đổi bất ngờ trong kế hoạch. Trong trường hợp cần hủy Hợp đồng Mua bán, điều kiện và chính sách hoàn tiền sẽ được thực hiện theo đúng điều khoản đã ký kết trong hợp đồng. Tùy giai đoạn hủy, Quý khách có thể bị khấu trừ một phần phí đặt cọc. Noble trân trọng khuyến khích Quý khách xem xét kỹ và liên hệ chuyên viên để được tư vấn phương án tốt nhất trước khi đưa ra quyết định."
+  },
+  {
+    "id": "faq_034",
+    "category": "gia_chinh_sach",
+    "question": "Người nước ngoài có mua căn hộ Noble được không?",
+    "answer": "Dạ có, Quý khách nước ngoài hoàn toàn được phép sở hữu căn hộ tại Việt Nam theo quy định của Luật Nhà ở 2014 (sửa đổi 2023). Theo đó, người nước ngoài có thể mua tối đa 30% số căn trong một tòa chung cư với thời hạn sở hữu 50 năm và có thể gia hạn. Noble có đội ngũ chuyên viên thành thạo tiếng Anh, sẵn sàng hỗ trợ Quý khách quốc tế hoàn tất toàn bộ thủ tục một cách nhanh chóng và thuận tiện nhất!"
+  },
+  {
+    "id": "faq_035",
+    "category": "quy_trinh",
+    "question": "Sau khi ký hợp đồng, tôi nhận thông báo thanh toán qua đâu?",
+    "answer": "Sau khi ký Hợp đồng Mua bán, Noble sẽ chủ động thông báo tiến độ thanh toán đến Quý khách qua ba kênh: (1) Email đã đăng ký; (2) Tin nhắn SMS/Zalo; (3) Cuộc gọi trực tiếp từ chuyên viên phụ trách. Mỗi thông báo sẽ được gửi trước tối thiểu 15–30 ngày, giúp Quý khách có đủ thời gian chủ động chuẩn bị tài chính một cách thoải mái nhất."
+  },
+  {
+    "id": "faq_036",
+    "category": "quy_trinh",
+    "question": "Quy trình nhận bàn giao căn hộ diễn ra như thế nào?",
+    "answer": "Quy trình nhận bàn giao căn hộ Noble gồm 5 bước rõ ràng và minh bạch: (1) Noble gửi thông báo lịch bàn giao qua email và điện thoại; (2) Quý khách hoàn tất 100% thanh toán theo hợp đồng; (3) Cùng đại diện Noble kiểm tra thực tế căn hộ; (4) Ký biên bản bàn giao, ghi nhận các hạng mục cần bổ sung (nếu có); (5) Nhận chìa khóa và thẻ cư dân. Mọi vấn đề kỹ thuật phát sinh trong thời gian bảo hành đều được Noble xử lý kịp thời và miễn phí."
+  },
+  {
+    "id": "faq_037",
+    "category": "quy_trinh",
+    "question": "Thời gian bảo hành căn hộ Noble là bao lâu?",
+    "answer": "Noble cam kết bảo hành căn hộ đầy đủ theo quy định pháp luật với các mốc sau: kết cấu chịu lực (cột, dầm, sàn) bảo hành 60 tháng; hệ thống điện, nước và thang máy bảo hành 24 tháng; hoàn thiện nội thất (sơn tường, ốp lát) bảo hành 12 tháng — tính từ ngày bàn giao. Mọi sự cố trong thời gian bảo hành sẽ được đội ngũ kỹ thuật Noble tiếp nhận và xử lý miễn phí, đảm bảo Quý khách luôn an tâm."
+  },
+  {
+    "id": "faq_038",
+    "category": "quy_trinh",
+    "question": "Tôi cần liên hệ ai nếu có vấn đề sau khi nhận bàn giao căn hộ?",
+    "answer": "Sau khi nhận bàn giao, mọi thắc mắc hoặc sự cố Quý khách đều có thể phản ánh qua: (1) Bộ phận Chăm sóc Khách hàng Noble — hotline 1800 xxxx; (2) Ban quản lý tòa nhà tại chỗ — trực 24/7; (3) Email hỗ trợ cskh@noble.com.vn. Với các sự cố khẩn cấp liên quan đến điện, nước hoặc thang máy, ban quản lý cam kết phản hồi và có mặt xử lý trong vòng 30 phút. Quý khách yên tâm, chúng tôi luôn sẵn sàng hỗ trợ!"
+  },
+  {
+    "id": "faq_039",
+    "category": "chatbot",
+    "question": "Chatbot Noble có thể hỗ trợ tôi những gì?",
+    "answer": "Trợ lý ảo Noble sẵn sàng hỗ trợ Quý khách 24/7 với nhiều tiện ích: tra cứu thông tin dự án, giá bán và chính sách thanh toán; giải đáp các câu hỏi thường gặp về quy trình mua bán; đặt lịch tham quan nhà mẫu; kết nối với chuyên viên tư vấn khi cần thiết; và đề xuất các căn hộ phù hợp với nhu cầu, ngân sách của Quý khách. Dù là ngày hay đêm, chúng tôi luôn ở đây để đồng hành cùng Quý khách!"
+  },
+  {
+    "id": "faq_040",
+    "category": "chatbot",
+    "question": "Chatbot Noble có hỗ trợ nhắn tin giọng nói không?",
+    "answer": "Dạ có, trợ lý ảo Noble hỗ trợ đầy đủ cả nhắn tin văn bản lẫn tính năng nhắn tin giọng nói (voice chat). Quý khách chỉ cần nói câu hỏi, hệ thống sẽ tự động nhận diện giọng nói và phản hồi bằng cả văn bản lẫn giọng đọc tự nhiên. Đây là tính năng đặc biệt tiện lợi cho những lúc Quý khách không tiện gõ phím. Hãy thử ngay nhé!"
+  },
+  {
+    "id": "faq_041",
+    "category": "chatbot",
+    "question": "Lịch sử trò chuyện của tôi có được lưu lại không?",
+    "answer": "Dạ có, toàn bộ lịch sử trò chuyện của Quý khách được lưu trữ an toàn theo từng phiên hội thoại. Quý khách có thể xem lại các cuộc trò chuyện trước đó bất cứ lúc nào để tiện theo dõi và tra cứu thông tin đã trao đổi. Dữ liệu được bảo mật tuyệt đối — chỉ có Quý khách mới có quyền truy cập vào lịch sử hội thoại của mình. Quý khách hoàn toàn yên tâm!"
+  },
+  {
+    "id": "faq_042",
+    "category": "chatbot",
+    "question": "Nếu chatbot không trả lời được câu hỏi của tôi thì sao?",
+    "answer": "Trong trường hợp trợ lý ảo Noble chưa có đủ thông tin để giải đáp, hệ thống sẽ tự động đề xuất kết nối Quý khách với chuyên viên tư vấn trực tiếp qua điện thoại hoặc Zalo. Quý khách cũng có thể để lại câu hỏi kèm số điện thoại — chuyên viên sẽ chủ động liên hệ lại trong thời gian sớm nhất trong giờ hành chính. Chúng tôi luôn đảm bảo không để câu hỏi nào của Quý khách bị bỏ sót!"
+  },
+  {
+    "id": "faq_043",
+    "category": "chatbot",
+    "question": "Chatbot Noble có hoạt động 24/7 không?",
+    "answer": "Dạ có, trợ lý ảo Noble hoạt động liên tục 24/7, kể cả ngày lễ và ngoài giờ hành chính. Dù là sáng sớm hay đêm khuya, Quý khách đều có thể đặt câu hỏi và nhận phản hồi ngay lập tức. Đối với những yêu cầu cần chuyên viên xử lý trực tiếp, Noble sẽ tiếp nhận và phản hồi trong giờ làm việc (08h00 – 17h30, Thứ 2 đến Thứ 7). Quý khách cứ yên tâm liên hệ bất cứ lúc nào!"
+  },
+  {
+    "id": "faq_044",
+    "category": "chatbot",
+    "question": "Tôi có thể bắt đầu cuộc trò chuyện mới với chatbot như thế nào?",
+    "answer": "Để bắt đầu một cuộc trò chuyện mới, Quý khách chỉ cần nhấn vào nút \"Cuộc trò chuyện mới\" hoặc biểu tượng chat trên ứng dụng Noble — đơn giản và nhanh chóng chỉ trong một cú chạm! Sau đó, trợ lý ảo sẽ gợi ý một số chủ đề phổ biến để Quý khách chọn nhanh, hoặc Quý khách có thể tự gõ hoặc nói câu hỏi theo nhu cầu. Chúng tôi luôn sẵn sàng lắng nghe và hỗ trợ Quý khách!"
+  },
+  {
+    "id": "faq_045",
+    "category": "ho_tro_sau_ban_hang",
+    "question": "Noble có ứng dụng dành cho cư dân không?",
+    "answer": "Dạ có, Noble cung cấp ứng dụng Noble Resident — được thiết kế chuyên biệt để nâng cao trải nghiệm sống cho Quý cư dân. Qua ứng dụng, Quý khách có thể: đăng ký dịch vụ tiện ích, phản ánh sự cố bảo trì, thanh toán phí dịch vụ, nhận thông báo từ ban quản lý và kết nối với cộng đồng cư dân Noble. Quý khách tải ngay trên App Store hoặc Google Play bằng cách tìm kiếm \"Noble Resident\"!"
+  },
+  {
+    "id": "faq_046",
+    "category": "ho_tro_sau_ban_hang",
+    "question": "Tôi muốn cho thuê căn hộ Noble, Noble có hỗ trợ không?",
+    "answer": "Dạ có, Noble hỗ trợ Quý khách toàn diện trong việc khai thác cho thuê thông qua đơn vị quản lý cho thuê uy tín. Dịch vụ bao gồm: đăng tin tìm khách thuê, sàng lọc và thẩm định khách thuê, soạn thảo hợp đồng và quản lý trong suốt thời gian cho thuê. Phí dịch vụ sẽ được thỏa thuận rõ ràng và minh bạch. Quý khách liên hệ bộ phận Chăm sóc Khách hàng Noble để được tư vấn cụ thể nhé!"
+  },
+  {
+    "id": "faq_047",
+    "category": "ho_tro_sau_ban_hang",
+    "question": "Ban quản lý tòa nhà Noble cung cấp những dịch vụ gì?",
+    "answer": "Ban quản lý tòa nhà Noble cung cấp đầy đủ các dịch vụ chuyên nghiệp để đảm bảo chất lượng sống tốt nhất cho Quý cư dân, bao gồm: vệ sinh khu vực chung hàng ngày, bảo vệ và kiểm soát ra vào 24/7, bảo trì định kỳ hệ thống kỹ thuật (thang máy, PCCC, điện nước), hỗ trợ chuyển đồ và vận chuyển hàng hóa, quản lý đỗ xe và tiếp nhận xử lý phản ánh của cư dân. Quý khách liên hệ quầy lễ tân hoặc qua ứng dụng Noble Resident để được hỗ trợ ngay!"
+  },
+  {
+    "id": "faq_048",
+    "category": "ho_tro_sau_ban_hang",
+    "question": "Làm thế nào để đăng ký xe gắn máy/ô tô tại tòa nhà Noble?",
+    "answer": "Để đăng ký xe tại tòa nhà Noble, Quý khách vui lòng mang hồ sơ đến ban quản lý, gồm: (1) Bản sao Hợp đồng Mua bán hoặc Biên bản bàn giao căn hộ; (2) Bản sao CCCD của chủ hộ; (3) Giấy tờ xe hợp lệ (đăng ký xe và bảo hiểm còn hiệu lực). Mỗi căn hộ thường được cấp 1 thẻ ô tô và 2 thẻ xe máy. Phí gửi xe được tính theo tháng và nêu rõ trong nội quy tòa nhà. Nhân viên ban quản lý sẽ hỗ trợ Quý khách hoàn tất thủ tục nhanh chóng!"
+  },
+  {
+    "id": "faq_049",
+    "category": "ho_tro_sau_ban_hang",
+    "question": "Tôi muốn cải tạo, sửa chữa căn hộ thì cần xin phép không?",
+    "answer": "Dạ có, để đảm bảo an toàn chung cho toàn tòa nhà, Quý khách vui lòng đăng ký với ban quản lý trước ít nhất 3–7 ngày làm việc trước khi tiến hành cải tạo hoặc sửa chữa căn hộ. Hồ sơ đăng ký gồm: đơn xin phép sửa chữa, bản vẽ thiết kế (nếu có thay đổi kết cấu) và cam kết thi công đúng giờ quy định (thường 08h–17h các ngày trong tuần). Quý khách lưu ý không đục phá kết cấu chịu lực và đảm bảo vệ sinh sau thi công. Ban quản lý luôn sẵn lòng hỗ trợ Quý khách hoàn tất thủ tục!"
+  },
+  {
+    "id": "faq_050",
+    "category": "ho_tro_sau_ban_hang",
+    "question": "Phí dịch vụ hàng tháng được thanh toán bằng cách nào?",
+    "answer": "Phí dịch vụ hàng tháng tại Noble có thể thanh toán dễ dàng qua nhiều hình thức: (1) Chuyển khoản ngân hàng vào tài khoản ban quản lý tòa nhà; (2) Thanh toán trực tuyến tiện lợi ngay trên ứng dụng Noble Resident; (3) Thanh toán trực tiếp tại quầy lễ tân tòa nhà bằng tiền mặt hoặc thẻ ngân hàng. Hóa đơn điện tử sẽ được gửi tự động đến email của Quý khách sau khi thanh toán thành công. Mọi thắc mắc về phí dịch vụ, Quý khách cứ liên hệ ban quản lý để được hỗ trợ ngay!"
+  },
+  {
+    "id": "faq_051",
+    "category": "gia_chinh_sach",
+    "question": "Noble có chính sách ưu đãi cho khách hàng mua nhiều căn không?",
+    "answer": "Dạ có, Noble có chính sách ưu đãi đặc biệt dành cho Quý khách mua từ 2 căn trở lên trong cùng một dự án hoặc nhiều dự án của Noble. Mức chiết khấu và quyền lợi cụ thể sẽ được chuyên viên tư vấn trực tiếp dựa trên số lượng căn và thời điểm giao dịch. Quý khách vui lòng liên hệ hotline 1800 xxxx để được tư vấn gói ưu đãi phù hợp nhất. Chúng tôi trân trọng sự tin tưởng của Quý khách!"
+  },
+  {
+    "id": "faq_052",
+    "category": "gia_chinh_sach",
+    "question": "Noble có chính sách ưu đãi cho khách hàng giới thiệu người mua không?",
+    "answer": "Dạ có, Noble có chương trình tri ân dành cho Quý khách giới thiệu người thân, bạn bè thành công mua căn hộ. Quý khách sẽ nhận được phần thưởng hấp dẫn theo từng đợt chương trình đang áp dụng. Đây là cách Noble thể hiện sự trân trọng đối với những Quý khách đã tin tưởng và đồng hành cùng chúng tôi. Liên hệ hotline 1800 xxxx để biết thêm chi tiết chương trình hiện hành nhé!"
+  },
+  {
+    "id": "faq_053",
+    "category": "gia_chinh_sach",
+    "question": "Tôi có thể thương lượng giá bán với Noble không?",
+    "answer": "Giá bán căn hộ tại Noble được niêm yết công khai và minh bạch theo từng đợt mở bán. Tuy nhiên, Quý khách hoàn toàn có thể trao đổi với chuyên viên tư vấn để tìm hiểu về các chương trình chiết khấu thanh toán sớm, ưu đãi theo đợt hoặc các quyền lợi cộng thêm đang được áp dụng. Chúng tôi luôn nỗ lực mang đến phương án tốt nhất trong khả năng để Quý khách có được căn hộ ưng ý với giá trị xứng đáng nhất!"
+  },
+  {
+    "id": "faq_054",
+    "category": "gia_chinh_sach",
+    "question": "Phí công chứng hợp đồng mua bán do ai chịu?",
+    "answer": "Phí công chứng Hợp đồng Mua bán thông thường do Quý khách (bên mua) chi trả theo quy định pháp luật hiện hành. Mức phí được tính theo biểu phí công chứng do Nhà nước quy định, tùy thuộc vào giá trị hợp đồng. Chuyên viên Noble sẽ thông báo chi tiết và minh bạch toàn bộ các khoản phí phát sinh trước khi Quý khách ký hợp đồng, đảm bảo không có bất kỳ khoản phát sinh nào ngoài dự kiến."
+  },
+  {
+    "id": "faq_055",
+    "category": "gia_chinh_sach",
+    "question": "Nếu giá vật liệu xây dựng tăng, Noble có điều chỉnh giá hợp đồng không?",
+    "answer": "Giá trị căn hộ đã được cố định và ghi rõ trong Hợp đồng Mua bán ngay từ thời điểm ký kết. Noble cam kết không điều chỉnh giá bán trong suốt quá trình thực hiện hợp đồng, bất kể biến động thị trường hay chi phí vật liệu. Quý khách hoàn toàn yên tâm về sự ổn định tài chính trong toàn bộ hành trình sở hữu căn hộ cùng Noble."
+  },
+  {
+    "id": "faq_056",
+    "category": "gia_chinh_sach",
+    "question": "Noble có chính sách hỗ trợ lãi suất 0% không?",
+    "answer": "Tùy từng đợt mở bán và chính sách áp dụng, Noble có thể triển khai chương trình hỗ trợ lãi suất 0% trong giai đoạn đầu (thường 12–24 tháng) thông qua các ngân hàng đối tác. Đây là một trong những ưu đãi được Quý khách đánh giá rất cao vì giúp giảm áp lực tài chính đáng kể trong giai đoạn đầu sở hữu căn hộ. Quý khách liên hệ hotline 1800 xxxx để cập nhật chương trình đang áp dụng nhé!"
+  },
+  {
+    "id": "faq_057",
+    "category": "gia_chinh_sach",
+    "question": "Tôi có thể thanh toán trước hạn để được chiết khấu không?",
+    "answer": "Dạ có, Noble khuyến khích và có chính sách chiết khấu hấp dẫn cho Quý khách thanh toán nhanh hoặc thanh toán toàn bộ trước tiến độ. Mức chiết khấu cụ thể (thường từ 2–5%) sẽ được áp dụng tùy theo thời điểm và đợt mở bán. Đây là cơ hội tốt để Quý khách tối ưu chi phí khi sở hữu căn hộ Noble. Chuyên viên của chúng tôi sẽ tư vấn và tính toán lợi ích cụ thể cho Quý khách!"
+  },
+  {
+    "id": "faq_058",
+    "category": "gia_chinh_sach",
+    "question": "Thuế trước bạ khi mua căn hộ Noble là bao nhiêu?",
+    "answer": "Theo quy định hiện hành, thuế trước bạ khi đăng ký quyền sở hữu nhà đất là 0,5% trên giá trị căn hộ được ghi trong hợp đồng. Đây là nghĩa vụ tài chính của bên mua và được nộp tại cơ quan thuế địa phương khi làm thủ tục cấp Sổ hồng. Chuyên viên Noble sẽ hỗ trợ Quý khách hoàn tất toàn bộ hồ sơ thuế, đảm bảo nhanh chóng và đúng quy định."
+  },
+  {
+    "id": "faq_059",
+    "category": "gia_chinh_sach",
+    "question": "Nếu tôi muốn thay đổi loại căn sau khi đã đặt cọc thì có được không?",
+    "answer": "Trong một số trường hợp, Noble có thể hỗ trợ Quý khách điều chỉnh lựa chọn căn hộ sau khi đặt cọc, tùy thuộc vào quỹ căn còn lại và giai đoạn giao dịch. Quý khách vui lòng liên hệ ngay chuyên viên phụ trách để được xem xét và tư vấn phương án phù hợp nhất. Chúng tôi luôn nỗ lực tạo điều kiện tốt nhất để Quý khách có được căn hộ thực sự như mong muốn!"
+  },
+  {
+    "id": "faq_060",
+    "category": "du_an",
+    "question": "Dự án Noble có cam kết bàn giao đúng tiến độ không?",
+    "answer": "Đúng vậy, Noble cam kết tuân thủ tiến độ xây dựng và bàn giao đã công bố trong Hợp đồng Mua bán. Noble hiểu rằng mỗi ngày chờ đợi của Quý khách đều rất quý giá, vì vậy chúng tôi luôn nỗ lực đẩy nhanh tiến độ thi công và cập nhật thường xuyên đến Quý khách. Trong trường hợp chậm bàn giao do lỗi từ Noble, Quý khách sẽ được bồi thường theo đúng quy định pháp luật — quyền lợi của Quý khách luôn được đảm bảo tuyệt đối."
+  },
+  {
+    "id": "faq_061",
+    "category": "du_an",
+    "question": "Dự án Noble có gần trường học và bệnh viện không?",
+    "answer": "Các dự án Noble được chọn lựa kỹ lưỡng tại những vị trí có hạ tầng tiện ích xã hội đồng bộ. Tùy từng dự án, Quý khách có thể tiếp cận dễ dàng các trường học quốc tế, trường công lập chất lượng cao, bệnh viện và trung tâm y tế uy tín trong bán kính gần. Chuyên viên Noble sẽ cung cấp bản đồ tiện ích ngoại khu chi tiết để Quý khách có cái nhìn toàn diện về môi trường sống xung quanh dự án."
+  },
+  {
+    "id": "faq_062",
+    "category": "du_an",
+    "question": "Mật độ xây dựng tại các dự án Noble như thế nào?",
+    "answer": "Noble đặc biệt chú trọng đến mật độ xây dựng thấp và không gian xanh rộng rãi trong từng dự án. Tỷ lệ cây xanh và khu vực cảnh quan luôn được ưu tiên tối đa, tạo ra môi trường sống thoáng đãng, trong lành cho Quý cư dân. Thông tin quy hoạch chi tiết và mật độ xây dựng cụ thể của từng dự án có thể được cung cấp bởi chuyên viên Noble khi Quý khách có nhu cầu tìm hiểu sâu hơn."
+  },
+  {
+    "id": "faq_063",
+    "category": "du_an",
+    "question": "Căn hộ Noble có view hướng nào đẹp nhất?",
+    "answer": "Tùy theo từng dự án, Noble thiết kế đa dạng các hướng view để đáp ứng sở thích của mọi Quý khách. Những căn hướng Hồ Tây hoặc cảnh quan sông hồ thường được đánh giá đẹp và có giá trị cao nhất, tiếp theo là các căn hướng Đông Nam đón nắng sáng và gió mát. Chuyên viên Noble sẽ tư vấn chi tiết về từng loại view và giúp Quý khách chọn được căn phù hợp nhất với thị hiếu và ngân sách."
+  },
+  {
+    "id": "faq_064",
+    "category": "du_an",
+    "question": "Hệ thống an ninh tại dự án Noble có những gì?",
+    "answer": "Noble đầu tư hệ thống an ninh đa lớp, đảm bảo sự an toàn tuyệt đối cho Quý cư dân, bao gồm: đội ngũ bảo vệ chuyên nghiệp trực 24/7, hệ thống camera giám sát toàn khu, kiểm soát ra vào bằng thẻ từ hoặc nhận diện khuôn mặt, cổng an ninh tự động và hệ thống báo cháy – chữa cháy PCCC đạt chuẩn. Quý khách và gia đình hoàn toàn có thể yên tâm sinh sống trong môi trường được bảo vệ chặt chẽ."
+  },
+  {
+    "id": "faq_065",
+    "category": "du_an",
+    "question": "Dự án Noble có chỗ đậu xe cho khách thăm không?",
+    "answer": "Dạ có, các dự án Noble đều bố trí khu vực đậu xe dành cho khách thăm tại tầng hầm hoặc khu vực ngoài trời theo quy hoạch của từng tòa nhà. Quý khách thăm chỉ cần đăng ký tại chốt bảo vệ và sẽ được hướng dẫn vị trí đậu xe thuận tiện. Phí đậu xe theo giờ hoặc theo ngày được niêm yết công khai tại khu vực ra vào tòa nhà."
+  },
+  {
+    "id": "faq_066",
+    "category": "du_an",
+    "question": "Dự án Noble có hồ bơi không? Có tính phí sử dụng không?",
+    "answer": "Dạ có, hầu hết các dự án Noble đều được trang bị hồ bơi trong nhà và/hoặc ngoài trời với thiết kế sang trọng, hiện đại. Hồ bơi là tiện ích nội khu miễn phí dành cho Quý cư dân và được vận hành, vệ sinh theo tiêu chuẩn khách sạn 5 sao. Một số dịch vụ đặc thù như huấn luyện viên bơi riêng hoặc đặt hồ cho sự kiện riêng tư có thể phát sinh phí theo quy định của ban quản lý."
+  },
+  {
+    "id": "faq_068",
+    "category": "du_an",
+    "question": "Vật liệu xây dựng và hoàn thiện tại dự án Noble có chất lượng như thế nào?",
+    "answer": "Noble cam kết sử dụng vật liệu xây dựng và hoàn thiện cao cấp từ các thương hiệu uy tín trong và ngoài nước. Hệ thống kết cấu được thiết kế theo tiêu chuẩn kháng chấn và chống thấm đạt chuẩn, nội thất hoàn thiện sử dụng sàn gỗ, thiết bị vệ sinh nhập khẩu và hệ thống điện thông minh. Quý khách có thể tham quan căn mẫu tại showroom để trải nghiệm trực tiếp chất lượng bàn giao thực tế."
+  },
+  {
+    "id": "faq_069",
+    "category": "du_an",
+    "question": "Tôi có thể xem tiến độ thi công dự án ở đâu?",
+    "answer": "Noble cập nhật tiến độ thi công định kỳ qua nhiều kênh để Quý khách luôn nắm bắt kịp thời: (1) Mục \"Tiến độ dự án\" trên website noble.com.vn; (2) Thông báo qua email và Zalo cho Quý khách đã đặt mua; (3) Fanpage Facebook Noble với hình ảnh và video thi công cập nhật thường xuyên. Ngoài ra, Quý khách cũng có thể liên hệ chuyên viên để được cung cấp báo cáo tiến độ chi tiết theo yêu cầu."
+  },
+  {
+    "id": "faq_070",
+    "category": "du_an",
+    "question": "Căn hộ Noble có thiết kế thông minh (smart home) không?",
+    "answer": "Các dự án cao cấp của Noble được tích hợp hệ thống nhà thông minh (smart home) với các tính năng hiện đại như: điều khiển ánh sáng, nhiệt độ, rèm cửa và khóa cửa từ xa qua smartphone; hệ thống chuông hình kết nối tòa nhà; và tích hợp các thiết bị IoT tiện lợi. Thông tin chi tiết về gói smart home của từng dự án sẽ được chuyên viên giới thiệu đầy đủ trong buổi tư vấn, Quý khách đừng ngại hỏi thêm nhé!"
+  },
+  {
+    "id": "faq_071",
+    "category": "cham_soc_khach_hang",
+    "question": "Tôi cần phản ánh vấn đề về chất lượng căn hộ thì liên hệ đâu?",
+    "answer": "Nếu Quý khách có bất kỳ phản ánh nào về chất lượng căn hộ, Noble rất mong được lắng nghe và giải quyết kịp thời. Quý khách vui lòng liên hệ qua: (1) Hotline Chăm sóc Khách hàng 1800 xxxx; (2) Email cskh@noble.com.vn; (3) Gặp trực tiếp bộ phận kỹ thuật tại ban quản lý tòa nhà. Chúng tôi cam kết tiếp nhận phản ánh trong vòng 24 giờ và phản hồi phương án xử lý cụ thể đến Quý khách sớm nhất có thể."
+  },
+  {
+    "id": "faq_072",
+    "category": "cham_soc_khach_hang",
+    "question": "Noble có khảo sát mức độ hài lòng của khách hàng không?",
+    "answer": "Dạ có, Noble thường xuyên thực hiện khảo sát mức độ hài lòng của Quý khách sau các mốc quan trọng: sau khi ký hợp đồng, sau khi nhận bàn giao và định kỳ hàng năm đối với cư dân. Những phản hồi quý báu từ Quý khách chính là nền tảng để Noble không ngừng cải tiến chất lượng sản phẩm và dịch vụ. Chúng tôi trân trọng mọi ý kiến đóng góp và cam kết hành động cụ thể từ những phản hồi nhận được."
+  },
+  {
+    "id": "faq_073",
+    "category": "cham_soc_khach_hang",
+    "question": "Noble có chương trình hội viên hoặc khách hàng thân thiết không?",
+    "answer": "Dạ có, Noble có chương trình Khách hàng Thân thiết dành cho Quý khách đã sở hữu căn hộ hoặc có giao dịch với Noble. Thành viên được hưởng các đặc quyền như: ưu tiên tiếp cận thông tin dự án mới trước khi mở bán, ưu đãi đặc biệt trong các đợt mở bán tiếp theo, quà tặng nhân dịp đặc biệt và nhiều phúc lợi giá trị khác. Quý khách liên hệ chuyên viên để biết thêm chi tiết và đăng ký tham gia chương trình!"
+  },
+  {
+    "id": "faq_074",
+    "category": "cham_soc_khach_hang",
+    "question": "Tôi có thể gặp trực tiếp chuyên viên Noble để tư vấn không?",
+    "answer": "Hoàn toàn có thể! Noble luôn chào đón Quý khách đến gặp trực tiếp đội ngũ chuyên viên tư vấn tại văn phòng bán hàng khu vực Tây Hồ, Hà Nội. Quý khách có thể đặt lịch hẹn trước qua hotline 1800 xxxx hoặc website noble.com.vn để được phục vụ chu đáo nhất, hoặc ghé thăm trực tiếp trong giờ làm việc. Chúng tôi rất mong được gặp gỡ và đồng hành cùng Quý khách!"
+  },
+  {
+    "id": "faq_075",
+    "category": "cham_soc_khach_hang",
+    "question": "Thời gian phản hồi của bộ phận chăm sóc khách hàng Noble là bao lâu?",
+    "answer": "Noble cam kết tiêu chuẩn phản hồi rõ ràng để đảm bảo Quý khách không phải chờ đợi lâu: phản hồi hotline ngay lập tức trong giờ hành chính; phản hồi email trong vòng 4–8 giờ làm việc; phản hồi tin nhắn Zalo/Facebook trong vòng 1–2 giờ. Đối với các sự cố khẩn cấp tại tòa nhà, đội kỹ thuật có mặt trong vòng 30 phút. Sự hài lòng của Quý khách chính là thước đo quan trọng nhất của chúng tôi."
+  },
+  {
+    "id": "faq_076",
+    "category": "cham_soc_khach_hang",
+    "question": "Noble có tổ chức sự kiện cho cư dân không?",
+    "answer": "Dạ có, Noble thường xuyên tổ chức các sự kiện cộng đồng ý nghĩa dành cho Quý cư dân như: lễ hội Tết và các ngày kỷ niệm đặc biệt trong năm, ngày hội gia đình và hoạt động vui chơi cho trẻ em, workshop nội thất và trang trí nhà, cùng các buổi gặp gỡ kết nối cộng đồng cư dân. Những hoạt động này được tổ chức nhằm xây dựng một cộng đồng Noble gắn kết, ấm áp và đáng sống."
+  },
+  {
+    "id": "faq_077",
+    "category": "cham_soc_khach_hang",
+    "question": "Tôi muốn gửi góp ý hoặc khiếu nại về dịch vụ của Noble thì làm thế nào?",
+    "answer": "Noble luôn trân trọng và lắng nghe mọi góp ý từ Quý khách — đây chính là động lực để chúng tôi không ngừng hoàn thiện. Quý khách có thể gửi góp ý hoặc khiếu nại qua: (1) Email cskh@noble.com.vn; (2) Hotline 1800 xxxx; (3) Form phản hồi trực tuyến trên noble.com.vn; (4) Gặp trực tiếp quản lý tại văn phòng Noble. Mọi phản ánh đều được tiếp nhận nghiêm túc và Noble cam kết phản hồi bằng văn bản trong vòng 3 ngày làm việc."
+  },
+  {
+    "id": "faq_078",
+    "category": "cham_soc_khach_hang",
+    "question": "Noble có hỗ trợ tư vấn nội thất sau khi nhận bàn giao không?",
+    "answer": "Dạ có, Noble hợp tác với các đơn vị thiết kế nội thất uy tín để hỗ trợ Quý khách kiến tạo không gian sống theo phong cách riêng. Quý khách sẽ được giới thiệu đến các đối tác nội thất đã quen thuộc với đặc điểm kiến trúc căn hộ Noble, đảm bảo thi công đúng tiêu chuẩn và thẩm mỹ. Dịch vụ tư vấn ban đầu hoàn toàn miễn phí, giúp Quý khách có được ngôi nhà mơ ước đúng nghĩa!"
+  },
+  {
+    "id": "faq_079",
+    "category": "cham_soc_khach_hang",
+    "question": "Noble có hỗ trợ thủ tục đăng ký hộ khẩu sau khi nhận bàn giao không?",
+    "answer": "Dạ có, Noble sẽ hỗ trợ Quý khách chuẩn bị đầy đủ giấy tờ cần thiết để làm thủ tục đăng ký hộ khẩu thường trú hoặc tạm trú tại địa chỉ căn hộ sau khi nhận bàn giao. Đội ngũ Chăm sóc Khách hàng Noble sẽ hướng dẫn chi tiết từng bước và phối hợp với chính quyền địa phương để quá trình đăng ký diễn ra nhanh chóng, thuận lợi nhất cho Quý khách."
+  },
+  {
+    "id": "faq_080",
+    "category": "cham_soc_khach_hang",
+    "question": "Tôi có thể liên hệ Noble qua Zalo không?",
+    "answer": "Dạ có, Noble có Zalo Official Account chính thức để tiện hỗ trợ Quý khách mọi lúc mọi nơi. Quý khách tìm kiếm \"Noble Vietnam\" trên Zalo và nhấn theo dõi để nhắn tin trực tiếp với đội ngũ tư vấn. Đây là kênh hỗ trợ nhanh chóng và tiện lợi, đặc biệt phù hợp cho những câu hỏi nhanh hoặc khi Quý khách cần hỗ trợ ngoài giờ hành chính. Chúng tôi luôn sẵn sàng lắng nghe!"
+  },
+  {
+    "id": "faq_081",
+    "category": "cham_soc_khach_hang",
+    "question": "Noble có chính sách hậu mãi sau khi mua căn hộ không?",
+    "answer": "Noble cam kết đồng hành cùng Quý khách không chỉ trong quá trình mua bán mà còn lâu dài sau khi nhận bàn giao. Chính sách hậu mãi của Noble bao gồm: bảo hành căn hộ theo quy định, hỗ trợ thủ tục cấp Sổ hồng, tư vấn nội thất và cho thuê, giải quyết phản ánh về chất lượng dịch vụ quản lý, cùng các chương trình tri ân cư dân định kỳ. Với Noble, mối quan hệ với Quý khách không kết thúc sau khi ký hợp đồng — mà chỉ mới bắt đầu!"
+  },
+  {
+    "id": "faq_100",
+    "category": "du_an",
+    "question": "Noble có những dự án nào?",
+    "answer": "Dạ, hiện tại Noble đang phát triển các dự án sau ạ:\n\n**Khu vực Long Biên:**\n- Noble Crystal Long Biên (NCLB): Khu đô thị cao cấp, dinh thự trên không\n- Noble Palace Long Biên (NPLB): Bộ sưu tập dinh thự nghệ thuật\n\n**Khu vực Tây Hồ:**\n- Noble Crystal Tây Hồ (NCTH - WorldHotels Residence): Tổ hợp nghỉ dưỡng, căn hộ hạng sang tại Ciputra\n- Noble Palace Tây Hồ - Boutique (NPTHB): Biệt thự, liền kề, shophouse thương mại\n- Noble Palace Tây Hồ - Golf (NPTHG): Biệt thự tinh hoa sát sân golf Ciputra\n- Noble Palace Tây Hồ - River (NPTHR): Biệt thự bên Hồ Tây và sông Hồng\n\n**Khu vực Tây Thăng Long:**\n- Noble Palace Tây Thăng Long (NPTTL): Biệt thự, liền kề, nhà phố thương mại tại Đan Phượng\n\nAnh/chị quan tâm đến dự án nào để em tư vấn chi tiết ạ?"
+  },
+  {
+    "id": "faq_101",
+    "category": "du_an",
+    "question": "Dự án ở Long Biên có gì?",
+    "answer": "Dạ, tại khu vực Long Biên, Noble đang phát triển 2 dự án ạ:\n\n- **Noble Crystal Long Biên (NCLB):** Khu đô thị cao cấp với bộ sưu tập tư dinh trên không Branded Residences độc bản\n- **Noble Palace Long Biên (NPLB):** Bộ sưu tập dinh thự nghệ thuật\n\nAnh/chị muốn tìm hiểu chi tiết dự án nào ạ?"
+  },
+  {
+    "id": "faq_102",
+    "category": "du_an",
+    "question": "Dự án ở Tây Hồ có gì?",
+    "answer": "Dạ, tại khu vực Tây Hồ, Noble đang phát triển 4 dự án ạ:\n\n- **Noble Crystal Tây Hồ (NCTH - WorldHotels Residence):** Tổ hợp nghỉ dưỡng, căn hộ hạng sang tại Ciputra\n- **Noble Palace Tây Hồ - Boutique (NPTHB):** Biệt thự, liền kề, shophouse thương mại\n- **Noble Palace Tây Hồ - Golf (NPTHG):** Biệt thự tinh hoa sát sân golf Ciputra\n- **Noble Palace Tây Hồ - River (NPTHR):** Biệt thự bên Hồ Tây và sông Hồng\n\nAnh/chị quan tâm đến dự án nào ạ?"
+  },
+  {
+    "id": "faq_103",
+    "category": "du_an",
+    "question": "Dự án ở Tây Thăng Long có gì?",
+    "answer": "Dạ, tại khu vực Tây Thăng Long, Noble có dự án:\n\n- **Noble Palace Tây Thăng Long (NPTTL):** Quần thể biệt thự, liền kề, nhà phố thương mại tại mặt đường Tây Thăng Long, Đan Phượng, Hà Nội\n\nAnh/chị muốn tìm hiểu chi tiết về dự án này không ạ?"
+  }
+]

@@ -1,0 +1,10 @@
+{"id":"r1","query":"Tiện ích nội khu của Noble Crystal Long Biên có những gì","project":"NCLB","expected_tool":"kb_search","expected_keywords":["tiện ích"],"note":"amenities query"}
+{"id":"r2","query":"Dự án NCLB có hồ bơi và phòng gym không","project":"NCLB","expected_tool":"kb_search","expected_keywords":["hồ bơi","gym"],"note":"facility detail"}
+{"id":"r3","query":"Bệnh viện gần nhất với dự án Noble Crystal Tây Hồ là đâu","project":"NCTH","expected_tool":"kb_search","expected_keywords":["bệnh viện"],"note":"nearby hospital query"}
+{"id":"r4","query":"Vị trí địa lý của Noble Palace Long Biên cụ thể ở đâu trong quận Long Biên","project":"NPLB","expected_tool":"kb_search","expected_keywords":["vị trí","long biên"],"note":"location detail"}
+{"id":"r5","query":"Mật độ xây dựng và tỷ lệ cây xanh của dự án NTTL là bao nhiêu","project":"NTTL","expected_tool":"kb_search","expected_keywords":["mật độ","cây xanh"],"note":"greenery ratio"}
+{"id":"r6","query":"Dự án Noble Palace Tây Thăng Long có bao nhiêu tòa và bao nhiêu căn hộ","project":"NTTL","expected_tool":"kb_search","expected_keywords":["tòa","căn hộ"],"note":"project scale"}
+{"id":"r7","query":"Giao thông kết nối từ dự án NCLB đến trung tâm Hà Nội thế nào","project":"NCLB","expected_tool":"kb_search","expected_keywords":["giao thông","kết nối"],"note":"transport connectivity"}
+{"id":"r8","query":"Sunshine Legend City có tiện ích thương mại và khu vui chơi trẻ em không","project":"SSLC","expected_tool":"kb_search","expected_keywords":["thương mại","trẻ em"],"note":"commercial amenity"}
+{"id":"r9","query":"Noble Crystal Tây Hồ có trường học quốc tế trong khuôn viên không","project":"NCTH","expected_tool":"kb_search","expected_keywords":["trường học","quốc tế"],"note":"school query"}
+{"id":"r10","query":"Diện tích khuôn viên và cảnh quan xung quanh dự án NCLB","project":"NCLB","expected_tool":"kb_search","expected_keywords":["diện tích","cảnh quan"],"note":"landscape detail"}

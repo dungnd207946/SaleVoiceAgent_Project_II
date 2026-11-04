@@ -1,0 +1,50 @@
+{
+  "version": "v5",
+  "prompt_order": "static_first_cache_friendly",
+  "format": "xml_with_markdown",
+  "cache_marker": "───DYN───",
+  "agents": {
+    "router": {
+      "id": "router",
+      "display_name": "Luna Router",
+      "persona_file": "agents/router.md",
+      "skills": [],
+      "tool_groups": {
+        "_full": ["switch_agent", "update_customer"]
+      },
+      "max_iterations": 1,
+      "temperature": 0.0
+    },
+    "consultant": {
+      "id": "consultant",
+      "display_name": "Luna Consultant",
+      "persona_file": "agents/consultant.md",
+      "skills": ["info", "pricing", "advisor", "booking"],
+      "_comment": "No skill_triggers. Emergent routing via LLM. Router hint via switch_agent.suggested_skill -> narrow tool_groups.",
+      "tool_groups": {
+        "info":    ["noble_search", "get_project_overview", "list_projects", "search_units", "update_customer", "switch_agent"],
+        "pricing": ["get_project_financial", "search_units", "noble_search", "update_customer", "switch_agent"],
+        "advisor": ["match_projects", "get_project_financial", "get_project_overview", "noble_search", "update_customer", "switch_agent"],
+        "booking": ["check_availability", "schedule_viewing", "get_booking_state", "update_booking_info", "validate_phone", "update_customer", "switch_agent"],
+        "_full":   ["noble_search", "list_projects", "get_project_overview", "get_project_financial", "search_units", "match_projects", "check_availability", "schedule_viewing", "get_booking_state", "update_booking_info", "list_bookings", "modify_booking", "validate_phone", "update_customer", "switch_agent"]
+      },
+      "max_iterations": 3,
+      "temperature": 0.2
+    },
+    "support": {
+      "id": "support",
+      "display_name": "Luna Support",
+      "persona_file": "agents/support.md",
+      "skills": ["support-crm", "support-escalation"],
+      "tool_groups": {
+        "support-crm": ["crm_lookup", "verify_identity", "support_ticket", "get_certificate_status", "noble_search", "update_customer", "switch_agent"],
+        "support-escalation": ["escalate", "noble_search", "update_customer"],
+        "_full": ["crm_lookup", "verify_identity", "support_ticket", "get_certificate_status", "escalate", "noble_search", "update_customer", "switch_agent"]
+      },
+      "max_iterations": 3,
+      "temperature": 0.2
+    }
+  },
+  "default_agent": "router",
+  "layer_a_files": ["base/ORG_BASE.md", "base/VOICE_STYLE.md"]
+}

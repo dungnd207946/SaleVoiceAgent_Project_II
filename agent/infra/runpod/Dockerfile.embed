@@ -1,0 +1,40 @@
+# syntax=docker/dockerfile:1
+# FastEmbed e5-large embedding service — CPU-only, small footprint.
+# Serves the same ONNX INT8 model that flat_store.py loads in-process,
+# exposed over HTTP so the agent can offload embedding to a sidecar pod.
+#
+# Build:  docker build -f infra/runpod/Dockerfile.embed -t noble-embed:latest .
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    FASTEMBED_CACHE_PATH=/app/.cache/fastembed
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# Small dependency set — just FastEmbed + FastAPI
+RUN pip install --upgrade pip && \
+    pip install \
+        "fastembed>=0.3,<1.0" \
+        "fastapi>=0.110" \
+        "uvicorn[standard]>=0.27" \
+        "numpy>=1.24" \
+        "pydantic>=2.0"
+
+COPY infra/runpod/embed_server.py /app/embed_server.py
+
+# Pre-download ONNX INT8 weights at build time so cold-start is fast.
+# Comment out if you prefer first-run download + cached volume.
+RUN python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='intfloat/multilingual-e5-large')" || \
+    echo "WARN: pre-download failed, will download on first request"
+
+EXPOSE 8091
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:8091/health || exit 1
+
+CMD ["uvicorn", "embed_server:app", "--host", "0.0.0.0", "--port", "8091", "--workers", "1"]

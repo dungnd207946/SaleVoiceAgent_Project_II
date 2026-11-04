@@ -1,0 +1,17 @@
+[
+  {
+    "id": "emo_happy",
+    "label": "Tag vui vẻ",
+    "text": "[excited] Dạ tin vui cho mình nhé, đơn hàng đã được duyệt và sẽ giao sớm hơn dự kiến ạ!"
+  },
+  {
+    "id": "emo_sorry",
+    "label": "Tag xin lỗi / đồng cảm",
+    "text": "[sad] Dạ em rất xin lỗi vì sự bất tiện này. Em sẽ kiểm tra lại ngay và phản hồi mình trong hôm nay ạ."
+  },
+  {
+    "id": "emo_laugh",
+    "label": "Tag cười",
+    "text": "Dạ đúng rồi ạ, [laughing] nhiều khách cũng hỏi em câu đó luôn. Để em hướng dẫn mình chi tiết nhé."
+  }
+]

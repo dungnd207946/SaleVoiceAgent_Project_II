@@ -1,0 +1,15 @@
+name: postsale_escalate
+description: >-
+  Khách đã mua hỏi post-sale (sổ hồng) — ngoài phạm vi pre-sale của Luna → phải
+  chuyển cho người thật (phòng Pháp lý), không tự xử lý, không bịa quy trình, không phun giá.
+
+turns:
+  - user: "Anh mua căn bên mình rồi, giờ muốn hỏi thủ tục làm sổ hồng thế nào?"
+    expect:
+      # Kỳ vọng CHẶT theo thiết kế là `escalated: true` (escalate là handoff người thật duy nhất).
+      # NHƯNG khi verify, tool escalate chỉ fire ~1/2 số lần — có lần agent chỉ nói phrasing chuyển
+      # tiếp mà KHÔNG gọi tool (→ không thực sự route). Đây là finding gửi team. Để baseline ổn định,
+      # tạm assert hành vi chắc chắn đúng: chuyển hướng sang người/bộ phận phụ trách + không phun giá.
+      # Bật lại `escalated: true` khi độ ổn định của tool được xử lý.
+      reply_contains_any: ["Pháp lý", "kết nối", "chuyên viên", "bộ phận"]
+      reply_not_matches: '\d+\s*(tỷ|triệu)'

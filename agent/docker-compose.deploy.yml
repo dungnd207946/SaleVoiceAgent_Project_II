@@ -1,0 +1,153 @@
+# santa-hotline-agent — DEPLOY: agent (aiortc) + livekit-worker + gateway
+# ---------------------------------------------------------------------------
+# Đóng gói 3 service của 1 process share phục vụ N tenant:
+#
+#   agent      — transport aiortc: /chat UI, browser RTC, telephony  (port 8766)
+#   agent-lk   — LiveKit worker: đăng ký OUTBOUND tới LiveKit, join room được dispatch
+#   gateway    — ingress provider-facing, resolve tenant qua Host subdomain,
+#                verify Bearer, route /v1/voice (voice→LiveKit) + /v1/chat (→agent)
+#                (port 9200 — điểm DUY NHẤT cần public domain)
+#
+# Mạng: dùng BRIDGE (không host) để gateway phân giải được service `agent`
+# theo đúng default WORKER_CHAT_INTERNAL_URL_TEMPLATE=ws://agent:8766/chat.
+#
+# Phụ thuộc NGOÀI compose này (khai báo trong .env, không đóng gói ở đây):
+#   - MongoDB / Redis / Qdrant          (santa-infra hoặc dịch vụ ngoài)
+#   - LiveKit server                    (LIVEKIT_URL — Cloud hoặc self-hosted)
+#   - MinIO tenant store                (gateway đọc credential từ đây)
+#   - STT / TTS service                 (STT_BACKEND=remote / TTS_BACKEND=remote)
+#
+#   Nếu các store chạy NATIVE trên host (santa-infra qua localhost), trỏ URI
+#   trong .env tới `host.docker.internal` (đã map extra_hosts bên dưới), KHÔNG
+#   dùng `localhost` (localhost trong container ≠ host khi chạy bridge).
+#
+# TLS/public: đặt reverse proxy (nginx/Caddy) TERMINATE wss trên 443, forward
+# nguyên Host header → gateway:9200. DNS wildcard *.agents.noblex.vn → máy này.
+# ---------------------------------------------------------------------------
+
+x-agent-image: &agent-image santa-hotline-agent:deploy
+
+x-common: &common
+  image: *agent-image
+  env_file: .env
+  networks: [noble-net]
+  extra_hosts:
+    - "host.docker.internal:host-gateway"   # để .env trỏ store về host nếu cần
+  restart: unless-stopped
+
+# Ghim tên project: không ghim thì Compose lấy tên folder, đổi folder là đổi tên container.
+name: odyssey-agent
+
+services:
+  # ── PostgreSQL: data-plane (tenant_data) + control-plane cho db-mode ───────
+  # Tự tạo schema tenant_data (conversations/appointments/contacts + KB tables)
+  # từ 2 file DDL mount vào initdb — CHỈ chạy lần đầu (volume trống).
+  #
+  # ⚠️ SAU KHI đổi POSTGRES_DSN trong .env sang service này thì container mới
+  #    được dùng. Ví dụ (thay 10.50.13.220:5433 hiện tại):
+  #      POSTGRES_DSN=postgresql://odyssey_agent:<pw>@postgres:5432/odyssey
+  #      POSTGRES_ADMIN_DSN=postgresql://sp_admin:<pw>@postgres:5432/odyssey
+  #
+  # ⚠️ DDL chỉ dựng schema + bảng + RLS. Còn phải chạy 1 lần sau khi DB healthy:
+  #      docker compose -f docker-compose.deploy.yml exec agent \
+  #        noble-tenant pg-ensure-app-role         # tạo role odyssey_agent (runtime)
+  #        noble-tenant pg-provision <tenant>      # tạo role + grant per-tenant
+  #
+  # ⚠️ Control-plane db-mode (agent_published_config VIEW, control.* / agent_api.*)
+  #    do Portal sở hữu — KHÔNG nằm trong 2 file DDL này. Nếu AGENT_CONFIG_SOURCE=db
+  #    bạn phải nạp thêm schema Portal, nếu không sẽ chạy legacy path.
+  postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=${PG_DB:-odyssey}
+      - POSTGRES_USER=${PG_SUPERUSER:-sp_admin}   # khớp user trong POSTGRES_ADMIN_DSN
+      - POSTGRES_PASSWORD=${PG_PASSWORD:?set PG_PASSWORD in .env}
+    ports:
+      - "5433:5432"                   # host 5433 (khớp thói quen) → container 5432
+    networks: [noble-net]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./src/noble_agent/storage/sql/odyssey_data_plane.sql:/docker-entrypoint-initdb.d/10-odyssey_data_plane.sql:ro
+      - ./src/noble_agent/storage/sql/kb_real_estate.sql:/docker-entrypoint-initdb.d/20-kb_real_estate.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_SUPERUSER:-sp_admin} -d ${PG_DB:-odyssey}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── aiortc transport: /chat UI + browser RTC + telephony AudioSocket ──────
+  # Pin aiortc để TRANSPORT_BACKEND dùng chung không đổi route service này.
+  # Cũng là ĐÍCH reverse-proxy chat của gateway (ws://agent:8766/chat).
+  agent:
+    <<: *common
+    build:
+      context: .
+      dockerfile: Dockerfile          # đổi sang Dockerfile.local nếu deploy CPU/host-TTS
+    image: *agent-image               # build 1 lần ở đây, các service khác tái dùng
+    environment:
+      - TRANSPORT_BACKEND=aiortc
+    ports:
+      - "8766:8766"                   # /chat + RTC (bỏ nếu chỉ vào qua gateway)
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./models:/app/models          # sherpa STT model (nếu STT_BACKEND=sherpa)
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── LiveKit worker: register outbound tới LIVEKIT_URL, phục vụ mọi tenant ──
+  # Không publish port — chỉ kết nối ra. Tenant đi trong participant metadata.
+  agent-lk:
+    <<: *common
+    environment:
+      - TRANSPORT_BACKEND=livekit
+    command: ["noble-agent", "--transport", "livekit", "start"]
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./models:/app/models
+    depends_on:
+      agent:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    # ── Bật nếu TTS/STT chạy LOCAL trên GPU trong container (không remote) ──
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # ── Ingress gateway: điểm public duy nhất ─────────────────────────────────
+  gateway:
+    <<: *common
+    command: ["noble-gateway"]
+    environment:
+      # Gateway đọc credential tenant từ MinIO store → BẮT BUỘC bật store.
+      - TENANT_STORE_ENABLED=true
+      # Chat proxy đích: service `agent` trong bridge network (đúng default).
+      - WORKER_CHAT_INTERNAL_URL_TEMPLATE=ws://agent:8766/chat
+      # Auth single-domain: tenant resolve từ Bearer API key qua runtime-credentials
+      # API. Rỗng/thiếu ⇒ mọi WS bị đóng 4001 auth_api_unavailable. Đặt trong `.env`.
+      # - GATEWAY_CREDENTIALS_API_URL=https://portal…/api/v1/runtime-credentials
+      # - GATEWAY_PORT=9200
+    ports:
+      - "9200:9200"                   # reverse-proxy TLS 443 → forward vào đây
+    depends_on:
+      agent:
+        condition: service_started
+      agent-lk:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+
+networks:
+  noble-net:
+    driver: bridge
+
+volumes:
+  pgdata:

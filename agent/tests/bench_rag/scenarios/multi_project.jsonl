@@ -1,0 +1,6 @@
+{"id":"m1","query":"So sánh giá căn 2 phòng ngủ giữa Noble Crystal Long Biên và Noble Palace Long Biên","project":"NCLB,NPLB","expected_tool":"get_project_financial","expected_keywords":["tỷ"],"note":"price comparison 2 projects"}
+{"id":"m2","query":"Dự án Crystal Tây Hồ hay Palace Tây Thăng Long có tiện ích tốt hơn","project":"NCTH,NTTL","expected_tool":"kb_search","expected_keywords":["tiện ích"],"note":"amenity comparison 2 projects"}
+{"id":"m3","query":"Pháp lý và tiến độ bàn giao của NCLB và NPLB khác nhau như thế nào","project":"NCLB,NPLB","expected_tool":"kb_search","expected_keywords":["pháp lý","bàn giao"],"note":"legal comparison"}
+{"id":"m4","query":"Giá thuê căn hộ cho thuê ước tính tại Noble Crystal Long Biên và Noble Palace Long Biên","project":"NCLB,NPLB","expected_tool":"get_project_financial","expected_keywords":["cho thuê","tháng"],"note":"rental yield comparison"}
+{"id":"m5","query":"Sunshine Legend City và Noble Crystal Long Biên cái nào gần trung tâm hơn","project":"SSLC,NCLB","expected_tool":"kb_search","expected_keywords":["trung tâm","khoảng cách"],"note":"location comparison"}
+{"id":"m6","query":"Tôi muốn so sánh tổng quan về Noble Crystal Tây Hồ và Noble Palace Long Biên","project":"NCTH,NPLB","expected_tool":"get_project_overview","expected_keywords":["tây hồ","long biên"],"note":"overview comparison"}

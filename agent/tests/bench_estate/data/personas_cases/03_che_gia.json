@@ -1,0 +1,47 @@
+{
+  "case_id": "C-3",
+  "title": "Xử lý từ chối — khách chê giá cao",
+  "case_text": "KH xem căn 2PN 4.5 tỷ, chê giá cao hơn dự án X bên cạnh chỉ 4 tỷ. Sale cần xử lý từ chối bằng so sánh khách quan có dữ liệu, chia nhỏ giá, và dẫn đến CTA book xem nhà mẫu.",
+  "turns": [
+    {
+      "speaker": "KH",
+      "text": "Sao giá cao quá vậy em? 4,5 tỷ căn 2PN này đắt! Dự án X bên cạnh chỉ 4 tỷ thôi mà."
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: đồng cảm và công nhận lo ngại của KH; hỏi lại để làm rõ so sánh với dự án nào"
+    },
+    {
+      "speaker": "KH",
+      "text": "Dự án X ngay kế bên đó em, cũng 2PN tương tự, họ giá 4 tỷ thôi."
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: so sánh khách quan — dự án X chưa nội thất, mật độ 45% vs 28%, vận hành tự làm vs CBRE; chia nhỏ giá 4.5tỷ/50 năm = 7.5tr/tháng; CTA book xem nhà mẫu"
+    }
+  ],
+  "rubric_checkpoints": [
+    [
+      "đồng cảm chân thành, không tranh luận ngay",
+      "đặt câu hỏi khám phá: so với dự án nào cụ thể",
+      "tone tư vấn, không phòng thủ"
+    ],
+    [
+      "so sánh khách quan có dữ liệu: full nội thất Marriott vs chưa có nội thất",
+      "mật độ xây dựng 28% vs 45%",
+      "đơn vị vận hành CBRE vs tự vận hành",
+      "chia nhỏ giá: 4.5 tỷ / 50 năm = 7.5 triệu/tháng",
+      "CTA cụ thể: mời book lịch xem nhà mẫu"
+    ]
+  ],
+  "key_answers": {
+    "step_1": "Đồng cảm, công nhận lo ngại",
+    "step_2": "Đặt câu hỏi khám phá nguyên nhân thực",
+    "step_3": "So sánh khách quan có dữ liệu (full nội thất Marriott vs chưa, mật độ 28% vs 45%, CBRE vs CĐT mới, tiến độ giao đúng vs vướng GPXD)",
+    "step_4": "Chia nhỏ giá: 4.5 tỷ/50 năm = 7.5tr/tháng",
+    "step_5": "CTA: book lịch xem nhà mẫu cụ thể"
+  },
+  "judge_extras": "Case xử lý từ chối — chấm chặt T3 (số liệu so sánh chính xác: mật độ, nội thất, đơn vị vận hành, phép chia giá). T4 phải có CTA cụ thể. Không chấp nhận phủ nhận dự án X mà không có căn cứ.",
+  "points": 20.0,
+  "delivery_mode": "scripted_multiturn"
+}

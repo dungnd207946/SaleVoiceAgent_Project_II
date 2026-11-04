@@ -1,0 +1,26 @@
+# LiveKit server — self-hosted deployment on EC2 (Option B migration).
+#
+# Runs alongside the hotline-agent deploy stack (/home/gitlab-runner/santa-hotline-agent/).
+# Uses host networking so:
+#   - Reaches the shared redis on 127.0.0.1:6379
+#   - Accepts RTC on :7880 (HTTP/WS), :7881 (TCP), 52000-52049/UDP (ICE)
+#   - Nginx proxies wss://.../livekit/rtc → 127.0.0.1:7880/rtc
+#
+# First-time setup on a new host (see docs/runbooks/deploy.md):
+#   1. cp livekit.example.yaml livekit.yaml
+#   2. Generate keys:  openssl rand -hex 32  → fill LIVEKIT_API_KEY/SECRET
+#   3. Open AWS security group: 7880/TCP, 7881/TCP, 52000-52049/UDP
+#   4. docker compose up -d
+services:
+  livekit:
+    image: livekit/livekit-server:v1.8
+    command: --config /etc/livekit.yaml
+    network_mode: host
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

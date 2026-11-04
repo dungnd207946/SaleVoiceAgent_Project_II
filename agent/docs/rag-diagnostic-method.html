@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chẩn đoán RAG — định vị chỗ hỏng trước khi xây Graph</title>
+<style>
+  /* ---------- Tokens (light default) ---------- */
+  :root{
+    --bg:#f3f6f6;
+    --surface:#ffffff;
+    --surface-2:#eef2f3;
+    --ink:#14202a;
+    --ink-soft:#566b78;
+    --ink-faint:#8598a3;
+    --line:#d7dee2;
+    --line-strong:#c2ccd1;
+    --sig:#0d9488;         /* signal teal */
+    --sig-ink:#0b7a70;
+    --f-chunk:#d6456f;     /* rose  */
+    --f-recall:#bd7a09;    /* amber */
+    --f-rank:#6d5cd6;      /* violet*/
+    --f-gen:#3f74a3;       /* steel */
+    --good:#1f9d6b;
+    --shadow:0 1px 2px rgba(20,32,42,.06),0 8px 24px rgba(20,32,42,.06);
+    --r:14px;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --maxw:1080px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0b1116;--surface:#121b21;--surface-2:#182430;--ink:#e8eff3;
+      --ink-soft:#94a6b2;--ink-faint:#63768200;--ink-faint:#6b7d89;--line:#233340;--line-strong:#2f4351;
+      --sig:#34d3c6;--sig-ink:#5fe0d4;--f-chunk:#f2668b;--f-recall:#f0a830;
+      --f-rank:#9b8cf7;--f-gen:#6fa6d6;--good:#3fca8f;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1116;--surface:#121b21;--surface-2:#182430;--ink:#e8eff3;
+    --ink-soft:#94a6b2;--ink-faint:#6b7d89;--line:#233340;--line-strong:#2f4351;
+    --sig:#34d3c6;--sig-ink:#5fe0d4;--f-chunk:#f2668b;--f-recall:#f0a830;
+    --f-rank:#9b8cf7;--f-gen:#6fa6d6;--good:#3fca8f;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 30px rgba(0,0,0,.35);
+  }
+  :root[data-theme="light"]{
+    --bg:#f3f6f6;--surface:#ffffff;--surface-2:#eef2f3;--ink:#14202a;
+    --ink-soft:#566b78;--ink-faint:#8598a3;--line:#d7dee2;--line-strong:#c2ccd1;
+    --sig:#0d9488;--sig-ink:#0b7a70;--f-chunk:#d6456f;--f-recall:#bd7a09;
+    --f-rank:#6d5cd6;--f-gen:#3f74a3;--good:#1f9d6b;
+    --shadow:0 1px 2px rgba(20,32,42,.06),0 8px 24px rgba(20,32,42,.06);
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    line-height:1.6;-webkit-font-smoothing:antialiased;letter-spacing:.005em;
+  }
+  .wrap{max-width:var(--maxw);margin-inline:auto;padding-inline:clamp(18px,4vw,40px)}
+  h1,h2,h3{text-wrap:balance;line-height:1.15;margin:0}
+  p{margin:0}
+  .mono{font-family:var(--mono)}
+  code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);
+    padding:.12em .4em;border-radius:6px;border:1px solid var(--line)}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--sig-ink);font-weight:600}
+
+  /* ---------- Top bar ---------- */
+  .bar{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px);
+    background:color-mix(in srgb,var(--bg) 82%,transparent);
+    border-bottom:1px solid var(--line)}
+  .bar .wrap{display:flex;align-items:center;gap:16px;height:56px}
+  .brand{font-family:var(--mono);font-weight:600;letter-spacing:.02em;display:flex;
+    align-items:center;gap:10px;font-size:14px}
+  .pulse{width:10px;height:10px;border-radius:50%;background:var(--sig);
+    box-shadow:0 0 0 0 var(--sig);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--sig) 60%,transparent)}
+    70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
+  .bar nav{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .bar a{color:var(--ink-soft);text-decoration:none;font-size:13px;padding:6px 10px;
+    border-radius:8px}
+  .bar a:hover{color:var(--ink);background:var(--surface-2)}
+  .toggle{border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);
+    width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:15px;display:grid;
+    place-items:center}
+  .toggle:hover{color:var(--ink);border-color:var(--line-strong)}
+  @media (max-width:640px){.bar nav a{display:none}}
+
+  /* ---------- Hero ---------- */
+  .hero{padding:clamp(48px,9vh,104px) 0 clamp(30px,5vh,56px)}
+  .hero .eyebrow{margin-bottom:18px}
+  .hero h1{font-size:clamp(30px,5.4vw,54px);font-weight:700;letter-spacing:-.02em}
+  .hero h1 em{font-style:normal;color:var(--sig-ink);
+    border-bottom:3px solid color-mix(in srgb,var(--sig) 45%,transparent)}
+  .hero .lede{margin-top:22px;font-size:clamp(16px,2.1vw,20px);color:var(--ink-soft);
+    max-width:62ch}
+  .thesis{margin-top:30px;display:flex;gap:16px;align-items:flex-start;
+    background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--sig);
+    padding:18px 20px;border-radius:var(--r);box-shadow:var(--shadow);max-width:70ch}
+  .thesis .k{font-family:var(--mono);font-size:26px;line-height:1;color:var(--sig)}
+  .thesis p{font-size:15.5px}
+  .thesis strong{color:var(--ink)}
+
+  /* ---------- Section frame ---------- */
+  section{padding:clamp(40px,7vh,80px) 0;border-top:1px solid var(--line)}
+  .sec-head{margin-bottom:30px;max-width:70ch}
+  .sec-head h2{font-size:clamp(23px,3.4vw,34px);font-weight:700;letter-spacing:-.015em;
+    margin-top:10px}
+  .sec-head p{color:var(--ink-soft);margin-top:12px;font-size:16px}
+  .step-no{font-family:var(--mono);color:var(--ink-faint);font-size:13px;letter-spacing:.1em}
+
+  /* ---------- Pipeline ---------- */
+  .stage{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+    box-shadow:var(--shadow)}
+  .track-scroll{overflow-x:auto;padding:8px 4px 18px;scrollbar-width:thin}
+  .track{position:relative;display:flex;align-items:stretch;gap:0;min-width:820px;
+    padding:26px 22px 30px}
+  .spine{position:absolute;left:56px;right:56px;top:64px;height:2px;
+    background:repeating-linear-gradient(90deg,var(--line-strong) 0 8px,transparent 8px 14px)}
+  .node{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;
+    text-align:center;gap:10px;z-index:2}
+  .node .chip{width:66px;height:66px;border-radius:18px;display:grid;place-items:center;
+    background:var(--surface-2);border:1.5px solid var(--line-strong);
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+    transition:border-color .3s,box-shadow .3s,background .3s,transform .3s}
+  .node .chip svg{width:28px;height:28px;stroke:var(--ink-soft);fill:none;stroke-width:1.7}
+  .node[data-optional] .chip{border-style:dashed;opacity:.72}
+  .node .lab{font-size:12.5px;font-weight:600;max-width:15ch;line-height:1.3}
+  .node .sub{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);letter-spacing:.02em}
+  .node.hit .chip{border-color:var(--fc,var(--f-recall));background:color-mix(in srgb,var(--fc,var(--f-recall)) 12%,var(--surface));
+    box-shadow:0 0 0 4px color-mix(in srgb,var(--fc,var(--f-recall)) 18%,transparent)}
+  .node.hit .chip svg{stroke:var(--fc,var(--f-recall))}
+  .node.pass .chip{border-color:var(--sig);box-shadow:0 0 0 4px color-mix(in srgb,var(--sig) 16%,transparent)}
+  .node.pass .chip svg{stroke:var(--sig)}
+  /* travelling gold chunk */
+  .dot{position:absolute;top:64px;left:56px;width:20px;height:20px;margin:-10px 0 0 -10px;
+    border-radius:6px;background:var(--sig);z-index:5;
+    box-shadow:0 0 0 4px color-mix(in srgb,var(--sig) 28%,transparent),0 2px 8px rgba(0,0,0,.3);
+    transition:none}
+  .dot::after{content:"gold";position:absolute;top:-19px;left:50%;transform:translateX(-50%);
+    font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--sig-ink);opacity:.9}
+  .dot.dropped{background:var(--fc);box-shadow:0 0 0 4px color-mix(in srgb,var(--fc) 30%,transparent)}
+  .dot.dropped::after{content:"✗ mất";color:var(--fc)}
+  .dot.cracked{border-radius:3px;background:
+     linear-gradient(135deg,var(--fc) 47%,transparent 47% 53%,var(--fc) 53%)}
+
+  .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .btn{cursor:pointer;border:1px solid var(--line-strong);background:var(--surface);
+    color:var(--ink);font-family:var(--mono);font-size:12.5px;padding:9px 14px;border-radius:10px;
+    display:inline-flex;align-items:center;gap:8px;transition:transform .12s,border-color .2s,background .2s}
+  .btn:hover{transform:translateY(-1px)}
+  .btn .sw{width:11px;height:11px;border-radius:3px;background:var(--c,var(--sig))}
+  .btn[aria-pressed="true"]{background:color-mix(in srgb,var(--c,var(--sig)) 14%,var(--surface));
+    border-color:var(--c,var(--sig))}
+  .readout{margin-top:20px;display:grid;grid-template-columns:auto 1fr;gap:14px 18px;
+    background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+  .readout .tag{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ink-faint);padding-top:2px}
+  .readout .val{font-size:14.5px}
+  .readout .val b{color:var(--ro,var(--ink))}
+
+  /* ---------- Failure cards ---------- */
+  .grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  .fcard{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--c);
+    border-radius:var(--r);padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+  .fcard h3{font-size:16.5px;display:flex;align-items:center;gap:9px}
+  .fcard h3 .d{width:11px;height:11px;border-radius:3px;background:var(--c)}
+  .fcard .where{font-family:var(--mono);font-size:11px;color:var(--c);letter-spacing:.03em;font-weight:600}
+  .fcard p{font-size:14px;color:var(--ink-soft)}
+  .fcard .metric{margin-top:auto;font-family:var(--mono);font-size:11.5px;color:var(--ink);
+    background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:8px 11px}
+  .fcard .metric b{color:var(--c)}
+
+  /* ---------- Metrics explain ---------- */
+  .mrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+  .mcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+  .mcard .name{font-family:var(--mono);font-weight:600;color:var(--sig-ink);font-size:13.5px}
+  .mcard .formula{font-family:var(--mono);font-size:12.5px;color:var(--ink);margin:10px 0;
+    background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:9px 11px;overflow-x:auto}
+  .mcard p{font-size:13.5px;color:var(--ink-soft)}
+  .bars{display:flex;gap:10px;align-items:flex-end;height:96px;margin-top:6px}
+  .bar-col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px}
+  .bar-col .fill{width:100%;border-radius:7px 7px 3px 3px;background:var(--c,var(--sig));
+    animation:grow 1.1s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes grow{from{height:0 !important;opacity:.4}}
+  .bar-col .cap{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)}
+
+  /* ---------- Decision tree ---------- */
+  .tree{display:flex;flex-direction:column;gap:0}
+  .qnode{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+    padding:16px 20px;box-shadow:var(--shadow);position:relative}
+  .qnode .q{font-weight:600;font-size:15.5px}
+  .qnode .q .mono{color:var(--sig-ink);font-size:.9em}
+  .branch{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+  @media (max-width:560px){.branch{grid-template-columns:1fr}}
+  .leaf{border-radius:12px;padding:14px 16px;border:1px solid var(--line);font-size:14px}
+  .leaf .yn{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    display:block;margin-bottom:6px;font-weight:600}
+  .leaf.yes{background:color-mix(in srgb,var(--good) 9%,var(--surface));border-color:color-mix(in srgb,var(--good) 40%,var(--line))}
+  .leaf.yes .yn{color:var(--good)}
+  .leaf.no{background:color-mix(in srgb,var(--f-rank) 8%,var(--surface));border-color:color-mix(in srgb,var(--f-rank) 32%,var(--line))}
+  .leaf.no .yn{color:var(--f-rank)}
+  .leaf b{color:var(--ink)}
+  .connector{width:2px;height:22px;background:var(--line-strong);margin-left:32px}
+  .verdict{margin-top:6px;display:flex;gap:12px;align-items:flex-start;padding:16px 18px;
+    border-radius:var(--r);border:1px dashed var(--sig);background:color-mix(in srgb,var(--sig) 7%,var(--surface))}
+  .verdict .i{font-size:20px;line-height:1}
+
+  /* ---------- Playbook ---------- */
+  .ol{list-style:none;counter-reset:s;padding:0;margin:0;display:flex;flex-direction:column;gap:14px}
+  .ol li{counter-increment:s;display:grid;grid-template-columns:44px 1fr;gap:16px;align-items:start;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
+  .ol li::before{content:counter(s,decimal-leading-zero);font-family:var(--mono);font-weight:600;
+    color:var(--sig);font-size:15px;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:10px;width:40px;height:40px;display:grid;place-items:center}
+  .ol h3{font-size:15.5px;margin-bottom:4px}
+  .ol p{font-size:14px;color:var(--ink-soft)}
+  .ol .file{font-family:var(--mono);font-size:11.5px;color:var(--sig-ink);
+    background:color-mix(in srgb,var(--sig) 8%,transparent);border-radius:6px;padding:1px 6px}
+
+  footer{border-top:1px solid var(--line);padding:34px 0 60px;color:var(--ink-faint);font-size:13px}
+  footer .wrap{display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between}
+  footer a{color:var(--ink-soft)}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;animation-iteration-count:1 !important;
+      transition-duration:.001ms !important;scroll-behavior:auto}
+  }
+  :focus-visible{outline:2.5px solid var(--sig);outline-offset:2px;border-radius:6px}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="wrap">
+    <div class="brand"><span class="pulse"></span>RAG&nbsp;DIAGNOSTIC</div>
+    <nav>
+      <a href="#pipe">Pipeline</a>
+      <a href="#fail">4 lớp lỗi</a>
+      <a href="#metric">Chỉ số</a>
+      <a href="#tree">Cây quyết định</a>
+      <a href="#play">Quy trình</a>
+      <button class="toggle" id="themeBtn" title="Đổi giao diện sáng/tối" aria-label="Đổi giao diện">◐</button>
+    </nav>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Phương án 3 · Chẩn đoán trước, xây sau</div>
+    <h1>“Độ chính xác thấp” là <em>triệu chứng</em>,<br>không phải chẩn đoán.</h1>
+    <p class="lede">Trước khi thay RAG hiện tại (e5-large + BM25 hybrid) bằng Graph RAG — một
+      lựa chọn đắt và rủi ro cho latency voice — hãy định vị pipeline đang hỏng ở <em>đúng khâu nào</em>
+      bằng bộ eval sẵn có. Xây graph để chữa lỗi ranking cũng vô ích như uống kháng sinh để chữa gãy xương.</p>
+    <div class="thesis">
+      <div class="k">“</div>
+      <p>Bốn khâu có thể làm rơi câu trả lời đúng, và <strong>mỗi khâu có một cách đo riêng, một cách chữa
+      riêng</strong>. Graph RAG chỉ giải <strong>một</strong> trong bốn. Hãy đo trước khi cam kết công sức.</p>
+    </div>
+  </div>
+</header>
+
+<!-- ============ PIPELINE ============ -->
+<section id="pipe">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="step-no">// mô phỏng tương tác</span>
+      <h2>Chunk “vàng” rơi ra ở đâu?</h2>
+      <p>“Chunk vàng” = đoạn văn bản chứa câu trả lời đúng. Bấm một lớp lỗi để xem nó bị mất ở khâu nào
+        trên đường đi. Đây chính là điều bộ eval cần chỉ ra cho bạn — chứ không chỉ “đúng/sai” ở cuối.</p>
+    </div>
+
+    <div class="stage">
+      <div class="track-scroll">
+        <div class="track" id="track">
+          <div class="spine"></div>
+          <div class="dot" id="dot"></div>
+
+          <div class="node" data-i="0">
+            <div class="chip"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="6" rx="1.5"/><rect x="4" y="14" width="16" height="6" rx="1.5"/></svg></div>
+            <div class="lab">Chunk hoá</div>
+            <div class="sub">offline · build_faq</div>
+          </div>
+          <div class="node" data-i="1">
+            <div class="chip"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2"/></svg></div>
+            <div class="lab">Embed + BM25</div>
+            <div class="sub">e5-large · sparse</div>
+          </div>
+          <div class="node" data-i="2">
+            <div class="chip"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.4"/><path d="M16 16l4.5 4.5"/></svg></div>
+            <div class="lab">Truy hồi top-N</div>
+            <div class="sub">Qdrant / FlatStore</div>
+          </div>
+          <div class="node" data-i="3">
+            <div class="chip"><svg viewBox="0 0 24 24"><path d="M4 6h6M4 12h9M4 18h5"/><path d="M17 5l3 3-3 3M20 8h-7"/></svg></div>
+            <div class="lab">Fuse RRF → top-K</div>
+            <div class="sub">hợp nhất điểm</div>
+          </div>
+          <div class="node" data-i="4" data-optional>
+            <div class="chip"><svg viewBox="0 0 24 24"><path d="M6 4v16M6 8l-2.5 2.5M6 8l2.5 2.5M18 20V4M18 16l-2.5-2.5M18 16l2.5-2.5"/></svg></div>
+            <div class="lab">Rerank</div>
+            <div class="sub">tùy chọn · chưa có</div>
+          </div>
+          <div class="node" data-i="5">
+            <div class="chip"><svg viewBox="0 0 24 24"><path d="M5 6h14v9H9l-4 4z"/><path d="M9 10h6M9 12.5h4"/></svg></div>
+            <div class="lab">LLM trả lời</div>
+            <div class="sub">kb_search + prompt</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:0 22px 22px">
+        <div class="controls" id="controls">
+          <button class="btn" data-s="healthy"     style="--c:var(--sig)"      aria-pressed="true"><span class="sw"></span>Khỏe mạnh</button>
+          <button class="btn" data-s="chunking"     style="--c:var(--f-chunk)"  aria-pressed="false"><span class="sw"></span>Lỗi Chunking</button>
+          <button class="btn" data-s="recall"       style="--c:var(--f-recall)" aria-pressed="false"><span class="sw"></span>Lỗi Recall</button>
+          <button class="btn" data-s="ranking"      style="--c:var(--f-rank)"   aria-pressed="false"><span class="sw"></span>Lỗi Ranking</button>
+          <button class="btn" data-s="generation"   style="--c:var(--f-gen)"    aria-pressed="false"><span class="sw"></span>Lỗi Generation</button>
+        </div>
+
+        <div class="readout" id="readout">
+          <span class="tag">Kịch bản</span><span class="val" id="ro-name">—</span>
+          <span class="tag">Chunk vàng</span><span class="val" id="ro-fate">—</span>
+          <span class="tag">Bệnh ở khâu</span><span class="val" id="ro-where">—</span>
+          <span class="tag">Cách đo</span><span class="val" id="ro-measure">—</span>
+          <span class="tag">Cách chữa</span><span class="val" id="ro-fix">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FAILURE CLASSES ============ -->
+<section id="fail">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="step-no">// phân loại</span>
+      <h2>Bốn lớp lỗi, bốn cách chữa khác nhau</h2>
+      <p>Mỗi câu hỏi eval bị sai đều rơi vào <strong>đúng một</strong> lớp dưới đây. Đếm histogram xem lớp nào
+        chiếm đa số — đó là bệnh chính cần chữa trước.</p>
+    </div>
+    <div class="grid">
+      <article class="fcard" style="--c:var(--f-chunk)">
+        <h3><span class="d"></span>Lỗi Chunking</h3>
+        <div class="where">KHÂU: chunk hoá (offline)</div>
+        <p>Câu trả lời bị cắt vụn giữa 2 chunk, hoặc một chunk trộn lẫn nhiều dự án khiến tín hiệu bị loãng.
+          Chunk vàng “méo” ngay từ nguồn — mọi khâu sau đều bó tay.</p>
+        <div class="metric">Đo: <b>đọc tay</b> chunk gold + kiểm ranh giới cắt trong <code>_slice_md</code></div>
+      </article>
+      <article class="fcard" style="--c:var(--f-recall)">
+        <h3><span class="d"></span>Lỗi Recall</h3>
+        <div class="where">KHÂU: truy hồi top-N</div>
+        <p>Chunk vàng <em>hoàn toàn không có</em> trong tập N đoạn truy hồi ra. Lỗi ở embedding / BM25 /
+          hotwords / filter dự án. Đây là lớp mà <strong>Graph RAG có thể giúp</strong> — nhưng chỉ khi câu hỏi đa bước.</p>
+        <div class="metric">Đo: <b>Recall@N</b> với N lớn (vd 50)</div>
+      </article>
+      <article class="fcard" style="--c:var(--f-rank)">
+        <h3><span class="d"></span>Lỗi Ranking</h3>
+        <div class="where">KHÂU: fuse RRF → top-K</div>
+        <p>Chunk vàng <em>có</em> trong top-N nhưng bị xếp hạng thấp, rớt khỏi top-K đưa vào LLM. Lỗi ở
+          trọng số fusion / thiếu reranker. <strong>Graph RAG là thừa</strong> — reranker rẻ hơn nhiều.</p>
+        <div class="metric">Đo: <b>Recall@N − Recall@K</b> lớn · <b>MRR</b> thấp</div>
+      </article>
+      <article class="fcard" style="--c:var(--f-gen)">
+        <h3><span class="d"></span>Lỗi Generation</h3>
+        <div class="where">KHÂU: LLM trả lời</div>
+        <p>Context <em>đúng</em> đã nằm trong prompt nhưng LLM trả lời sai, bịa, hoặc bỏ sót. RAG hoàn toàn
+          vô can — lỗi ở prompt / model / thinking. Xây graph ở đây là chữa nhầm người bệnh.</p>
+        <div class="metric">Đo: nhét <b>gold context</b> vào prompt rồi chấm lại</div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ METRICS ============ -->
+<section id="metric">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="step-no">// thước đo</span>
+      <h2>Ba chỉ số tách bạch Recall khỏi Ranking</h2>
+      <p>Bí quyết: đừng chỉ log đáp án cuối. Hãy log <strong>toàn bộ top-N chunk mỗi câu</strong>, rồi tính ba
+        số này. Chênh lệch giữa chúng tự nói cho bạn bệnh nằm ở đâu.</p>
+    </div>
+    <div class="mrow">
+      <div class="mcard">
+        <div class="name">Recall@N (N lớn)</div>
+        <div class="formula"># câu có gold trong top-N ÷ tổng</div>
+        <p>Trần khả năng của tầng truy hồi. <b>Thấp</b> ⇒ lỗi Recall/Chunking (retriever không kéo nổi chunk đúng ra).</p>
+      </div>
+      <div class="mcard">
+        <div class="name">Recall@K (K = số đưa vào LLM)</div>
+        <div class="formula"># câu có gold trong top-K ÷ tổng</div>
+        <p>Cái LLM thực sự nhìn thấy. Nếu Recall@N cao mà cái này thấp ⇒ <b>lỗi Ranking thuần</b>.</p>
+      </div>
+      <div class="mcard">
+        <div class="name">MRR / nDCG</div>
+        <div class="formula">1 ÷ (thứ hạng đầu tiên của chunk gold)</div>
+        <p>Gold nằm ở hạng mấy. Cao ⇒ ranking tốt. Thấp dù Recall@N cao ⇒ reranker sẽ ăn tiền ngay.</p>
+      </div>
+    </div>
+
+    <div class="mcard" style="margin-top:18px">
+      <div class="name" style="margin-bottom:14px">Đọc khoảng hở — ví dụ minh hoạ</div>
+      <div class="bars">
+        <div class="bar-col"><div class="fill" style="--c:var(--sig);height:88%"></div><div class="cap">R@50<br>0.88</div></div>
+        <div class="bar-col"><div class="fill" style="--c:var(--f-rank);height:52%"></div><div class="cap">R@5<br>0.52</div></div>
+        <div class="bar-col"><div class="fill" style="--c:var(--f-gen);height:41%"></div><div class="cap">MRR<br>0.41</div></div>
+        <div class="bar-col"><div class="fill" style="--c:var(--good);height:63%"></div><div class="cap">đáp án đúng<br>0.63</div></div>
+      </div>
+      <p style="margin-top:14px">Khoảng hở <b style="color:var(--f-rank)">R@50 (0.88) → R@5 (0.52)</b> rất lớn: retriever
+        <em>kéo được</em> chunk đúng ra nhưng xếp nó tụt hạng. Đây là chân dung kinh điển của
+        <b style="color:var(--f-rank)">lỗi Ranking</b> ⇒ thêm reranker, <em>không</em> cần graph.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DECISION TREE ============ -->
+<section id="tree">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="step-no">// kết luận</span>
+      <h2>Cây quyết định: có nên xây Graph RAG?</h2>
+      <p>Đi từ trên xuống. Chỉ nhánh cuối cùng bên phải mới thực sự cần đến graph.</p>
+    </div>
+
+    <div class="tree">
+      <div class="qnode">
+        <div class="q">① Context đúng đã vào prompt mà vẫn trả lời sai? <span class="mono">(nhét gold vào rồi chấm)</span></div>
+        <div class="branch">
+          <div class="leaf no"><span class="yn">Có → dừng</span>Lỗi <b>Generation</b>. Sửa prompt / model / thinking. RAG vô can — <b>không</b> đụng retriever.</div>
+          <div class="leaf yes"><span class="yn">Không → đi tiếp</span>Context đang là thủ phạm. Xuống câu ②.</div>
+        </div>
+      </div>
+      <div class="connector"></div>
+
+      <div class="qnode">
+        <div class="q">② Recall@N (N lớn) có cao không? <span class="mono">(retriever kéo nổi gold ra không)</span></div>
+        <div class="branch">
+          <div class="leaf yes"><span class="yn">Cao → dừng</span>Gold có trong top-N nhưng rớt top-K ⇒ lỗi <b>Ranking</b>. Thêm <b>cross-encoder reranker (~10ms)</b>. Rẻ, ROI cao, <b>không</b> cần graph.</div>
+          <div class="leaf no"><span class="yn">Thấp → đi tiếp</span>Retriever không lấy nổi chunk đúng. Xuống câu ③.</div>
+        </div>
+      </div>
+      <div class="connector"></div>
+
+      <div class="qnode">
+        <div class="q">③ Câu hỏi có cần nối nhiều thực thể (multi-hop) không? <span class="mono">(vd: “dự án nào gần trường + có bể bơi + dưới 5 tỷ”)</span></div>
+        <div class="branch">
+          <div class="leaf no"><span class="yn">Không (single-hop)</span>Phần lớn câu BĐS là single-hop. Sửa <b>chunking / embedding / hotwords / filter dự án</b>. Graph <em>không</em> giúp câu factual đơn.</div>
+          <div class="leaf yes"><span class="yn">Có → đây mới là lúc</span><b>Graph RAG</b> đáng làm — nhưng bản <b>HippoRAG-style: KG offline + PPR ở query-time, KHÔNG gọi LLM</b>, fuse vào RRF hiện có.</div>
+        </div>
+      </div>
+
+      <div class="verdict">
+        <span class="i">◎</span>
+        <p>Với corpus ~285 chunk / 15 dự án và câu hỏi chủ yếu single-hop, xác suất cao bạn dừng ở ① hoặc ②.
+          <b>Chạy chẩn đoán một buổi</b> có thể tiết kiệm hàng tuần xây graph để rồi phát hiện bệnh nằm ở reranker.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PLAYBOOK ============ -->
+<section id="play">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="step-no">// thực thi trên codebase của bạn</span>
+      <h2>Quy trình 5 bước — dùng đồ nghề sẵn có</h2>
+      <p>Không cần dựng gì mới. Tận dụng bộ <code>eval-estate</code> và tầng RAG đang chạy.</p>
+    </div>
+    <ol class="ol">
+      <li>
+        <div>
+          <h3>Dựng gold set</h3>
+          <p>Với mỗi câu trong <span class="file">tests/bench_estate/</span>, gắn nhãn: chunk/đoạn nào chứa câu trả lời đúng
+            (dùng <code>content_hash</code> hoặc <code>point.id</code> của Qdrant làm khoá).</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Log toàn bộ top-N, không chỉ đáp án cuối</h3>
+          <p>Thêm hook trong <span class="file">agent/rag/noble_kb.query_noble_kb</span> để ghi lại danh sách N chunk (id + score)
+            mỗi truy vấn. Chạy <code>make eval-estate</code> ở chế độ N lớn (vd 50).</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Tính Recall@K, Recall@N, MRR</h3>
+          <p>Một script nhỏ so gold-id với danh sách đã log. Phân mỗi câu fail vào 1 trong 4 lớp lỗi ở trên.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Vẽ histogram lớp lỗi</h3>
+          <p>Đếm mỗi lớp chiếm bao nhiêu %. Lớp cao nhất là <em>bệnh chính</em>. Đây là dữ kiện thay cho cảm giác “chưa chính xác”.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Chữa đúng bệnh theo cây quyết định</h3>
+          <p>Ranking → reranker. Recall single-hop → chunking/embedding. Generation → prompt.
+            <b>Chỉ khi</b> đa số là Recall + multi-hop mới mở nhánh Graph RAG (HippoRAG-style, no-LLM query-time).</p>
+        </div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Chẩn đoán RAG · Noble Voice Agent — đo trước, xây sau.</span>
+    <span class="mono">docs/rag-diagnostic-method.html</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+  /* ----- theme toggle ----- */
+  var root = document.documentElement, tbtn = document.getElementById("themeBtn");
+  tbtn.addEventListener("click", function(){
+    var cur = root.getAttribute("data-theme");
+    if(!cur){ cur = matchMedia("(prefers-color-scheme:dark)").matches ? "dark":"light"; }
+    root.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
+  });
+
+  /* ----- pipeline sim ----- */
+  var track = document.getElementById("track");
+  var dot   = document.getElementById("dot");
+  var nodes = Array.prototype.slice.call(track.querySelectorAll(".node"));
+  var readN = document.getElementById("ro-name");
+  var readF = document.getElementById("ro-fate");
+  var readW = document.getElementById("ro-where");
+  var readM = document.getElementById("ro-measure");
+  var readX = document.getElementById("ro-fix");
+
+  var SC = {
+    healthy:   {label:"Khỏe mạnh", color:"var(--sig)",      drop:null, cracked:false,
+      fate:"Đi trọn pipeline, gold nằm trong prompt LLM.",
+      where:"— không có lỗi —", measure:"Recall@K cao & đáp án đúng cao", fix:"Giữ nguyên."},
+    chunking:  {label:"Lỗi Chunking", color:"var(--f-chunk)", drop:0, cracked:true,
+      fate:"Gold bị cắt vụn / trộn dự án ngay tại nguồn.",
+      where:"Chunk hoá (offline)", measure:"Đọc tay chunk gold + ranh giới _slice_md", fix:"Chỉnh cách slice / kích thước chunk."},
+    recall:    {label:"Lỗi Recall", color:"var(--f-recall)", drop:2, cracked:false,
+      fate:"Gold không có trong top-N truy hồi.",
+      where:"Truy hồi top-N", measure:"Recall@N (N lớn) thấp", fix:"Embedding / BM25 / hotwords / filter — HOẶC graph nếu multi-hop."},
+    ranking:   {label:"Lỗi Ranking", color:"var(--f-rank)",   drop:3, cracked:false,
+      fate:"Gold có trong top-N nhưng bị xếp tụt, rớt top-K.",
+      where:"Fuse RRF → top-K", measure:"Recall@N − Recall@K lớn · MRR thấp", fix:"Thêm cross-encoder reranker (~10ms). Không cần graph."},
+    generation:{label:"Lỗi Generation", color:"var(--f-gen)", drop:null, arriveWrong:true, cracked:false,
+      fate:"Gold TỚI được LLM nhưng câu trả lời vẫn sai/bịa.",
+      where:"LLM trả lời", measure:"Nhét gold context vào prompt rồi chấm lại", fix:"Sửa prompt / model / thinking. RAG vô can."}
+  };
+
+  var raf = null;
+  function centerOf(node){
+    return { x: node.offsetLeft + node.offsetWidth/2, y: node.offsetTop + 33 };
+  }
+  function clearStates(){
+    nodes.forEach(function(n){ n.classList.remove("hit","pass"); n.style.removeProperty("--fc"); });
+    dot.classList.remove("dropped","cracked");
+    dot.style.removeProperty("--fc");
+  }
+  function place(pt){ dot.style.left = pt.x + "px"; dot.style.top = pt.y + "px"; }
+
+  function run(key){
+    if(raf){ cancelAnimationFrame(raf); raf = null; }
+    clearStates();
+    var s = SC[key];
+    dot.style.background = "var(--sig)";
+    dot.style.boxShadow = "0 0 0 4px color-mix(in srgb,var(--sig) 28%,transparent),0 2px 8px rgba(0,0,0,.3)";
+    // readout
+    readN.textContent = s.label;
+    readF.textContent = s.fate;
+    readW.textContent = s.where;   readW.style.color = s.color;
+    readM.textContent = s.measure;
+    readX.textContent = s.fix;
+
+    var lastIdx = (s.drop != null) ? s.drop : nodes.length - 1;
+    // build waypoints from node 0..lastIdx
+    var pts = [];
+    for(var i=0;i<=lastIdx;i++){ pts.push(centerOf(nodes[i])); }
+
+    function finish(){
+      var end = nodes[lastIdx];
+      if(s.drop != null){
+        end.classList.add("hit"); end.style.setProperty("--fc", s.color);
+        dot.style.setProperty("--fc", s.color);
+        dot.classList.add("dropped");
+        if(s.cracked) dot.classList.add("cracked");
+      } else {
+        // reached LLM
+        end.classList.add(s.arriveWrong ? "hit" : "pass");
+        if(s.arriveWrong){ end.style.setProperty("--fc", s.color); dot.style.setProperty("--fc", s.color); dot.classList.add("dropped"); }
+      }
+    }
+
+    // mark passed nodes progressively
+    if(reduce){
+      pts.forEach(function(p,i){ if(i<lastIdx && s.drop!==i) nodes[i].classList.add("pass"); });
+      place(pts[pts.length-1]); finish(); return;
+    }
+
+    place(pts[0]);
+    var seg = 0, t = 0, segMs = 560;
+    var startTime = null;
+    function ease(x){ return x<.5 ? 2*x*x : 1-Math.pow(-2*x+2,2)/2; }
+    function step(ts){
+      if(startTime==null) startTime = ts;
+      var dt = ts - startTime; startTime = ts;
+      t += dt/segMs;
+      var a = pts[seg], b = pts[seg+1];
+      if(!b){ finish(); raf=null; return; }
+      var e = ease(Math.min(t,1));
+      place({x:a.x+(b.x-a.x)*e, y:a.y+(b.y-a.y)*e});
+      if(t>=1){
+        // arrived at node seg+1
+        if(seg < lastIdx-1 || (s.drop==null && seg < lastIdx-1)){ nodes[seg+1].classList.add("pass"); }
+        t = 0; seg++;
+        if(seg >= pts.length-1){ finish(); raf=null; return; }
+      }
+      raf = requestAnimationFrame(step);
+    }
+    // also light up node 0 as pass if it's not the drop
+    if(s.drop!==0) nodes[0].classList.add("pass");
+    raf = requestAnimationFrame(step);
+  }
+
+  /* ----- controls ----- */
+  var btns = Array.prototype.slice.call(document.querySelectorAll("#controls .btn"));
+  btns.forEach(function(b){
+    b.addEventListener("click", function(){
+      btns.forEach(function(x){ x.setAttribute("aria-pressed","false"); });
+      b.setAttribute("aria-pressed","true");
+      run(b.getAttribute("data-s"));
+    });
+  });
+
+  function boot(){ run("healthy"); }
+  window.addEventListener("resize", function(){
+    var active = document.querySelector('#controls .btn[aria-pressed="true"]');
+    if(active) run(active.getAttribute("data-s"));
+  });
+  // wait a tick so layout (offsetLeft) is settled
+  if(document.readyState === "complete") setTimeout(boot,60);
+  else window.addEventListener("load", function(){ setTimeout(boot,60); });
+})();
+</script>
+</body>
+</html>

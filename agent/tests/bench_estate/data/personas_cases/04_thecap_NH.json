@@ -1,0 +1,62 @@
+{
+  "case_id": "C-4",
+  "title": "NƠHTTL đã thế chấp ngân hàng — pháp lý",
+  "case_text": "KH muốn mua căn hộ NƠHTTL nhưng phát hiện chủ đầu tư đã thế chấp toàn bộ dự án (bao gồm căn đó) tại ngân hàng. KH lo lắng và hỏi sale có nên mua không, cần làm gì để tự bảo vệ.",
+  "turns": [
+    {
+      "speaker": "KH",
+      "text": "Em ơi, anh nghe nói căn mà anh đang muốn mua ở dự án NƠHTTL đã bị chủ đầu tư thế chấp ngân hàng rồi. Vậy có nên mua không em? Anh lo lắm."
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: đồng cảm với lo ngại của KH; giải thích theo K1 Điều 56 Luật Nhà ở 2023 + LKDBĐS 2023: CĐT phải giải chấp trước khi ký HĐ huy động vốn, trừ khi có đồng ý 3 bên; khuyến nghị không ký khi chưa có văn bản giải chấp hoặc thỏa thuận 3 bên"
+    },
+    {
+      "speaker": "KH",
+      "text": "Vậy nếu anh vẫn muốn mua thì anh phải yêu cầu chủ đầu tư làm gì? Bằng chứng pháp lý anh cần kiểm tra những gì?"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: yêu cầu CĐT giải chấp trước, hoặc lập văn bản thỏa thuận 3 bên CĐT-NH-Khách; liệt kê 8 loại giấy tờ KH cần kiểm tra"
+    },
+    {
+      "speaker": "KH",
+      "text": "Em có thể liệt kê cho anh đúng 8 loại giấy tờ mà anh cần kiểm tra trước khi ký hợp đồng không?"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: liệt kê đầy đủ 8 giấy tờ: GCN đầu tư, GPXD, văn bản Sở XD, bảo lãnh ngân hàng, văn bản giải chấp, HĐ mẫu Bộ XD, báo cáo tiến độ, chứng từ tiền SDĐ"
+    }
+  ],
+  "rubric_checkpoints": [
+    [
+      "đồng cảm với lo ngại KH",
+      "trích K1 Điều 56 Luật Nhà ở 2023 hoặc LKDBĐS 2023",
+      "kết luận rõ: KHÔNG nên ký khi chưa giải chấp hoặc chưa có văn bản 3 bên",
+      "tone tư vấn bảo vệ quyền lợi KH"
+    ],
+    [
+      "yêu cầu CĐT giải chấp trước khi ký HĐ huy động vốn",
+      "hoặc có văn bản thỏa thuận 3 bên CĐT-Ngân hàng-Khách hàng",
+      "giải thích rủi ro nếu không có văn bản này"
+    ],
+    [
+      "Giấy chứng nhận đầu tư (GCN đầu tư)",
+      "Giấy phép xây dựng (GPXD)",
+      "Văn bản của Sở Xây dựng đủ điều kiện huy động vốn",
+      "Hợp đồng bảo lãnh từ ngân hàng",
+      "Văn bản giải chấp hoặc thỏa thuận 3 bên",
+      "Hợp đồng mẫu theo Bộ Xây dựng",
+      "Báo cáo tiến độ thi công",
+      "Chứng từ nộp tiền sử dụng đất"
+    ]
+  ],
+  "key_answers": {
+    "cau_1": "KHÔNG. Theo K1 Đ56 Luật Nhà ở 2023 + LKDBĐS 2023: phải GIẢI CHẤP trước khi ký HĐ huy động vốn, trừ khi có đồng ý 3 bên",
+    "cau_2": "Yêu cầu CĐT giải chấp trước, hoặc văn bản 3 bên CĐT-NH-Khách",
+    "cau_3": "8 giấy tờ: GCN đầu tư, GPXD, văn bản Sở XD, bảo lãnh ngân hàng, văn bản giải chấp, HĐ mẫu Bộ XD, báo cáo tiến độ, chứng từ tiền SDĐ"
+  },
+  "judge_extras": "Case pháp lý phức tạp — chấm chặt T2 (Điều 56 Luật Nhà ở 2023) và T3 (đủ 8 loại giấy tờ). Thiếu bất kỳ loại giấy tờ nào trong 8 loại thì T3 trừ điểm.",
+  "points": 20.0,
+  "delivery_mode": "scripted_multiturn"
+}

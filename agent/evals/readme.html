@@ -1,0 +1,576 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noble Evals Runbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root {
+    --bg: #F7F8F6;
+    --surface: #FFFFFF;
+    --surface-2: #EEF1EE;
+    --ink: #1E2523;
+    --muted: #5C6B66;
+    --line: #DCE2DE;
+    --accent: #0E7A5F;
+    --accent-ink: #FFFFFF;
+    --term-bg: #131A17;
+    --term-ink: #D9E5DF;
+    --term-cmd: #7FD8B8;
+    --pass: #188A52;
+    --fail: #C24634;
+    --warn: #9A6B10;
+    --pass-bg: #E3F2E9;
+    --fail-bg: #F8E7E2;
+    --warn-bg: #F6EDD8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101614; --surface: #18201D; --surface-2: #1F2925;
+      --ink: #E4EAE7; --muted: #93A39D; --line: #2C3833;
+      --accent: #3FBF95; --accent-ink: #0D1512;
+      --term-bg: #0B100E; --term-ink: #CFDDD6; --term-cmd: #6FCFA9;
+      --pass: #4CC98A; --fail: #E07A62; --warn: #D9A73E;
+      --pass-bg: #17352A; --fail-bg: #3A241E; --warn-bg: #38301A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101614; --surface: #18201D; --surface-2: #1F2925;
+    --ink: #E4EAE7; --muted: #93A39D; --line: #2C3833;
+    --accent: #3FBF95; --accent-ink: #0D1512;
+    --term-bg: #0B100E; --term-ink: #CFDDD6; --term-cmd: #6FCFA9;
+    --pass: #4CC98A; --fail: #E07A62; --warn: #D9A73E;
+    --pass-bg: #17352A; --fail-bg: #3A241E; --warn-bg: #38301A;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+    font-size: 15.5px; line-height: 1.65;
+  }
+  .wrap { display: flex; gap: 40px; max-width: 1180px; margin: 0 auto; padding: 0 24px 96px; }
+  nav.toc {
+    position: sticky; top: 0; align-self: flex-start; flex: 0 0 230px;
+    padding: 40px 0 24px; font-size: 13.5px; max-height: 100vh; overflow-y: auto;
+  }
+  nav.toc .brand { font-weight: 700; font-size: 14px; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; }
+  nav.toc a { display: block; color: var(--muted); text-decoration: none; padding: 4px 0; border-left: 2px solid transparent; padding-left: 10px; }
+  nav.toc a.sub { padding-left: 22px; font-size: 12.5px; }
+  nav.toc a:hover, nav.toc a:focus-visible { color: var(--ink); border-left-color: var(--accent); outline: none; }
+  main { flex: 1; min-width: 0; max-width: 76ch; }
+  header.hero { padding: 48px 0 8px; }
+  .eyebrow { font-size: 12.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  h1 { font-size: 34px; font-weight: 700; line-height: 1.2; margin: 6px 0 10px; text-wrap: balance; }
+  .lede { color: var(--muted); font-size: 16.5px; max-width: 62ch; margin: 0 0 8px; }
+  h2 { font-size: 22px; font-weight: 700; margin: 52px 0 12px; padding-top: 18px; border-top: 1px solid var(--line); text-wrap: balance; }
+  h3 { font-size: 16.5px; font-weight: 600; margin: 28px 0 8px; }
+  h3 code, h4 code { font-size: .95em; }
+  h4 { font-size: 14.5px; font-weight: 600; margin: 22px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .88em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+  pre {
+    background: var(--term-bg); color: var(--term-ink); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 13px; line-height: 1.6; position: relative; margin: 12px 0;
+  }
+  pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+  pre .c { color: #7E948C; }
+  pre .cmd { color: var(--term-cmd); font-weight: 600; }
+  .copy-btn {
+    position: absolute; top: 8px; right: 8px; border: 1px solid #3A4842; background: transparent;
+    color: #93A39D; font-family: inherit; font-size: 11px; padding: 3px 9px; border-radius: 5px; cursor: pointer;
+  }
+  .copy-btn:hover, .copy-btn:focus-visible { color: var(--term-ink); border-color: var(--term-ink); outline: none; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 14px; }
+  th { text-align: left; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid var(--line); padding: 8px 10px; }
+  td { border-bottom: 1px solid var(--line); padding: 9px 10px; vertical-align: top; }
+  td:first-child code { white-space: nowrap; }
+  .table-scroll { overflow-x: auto; }
+  .def { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; white-space: nowrap; color: var(--muted); }
+  .req { color: var(--fail); font-weight: 600; font-size: 12px; }
+  .pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+  .pill.pass { background: var(--pass-bg); color: var(--pass); }
+  .pill.fail { background: var(--fail-bg); color: var(--fail); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn); }
+  .pill.none { background: var(--surface-2); color: var(--muted); }
+  .step { display: flex; gap: 16px; margin: 22px 0; }
+  .step-no {
+    flex: 0 0 34px; height: 34px; border-radius: 8px; background: var(--accent); color: var(--accent-ink);
+    font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .step-body { flex: 1; min-width: 0; }
+  .step-body h3 { margin-top: 4px; }
+  .callout { border: 1px solid var(--line); border-left: 4px solid var(--accent); background: var(--surface); border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 16px 0; font-size: 14.5px; }
+  .callout.warn { border-left-color: var(--warn); }
+  .callout.fail { border-left-color: var(--fail); }
+  .callout b:first-child { display: block; margin-bottom: 2px; }
+  .suite-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 16px 0; }
+  .suite { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .suite .name { font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 600; color: var(--accent); }
+  .suite p { font-size: 13.5px; color: var(--muted); margin: 6px 0 0; }
+  .kbd-path { font-family: "JetBrains Mono", monospace; font-size: .85em; color: var(--muted); }
+  .cmd-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 4px 18px 16px; margin: 22px 0; }
+  .cmd-card h3 { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .cmd-card h3 .make { font-size: 12px; font-weight: 600; color: var(--muted); font-family: "JetBrains Mono", monospace; background: var(--surface-2); padding: 2px 8px; border-radius: 5px; }
+  .entry { font-size: 13px; color: var(--muted); margin: -2px 0 8px; }
+  .entry code { font-size: .92em; }
+  footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+  @media (max-width: 900px) { nav.toc { display: none; } .wrap { display: block; } }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+  html { scroll-behavior: smooth; }
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Mục lục">
+  <div class="brand">Evals Runbook</div>
+  <a href="#tong-quan">Tổng quan</a>
+  <a href="#setup">Setup một lần</a>
+  <a href="#infra">Suite cần infra gì</a>
+  <a href="#lenh">Tham chiếu lệnh &amp; tham số</a>
+  <a class="sub" href="#lenh-make">Bảng make target</a>
+  <a class="sub" href="#lenh-list">evals list</a>
+  <a class="sub" href="#lenh-run">evals run</a>
+  <a class="sub" href="#lenh-score">evals score</a>
+  <a class="sub" href="#lenh-rag">evals rag</a>
+  <a class="sub" href="#lenh-gen-golden">evals gen-golden</a>
+  <a class="sub" href="#lenh-labeller">evals labeller</a>
+  <a class="sub" href="#lenh-bench">evals bench</a>
+  <a class="sub" href="#lenh-load">evals load</a>
+  <a class="sub" href="#lenh-report">evals report</a>
+  <a class="sub" href="#lenh-with-key">eval_with_key.sh</a>
+  <a href="#labeller">Tạo &amp; duyệt case: Labeller</a>
+  <a href="#quality">Chạy: Quality</a>
+  <a href="#rag">Chạy: RAG</a>
+  <a href="#bench">Chạy: Bench</a>
+  <a href="#load">Chạy: Load / CCU</a>
+  <a href="#ket-qua">Đọc kết quả</a>
+  <a href="#dinh-ky">Monitoring định kỳ</a>
+  <a href="#tenant-moi">Thêm tenant mới</a>
+  <a href="#loi">Lỗi thường gặp</a>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">Noble Voice Agent · evals/</div>
+  <h1>Noble Evals Runbook</h1>
+  <p class="lede">Hướng dẫn setup và chạy toàn bộ bài đánh giá: chất lượng agent theo turn/multi-turn, retrieval + generation, latency từng component, và khả năng chịu tải — case/golden tạo &amp; duyệt bằng labeller, kết quả ghi vào registry theo dõi được qua git.</p>
+</header>
+
+<h2 id="tong-quan">Tổng quan — 4 suite, 1 registry</h2>
+<p>Mọi thứ nằm trong package <code>evals/</code> (không đụng <code>src/</code>), gọi qua một CLI duy nhất <code>python -m evals</code> hoặc các target <code>make eval-*</code>. Mỗi run append <b>một dòng tổng hợp</b> vào <code>evals/registry.jsonl</code> (tracked trong git); chi tiết per-case nằm ở <span class="kbd-path">evals/reports/&lt;run_id&gt;/</span> (gitignored).</p>
+<div class="suite-grid">
+  <div class="suite"><span class="name">quality</span><p>Full-pipeline agent, per-turn &amp; multi-turn. Deterministic: policy, tool selection, trajectory, run integrity, latency. Thêm <code>--judge</code>: 3 rubric LLM — correctness / groundedness / multiturn.</p></div>
+  <div class="suite"><span class="name">rag</span><p>Retrieval tách khỏi agent: recall@k, context recall/precision, MRR, empty-rate trên golden set v2 (nhiều chunk + answer, duyệt bằng labeller). Thêm <code>--judge</code>: stage generation cô lập (faithfulness, correctness, refusal).</p></div>
+  <div class="suite"><span class="name">bench</span><p>Latency từng component: STT, TTS, speaker, VAD, LLM — p50/p95/p99 + error rate.</p></div>
+  <div class="suite"><span class="name">load</span><p>CCU ramp tìm knee: chat WS (kèm assert admission 4029/503), voice LiveKit, từng service.</p></div>
+</div>
+
+<h2 id="setup">Setup một lần</h2>
+
+<div class="step"><div class="step-no">1</div><div class="step-body">
+  <h3>Môi trường Python</h3>
+  <pre><code><span class="cmd">python3 -m venv .venv &amp;&amp; source .venv/bin/activate</span>
+<span class="cmd">pip install -e ".[dev]"</span></code></pre>
+</div></div>
+
+<div class="step"><div class="step-no">2</div><div class="step-body">
+  <h3>File <code>.env</code></h3>
+  <p>Copy từ <code>.env.example</code> nếu chưa có. Các khoá suite quality cần:</p>
+  <div class="table-scroll"><table>
+    <tr><th>Biến</th><th>Giá trị đang dùng</th></tr>
+    <tr><td><code>REDIS_URL</code></td><td><code>redis://127.0.0.1:6379/0</code> (Redis local, bước 3)</td></tr>
+    <tr><td><code>USE_UNIFIED_AGENT</code></td><td><code>true</code></td></tr>
+    <tr><td><code>AGENT_CONFIG_SOURCE</code></td><td><code>db</code> — config đọc từ Postgres theo tenant</td></tr>
+    <tr><td><code>NOBLE_AGENT_MODEL</code> + API key</td><td>vd. <code>gemini-2.5-flash</code> + <code>GEMINI_API_KEY</code></td></tr>
+    <tr><td><code>POSTGRES_SERVER_DSN</code></td><td>DSN không userinfo — script tenant sẽ lắp role vào</td></tr>
+    <tr><td><code>GATEWAY_CREDENTIALS_API_URL</code></td><td>API đổi API key → credential per-tenant</td></tr>
+    <tr><td><code>EVAL_TENANT_API_KEY</code></td><td><i>(export lúc chạy, đừng ghi vào <code>.env</code>)</i> API key gateway của tenant — harness tự đổi thành PG role per-tenant. Xem <a href="#quality-cred">Credential per-tenant</a></td></tr>
+    <tr><td><code>SANTA_MODELS_TOKEN</code></td><td>Bearer token của embed service (<code>EMBED_SERVICE_URL</code>). <b>Sai token = <code>kb_search</code> rỗng im lặng</b> — xem callout ngay dưới</td></tr>
+  </table></div>
+  <div class="callout warn"><b>Bẫy kinh điển:</b> biến đã <code>export</code> trong shell <b>đè lên</b> <code>.env</code>. Khi config "không ăn", chạy <code>echo $REDIS_URL</code> trước khi nghi ngờ thứ khác.</div>
+  <div class="callout fail"><b><code>SANTA_MODELS_TOKEN</code> stale = chấm trên KB rỗng.</b> Backend <code>kb_service</code> embed in-process qua <code>EMBED_SERVICE_URL</code> với header <code>Bearer $SANTA_MODELS_TOKEN</code>. Token sai → embed trả <b>401</b> → <code>noble_kb</code> catch-all → <code>kb_search</code> trả rỗng, <b>không log gì ở mức turn</b>. Agent vẫn trả lời trơn tru nên đọc trace không phát hiện được; preflight của harness <b>không</b> kiểm biến này. Kiểm bằng <code>python scripts/test_search_tools.py -t &lt;tenant&gt; --kb "tiện ích dự án"</code> — nó gọi thẳng adapter nên 401 nổi thành traceback thay vì rỗng. Token đúng = biến <code>ODYSSEY_MODELS_TOKEN</code> trong container models (cả 4 container <code>stt/tts/embed/speaker</code> dùng chung), và embed dense phải trả vector <b>đúng <code>size</code> của collection <code>&lt;tenant&gt;_documents</code></b> — lệch dim là sai không gian vector, Qdrant trả nhiễu mà không báo lỗi.</div>
+</div></div>
+
+<div class="step"><div class="step-no">3</div><div class="step-body">
+  <h3>Redis local (bền qua reboot)</h3>
+  <pre><code><span class="cmd">docker run -d --name local-redis --restart unless-stopped \
+  -p 127.0.0.1:6379:6379 -v local-redis-data:/data \
+  redis:7-alpine redis-server --appendonly yes</span>
+<span class="cmd">docker exec local-redis redis-cli ping</span>   <span class="c"># → PONG</span></code></pre>
+</div></div>
+
+<div class="step"><div class="step-no">4</div><div class="step-body">
+  <h3>Kiểm tra harness lành lặn (không cần infra)</h3>
+  <pre><code><span class="cmd">make eval-selftest</span>   <span class="c"># 185 unit test — phải xanh</span>
+<span class="cmd">python -m evals list --tenant du_test</span>   <span class="c"># liệt kê case (du_test là tenant có case ship sẵn)</span></code></pre>
+  <div class="callout"><b>Lưu ý sau refactor 2026-08-25:</b> data case/golden cũ (schema v1, tenant <code>noble</code>/<code>green_park</code>) đã xoá. Case ship sẵn: <code>du_test</code> (bộ smoke 3 case + 7 case mẫu pattern) và <code>aina_prod</code> (<span class="kbd-path">p2_synthetic.jsonl</span> — 100 case synthetic, golden grounded bằng tool result thật); case mới tạo bằng <a href="#labeller">labeller</a>.</div>
+</div></div>
+
+<h2 id="infra">Suite nào cần infra gì</h2>
+<div class="table-scroll"><table>
+  <tr><th>Lệnh</th><th>Cần</th><th>Không cần</th></tr>
+  <tr><td><code>eval-selftest</code>, <code>eval-report</code>, <code>eval-labeller</code></td><td>—</td><td>mọi thứ (offline; labeller đọc/ghi JSONL local)</td></tr>
+  <tr><td><code>eval-quality*</code>, <code>eval_with_key.sh</code></td><td>Redis + LLM key + Postgres (credential per-tenant nếu tenant db-mode) + RAG backend (<b>Qdrant + <code>SANTA_MODELS_TOKEN</code> đúng</b>)</td><td>service voice</td></tr>
+  <tr><td><code>eval-rag</code>, <code>gen-golden</code></td><td>Qdrant (tunnel nếu ngoài VPC) + embed</td><td>Redis, LLM cho phần chấm</td></tr>
+  <tr><td><code>eval-bench</code></td><td>service đang chạy: STT <code>:8770</code>, TTS <code>:8771</code>, speaker <code>:9100</code> (thiếu cái nào tự skip cái đó)</td><td>—</td></tr>
+  <tr><td><code>eval-load</code></td><td>worker chat <code>:8766</code> / LiveKit — <b>chỉ staging/dev</b></td><td>—</td></tr>
+</table></div>
+
+<h2 id="lenh">Tham chiếu lệnh &amp; tham số</h2>
+<p>Entrypoint của mọi lệnh (trừ <code>eval-selftest</code>) là <span class="kbd-path">evals/__main__.py</span> — hàm <code>main()</code> parse args rồi route sang <code>_cmd_&lt;lệnh&gt;</code>. Default dưới đây lấy <b>đúng từ argparse trong code</b>; tham số nào không truyền thì nhận default đó.</p>
+
+<h3 id="lenh-make">Bảng tra nhanh: make target ↔ lệnh thật</h3>
+<p>Make target chỉ là wrapper; biến <code>ARGS="…"</code> được nối nguyên văn vào cuối lệnh.</p>
+<div class="table-scroll"><table>
+  <tr><th>Make target</th><th>Lệnh thật</th><th>Ghi chú</th></tr>
+  <tr><td><code>make eval-list</code></td><td><code>python -m evals list $(ARGS)</code></td><td>Liệt kê case, offline</td></tr>
+  <tr><td><code>make eval-quality</code></td><td><code>python -m evals run $(ARGS)</code></td><td>Toàn bộ case của tenant</td></tr>
+  <tr><td><code>make eval-quality-smoke</code></td><td><code>python -m evals run --case POL-001,TOOL-001,QA-001 --tenant du_test $(ARGS)</code></td><td>3 case cố định (tenant du_test) — đủ mẫu cho mọi gate</td></tr>
+  <tr><td><code>make eval-quality-full</code></td><td><code>python -m evals run --judge $(ARGS)</code></td><td>Full + LLM judge (tốn tiền)</td></tr>
+  <tr><td><code>make eval-score RUN=&lt;id&gt;</code></td><td><code>python -m evals score --run-dir evals/reports/$(RUN) $(ARGS)</code></td><td>Chấm lại trace có sẵn, miễn phí</td></tr>
+  <tr><td><code>make eval-rag</code></td><td><code>python -m evals rag $(ARGS)</code></td><td>Phải truyền <code>ARGS="--golden …"</code></td></tr>
+  <tr><td><code>make eval-bench</code></td><td><code>python -m evals bench $(ARGS)</code></td><td>Mặc định đo cả 5 component</td></tr>
+  <tr><td><code>make eval-load</code></td><td><code>python -m evals load --target chat $(ARGS)</code></td><td>Target voice/service phải gọi CLI trực tiếp</td></tr>
+  <tr><td><code>make eval-labeller</code></td><td><code>python -m evals labeller $(ARGS)</code></td><td>UI tạo/duyệt case + golden tại <code>127.0.0.1:8765</code></td></tr>
+  <tr><td><code>make eval-report</code></td><td><code>python -m evals report</code></td><td>Sinh TREND.md từ registry</td></tr>
+  <tr><td><code>make eval-periodic</code></td><td>smoke → bench (<code>--runs 5</code>) → report</td><td>Suite lỗi vẫn chạy suite sau; exit = OR — dành cho cron/CI</td></tr>
+  <tr><td><code>make eval-selftest</code></td><td><code>python -m pytest tests/unit/evals/ -q</code></td><td>Test của chính harness — không qua <code>__main__.py</code></td></tr>
+</table></div>
+
+<div class="cmd-card" id="lenh-list">
+<h3><code>python -m evals list</code> <span class="make">make eval-list</span></h3>
+<p class="entry">Entrypoint: <code>_cmd_list</code> — liệt kê case của một tenant, đánh dấu case <code>unreviewed</code> (bị loại khỏi scorecard). Offline, không cần infra.</p>
+<div class="table-scroll"><table>
+  <tr><th>Tham số</th><th>Default</th><th>Ý nghĩa</th></tr>
+  <tr><td><code>--tenant</code></td><td class="def">noble</td><td>Thư mục case sẽ đọc: <span class="kbd-path">evals/quality/data/cases/&lt;tenant&gt;/</span>. Không tồn tại → lỗi ngay. (Default <code>noble</code> hiện là thư mục rỗng — tenant ship case sẵn là <code>du_test</code>.)</td></tr>
+  <tr><td><code>--case</code></td><td class="def">"" (tất cả)</td><td>Lọc theo id, phân tách bằng dấu phẩy. Khớp <b>chính xác, phân biệt hoa thường</b> (<code>POL-001</code> ≠ <code>pol-001</code>).</td></tr>
+  <tr><td><code>--tag</code></td><td class="def">"" (tất cả)</td><td>Chỉ giữ case mang tag này (<code>policy</code> · <code>tool</code> · <code>qa</code> · <code>multiturn</code> · <code>smoke</code>).</td></tr>
+</table></div>
+<pre><code><span class="c"># Xem toàn bộ case của tenant du_test (id, tags, channel, số turn):</span>
+<span class="cmd">python -m evals list --tenant du_test</span>
+
+<span class="c"># Chỉ xem các case tag policy:</span>
+<span class="cmd">python -m evals list --tenant du_test --tag policy</span></code></pre>
+</div>
+
+<div class="cmd-card" id="lenh-run">
+<h3><code>python -m evals run</code> <span class="make">make eval-quality / -smoke / -full</span></h3>
+<p class="entry">Entrypoint: <code>_cmd_run</code> — drive agent thật qua từng turn của case (tốn LLM), ghi <code>traces.jsonl</code>, rồi chấm luôn (trừ khi <code>--no-score</code>). Cần Redis + LLM key + Postgres + RAG backend. Tenant db-mode → đặt <code>EVAL_TENANT_API_KEY</code> (hoặc đi qua <a href="#lenh-with-key"><code>eval_with_key.sh</code></a>), xem <a href="#quality-cred">Credential per-tenant</a>.</p>
+<p class="entry"><b>Env đọc thêm ngoài tham số:</b> <code>EVAL_TENANT_API_KEY</code> (credential PG per-tenant, kiểm ở preflight rồi gia hạn mỗi case) · <code>SANTA_MODELS_TOKEN</code> (embed cho <code>kb_search</code> — sai token là chấm trên KB rỗng) · <code>BILLING_METERING_ENABLED</code> bị <b>ép <code>false</code></b> trước mọi import <code>noble_agent</code>: đo tiêu thụ không bao giờ được bật như tác dụng phụ của một lượt eval.</p>
+<div class="table-scroll"><table>
+  <tr><th>Tham số</th><th>Default</th><th>Ý nghĩa</th></tr>
+  <tr><td><code>--tenant</code></td><td class="def">noble</td><td>Tenant để load case và chạy agent (set contextvar tenant cho cả turn loop).</td></tr>
+  <tr><td><code>--case</code></td><td class="def">"" (tất cả)</td><td>Chạy đúng các id liệt kê, phẩy phân tách. <b>Đừng chạy lẻ 1 case</b> — gate thiếu mẫu sẽ fail-closed (xem callout ở mục Quality).</td></tr>
+  <tr><td><code>--tag</code></td><td class="def">"" (tất cả)</td><td>Chỉ chạy case mang tag này. Selection rỗng hoặc trộn channel chat+voice → từ chối chạy ngay, không tốn budget.</td></tr>
+  <tr><td><code>--model</code></td><td class="def">(rỗng)</td><td>Pin <code>NOBLE_AGENT_MODEL</code> cho riêng run này (set env <i>trước</i> khi import <code>noble_agent</code>). Rỗng → dùng model trong <code>.env</code>. Dùng để so 2 model trên cùng bộ case.</td></tr>
+  <tr><td><code>--run-id</code></td><td class="def">"" (tự sinh)</td><td>Ghi đè run id. Tự sinh dạng <code>YYYYMMDD-HHMMSS-quality-&lt;6 hex&gt;</code>; cũng là prefix session Redis <code>eval:&lt;run_id&gt;:…</code> nên namespace eval không đụng session thật.</td></tr>
+  <tr><td><code>--no-score</code></td><td class="def">false</td><td>Chỉ chạy + ghi trace, bỏ bước chấm. Chấm sau bằng <code>evals score</code>.</td></tr>
+  <tr><td><code>--judge</code></td><td class="def">false</td><td>Thêm 3 trục LLM judge: <b>correctness</b> (so <code>golden.answer</code>), <b>groundedness</b> (so tool result), <b>multiturn</b> (case ≥2 lượt). Có cache sqlite — case đã chấm không chấm lại. Env: <code>EVAL_JUDGE_MODEL</code> / <code>EVAL_JUDGE_BASE_URL</code> / <code>EVAL_JUDGE_API_KEY</code> (tên có tiền tố <code>EVAL_</code>; <code>ESTATE_JUDGE_MODEL</code> còn được nhận như fallback lịch sử).</td></tr>
+  <tr><td><code>--judge-budget-usd</code></td><td class="def">None (không trần)</td><td>Trần chi phí judge; chạm trần → case còn lại đánh dấu <code>ungraded</code>, gate deterministic không ảnh hưởng.</td></tr>
+</table></div>
+<pre><code><span class="c"># Smoke 3 case tenant du_test — bộ tối thiểu đủ mẫu cho mọi gate:</span>
+<span class="cmd">make eval-quality-smoke</span>
+
+<span class="c"># Tenant db-mode: đặt key rồi gọi run như thường (harness tự đổi key → PG role):</span>
+<span class="cmd">export EVAL_TENANT_API_KEY=ody_ag_&lt;API_KEY&gt;</span>
+<span class="cmd">python -m evals run --tenant aina_prod --case SYN-TOOL-001,SYN-TOOL-013</span>
+<span class="c"># hoặc để wrapper tự suy tenant từ key:</span>
+<span class="cmd">scripts/eval_with_key.sh ody_ag_&lt;API_KEY&gt; --case POL-001,TOOL-001,QA-001</span>
+
+<span class="c"># Full bộ case + LLM judge (3 rubric), trần 2 USD:</span>
+<span class="cmd">python -m evals run --tenant du_test --judge --judge-budget-usd 2</span>
+
+<span class="c"># So sánh model: chạy cùng bộ case, pin model khác, đặt run-id dễ nhớ:</span>
+<span class="cmd">python -m evals run --model gemini-2.5-flash --run-id 20260824-flash-a</span>
+
+<span class="c"># Chạy đắt một lần, chấm sau (vd. đang chỉnh ngưỡng):</span>
+<span class="cmd">python -m evals run --no-score</span></code></pre>
+</div>
+
+<div class="cmd-card" id="lenh-score">
+<h3><code>python -m evals score</code> <span class="make">make eval-score RUN=&lt;id&gt;</span></h3>
+<p class="entry">Entrypoint: <code>_cmd_score</code> — chấm lại một run từ <code>traces.jsonl</code> có sẵn. <b>Không gọi LLM</b> (trừ khi thêm <code>--judge</code>), không cần Redis/PG — đổi ngưỡng hay sửa scorer xong chấm lại miễn phí.</p>
+<div class="table-scroll"><table>
+  <tr><th>Tham số</th><th>Default</th><th>Ý nghĩa</th></tr>
+  <tr><td><code>--run-dir</code></td><td class="def"><span class="req">bắt buộc</span></td><td>Thư mục chứa <code>traces.jsonl</code>, vd. <span class="kbd-path">evals/reports/&lt;run_id&gt;</span>.</td></tr>
+  <tr><td><code>--tenant</code></td><td class="def">noble</td><td>Bộ case dùng để đối chiếu trace — <b>phải cùng tenant với run gốc</b>, không thì case với trace lệch nhau.</td></tr>
+  <tr><td><code>--case</code></td><td class="def">"" (tất cả)</td><td>Chấm một tập con id. Selection phải khớp những case đã chạy trong trace.</td></tr>
+  <tr><td><code>--tag</code></td><td class="def">"" (tất cả)</td><td>Chấm một tập con theo tag.</td></tr>
+  <tr><td><code>--judge</code></td><td class="def">false</td><td>Thêm 3 rubric judge cho trace có sẵn — cách rẻ nhất để "nâng cấp" một run deterministic lên có judge.</td></tr>
+  <tr><td><code>--judge-budget-usd</code></td><td class="def">None</td><td>Trần chi phí judge (như ở <code>run</code>).</td></tr>
+</table></div>
+<pre><code><span class="c"># Chấm lại sau khi sửa ngưỡng trong thresholds.toml:</span>
+<span class="cmd">make eval-score RUN=20260824-093011-quality-a1b2c3 ARGS="--tenant du_test"</span>
+
+<span class="c"># Thêm judge cho run đã chạy trước đó (cache giữ case đã chấm):</span>
+<span class="cmd">python -m evals score --run-dir evals/reports/&lt;run_id&gt; --tenant du_test --judge</span></code></pre>
+</div>
+
+<div class="cmd-card" id="lenh-rag">
+<h3><code>python -m evals rag</code> <span class="make">make eval-rag ARGS="--golden …"</span></h3>
+<p class="entry">Entrypoint: <code>_cmd_rag</code> — đo retrieval tách khỏi agent trên golden set v2 đã duyệt: recall@k, <b>context recall/precision@k</b> (precision là <b>lower bound</b> — mẫu số là k, golden không phủ hết chunk liên quan), MRR, empty_rate, latency p50/p95. Cần Qdrant + embed; <b>không</b> cần Redis; LLM chỉ khi <code>--judge</code>.</p>
+<div class="table-scroll"><table>
+  <tr><th>Tham số</th><th>Default</th><th>Ý nghĩa</th></tr>
+  <tr><td><code>--golden</code></td><td class="def"><span class="req">bắt buộc</span></td><td>File golden JSONL schema v2 (<code>golden_chunks: [{chunk_id, evidence}]</code> + <code>answer</code>) — <b>mọi dòng phải <code>status: "approved"</code></b> (duyệt bằng labeller), còn dòng draft là runner từ chối cả file. File rỗng → exit 1, không ghi registry.</td></tr>
+  <tr><td><code>--tenant</code></td><td class="def">noble</td><td>Set contextvar tenant → quyết định collection Qdrant <code>&lt;tenant&gt;_documents</code>.</td></tr>
+  <tr><td><code>--top-k</code></td><td class="def">5</td><td>Số kết quả lấy về mỗi query; cũng là trần của recall@k (k ≤ top-k).</td></tr>
+  <tr><td><code>--mode</code></td><td class="def">structured</td><td><code>structured</code> = gọi thẳng Qdrant hybrid, chấm theo chunk id (đo retrieval thuần). <code>agent-string</code> = đi qua <code>query_noble_kb</code> như agent gọi thật, chấm theo evidence trong chuỗi trả về (đo cái agent thấy).</td></tr>
+  <tr><td><code>--judge</code></td><td class="def">false</td><td>Thêm stage <b>generation cô lập</b> (không qua agent): generator prompt cố định trả lời từ chunks đã retrieve → judge chấm <code>faithfulness_rate</code>, <code>rag_answer_correctness_mean</code> (so <code>answer</code> golden), <code>rag_refusal_rate</code>. Model generator: env <code>EVAL_RAG_GEN_MODEL</code> (fallback <code>JUDGE_MODEL</code>).</td></tr>
+  <tr><td><code>--judge-budget-usd</code></td><td class="def">None</td><td>Trần chi phí judge của stage generation.</td></tr>
+</table></div>
+<pre><code><span class="c"># Đo retrieval thuần trên golden set của du_test:</span>
+<span class="cmd">python -m evals rag --golden evals/rag/data/golden/du_test/draft-&lt;ts&gt;.jsonl --tenant du_test</span>
+
+<span class="c"># Kèm stage generation (faithfulness + answer correctness + refusal):</span>
+<span class="cmd">python -m evals rag --golden &lt;file&gt; --tenant du_test --judge --judge-budget-usd 2</span>
+
+<span class="c"># Đo đúng đường agent đi (string qua noble_kb), nới top-k lên 10:</span>
+<span class="cmd">python -m evals rag --golden &lt;file&gt; --tenant du_test --mode agent-string --top-k 10</span></code></pre>
+</div>
+
+<div class="cmd-card" id="lenh-gen-golden">
+<h3><code>python -m evals gen-golden</code> <span class="make">(không có make target)</span></h3>
+<p class="entry">Entrypoint: <code>_cmd_gen_golden</code> — đọc chunk từ Qdrant (read-only, scroll), nhờ LLM sinh bộ ba (<code>query</code> văn phong truy vấn, <code>evidence</code> nguyên văn, <code>answer</code> chuẩn) → file <b>draft</b> schema v2 (mặc định 1 chunk/case; case nhiều chunk tạo tay qua labeller). Bắt buộc duyệt qua <a href="#labeller">labeller</a> (phím <code>a</code> → approved) trước khi dùng với <code>evals rag</code>.</p>
+<div class="table-scroll"><table>
+  <tr><th>Tham số</th><th>Default</th><th>Ý nghĩa</th></tr>
+  <tr><td><code>--tenant</code></td><td class="def">noble</td><td>Collection nguồn <code>&lt;tenant&gt;_documents</code> và thư mục output draft.</td></tr>
+  <tr><td><code>--limit</code></td><td class="def">50</td><td>Số chunk tối đa lấy từ corpus.</td></tr>
+  <tr><td><code>--per-chunk</code></td><td class="def">2</td><td>Số câu hỏi sinh cho mỗi chunk → tối đa <code>limit × per-chunk</code> case draft.</td></tr>
+  <tr><td><code>--model</code></td><td class="def">gpt-5.4-nano-2026-03-17</td><td>Model <b>sinh câu hỏi</b> (OpenAI) — <i>không phải</i> <code>NOBLE_AGENT_MODEL</code>. Chuỗi env override: <code>EVAL_GOLDEN_MODEL</code> → <code>EVAL_JUDGE_MODEL</code> → <code>ESTATE_JUDGE_MODEL</code> → default.</td></tr>
+</table></div>
+<pre><code><span class="c"># Sinh ~100 case draft (50 chunk × 2 câu) cho du_test:</span>
+<span class="cmd">python -m evals gen-golden --tenant du_test --limit 50</span>
+<span class="c"># → evals/rag/data/golden/du_test/draft-&lt;ts&gt;.jsonl</span>
+<span class="c"># Duyệt bằng labeller: xoá câu kém, xác nhận evidence trích NGUYÊN VĂN, sửa answer, bấm `a` → approved</span></code></pre>
+</div>
+
+<div class="cmd-card" id="lenh-labeller">
+<h3><code>python -m evals labeller</code> <span class="make">make eval-labeller</span></h3>
+<p class="entry">Entrypoint: <code>evals/labeller/server.py</code> — HTTP server stdlib bind <code>127.0.0.1</code>, UI một trang để tạo/sửa/duyệt <b>case quality</b> (mode Agent cases) và <b>golden RAG</b> (mode RAG golden). Ghi thẳng vào JSONL trong repo: mỗi lần lưu validate <b>từng dòng</b> bằng chính loader (<code>parse_case</code>/<code>parse_golden</code>) rồi mới atomic-write — không bao giờ lưu được file sai schema (sai → banner 422, file không đổi). Offline, không cần infra.</p>
+<div class="table-scroll"><table>
+  <tr><th>Tham số</th><th>Default</th><th>Ý nghĩa</th></tr>
+  <tr><td><code>--port</code></td><td class="def">8765</td><td>Cổng UI: <code>http://127.0.0.1:&lt;port&gt;</code>.</td></tr>
+</table></div>
+<pre><code><span class="cmd">make eval-labeller</span>   <span class="c"># mở http://127.0.0.1:8765 — Ctrl-C để dừng</span></code></pre>
+<p>Phím tắt trong UI: <code>j</code>/<code>k</code> chuyển case · <code>a</code> toggle reviewed (case) / approved (golden) · <code>Ctrl+S</code> lưu. Sidebar hiện tiến độ <code>đã duyệt/tổng</code> mỗi file; bản nháp autosave vào localStorage, mở lại file sẽ hỏi khôi phục.</p>
+</div>
+
+<div class="cmd-card" id="lenh-bench">
+<h3><code>python -m evals bench</code> <span class="make">make eval-bench</span></h3>
+<p class="entry">Entrypoint: <code>_cmd_bench</code> — đo latency từng component: mỗi cái 1 lần warm-up (bỏ) + N lần đo → p50/p95/p99 + error count. Service chết hoặc thiếu env → skip component đó, không chặn phần còn lại; <b>mọi</b> component đều 0 run thì verdict = error.</p>
+<div class="table-scroll"><table>
+  <tr><th>Tham số</th><th>Default</th><th>Ý nghĩa</th></tr>
+  <tr><td><code>--components</code></td><td class="def">stt,tts,speaker,vad,llm</td><td>Chọn component đo, phẩy phân tách. <code>vad</code> chạy in-process (Silero — đúng model worker dùng); còn lại gọi service/provider thật.</td></tr>
+  <tr><td><code>--runs</code></td><td class="def">10</td><td>Số lần đo mỗi component. Riêng <code>llm</code> bị cap <code>min(runs, 5)</code> vì mỗi run là một call trả tiền.</td></tr>
+</table></div>
+<h4>Env liên quan (đọc lúc chạy)</h4>
+<div class="table-scroll"><table>
+  <tr><th>Biến</th><th>Default trong code</th><th>Ý nghĩa</th></tr>
+  <tr><td><code>STT_SERVICE_URL</code></td><td class="def">ws://127.0.0.1:8770/stt</td><td>WS endpoint STT service.</td></tr>
+  <tr><td><code>TTS_SERVICE_URL</code></td><td class="def">ws://127.0.0.1:8771/tts</td><td>WS endpoint TTS service.</td></tr>
+  <tr><td><code>SPEAKER_REMOTE_URL</code></td><td class="def">"" → skip</td><td>HTTP endpoint speaker embedding (<code>:9100</code>). Rỗng thì bỏ qua component speaker, có in dòng báo.</td></tr>
+  <tr><td><code>VOICE_SERVICE_AUTH_TOKEN</code></td><td class="def">""</td><td>Token auth chung cho STT/TTS service (nếu service yêu cầu).</td></tr>
+  <tr><td><code>VIENEU_VOICE_ID</code></td><td class="def">"" → voice mặc định của service</td><td>Voice dùng khi đo TTS.</td></tr>
+</table></div>
+<pre><code><span class="c"># Đo cả 5 component, mỗi cái 10 lần (llm 5 lần):</span>
+<span class="cmd">make eval-bench</span>
+
+<span class="c"># Chỉ đo VAD + LLM, tăng lên 20 lần cho số mượt hơn:</span>
+<span class="cmd">python -m evals bench --components vad,llm --runs 20</span>
+
+<span class="c"># Đo mình TTS sau khi deploy bản TTS mới:</span>
+<span class="cmd">python -m evals bench --components tts --runs 15</span></code></pre>
+</div>
+
+<div class="cmd-card" id="lenh-load">
+<h3><code>python -m evals load</code> <span class="make">make eval-load (chỉ target chat)</span></h3>
+<p class="entry">Entrypoint: <code>_cmd_load</code> → tách 3 nhánh theo <code>--target</code>. Ramp concurrency 1, 2, 4, 8, … tìm <b>knee</b> = bậc cao nhất mà throughput còn scale ≥15% và lỗi &lt;1%. <b>Chỉ chạy staging/dev.</b></p>
+<div class="table-scroll"><table>
+  <tr><th>Tham số</th><th>Default</th><th>Ý nghĩa</th></tr>
+  <tr><td><code>--target</code></td><td class="def">chat</td><td><code>chat</code> = WS <code>/chat</code> của worker · <code>voice</code> = cuộc gọi LiveKit · <code>service</code> = ramp riêng một service voice.</td></tr>
+  <tr><td><code>--max</code></td><td class="def">64</td><td>Trần concurrency của ramp (dừng ở bậc ≤ max kể cả chưa thấy knee).</td></tr>
+  <tr><td><code>--hold</code></td><td class="def">60.0</td><td>Số giây giữ tải ở mỗi bậc — ngắn quá thì p95 chưa ổn định.</td></tr>
+  <tr><td><code>--host</code></td><td class="def">ws://localhost:8766</td><td><i>Chỉ target chat.</i> Base WS của worker; suy ra base HTTP cho <code>/health/ready</code>.</td></tr>
+  <tr><td><code>--admission-cap</code></td><td class="def">None (bỏ qua)</td><td><i>Chỉ target chat.</i> Truyền = giá trị <code>CHAT_MAX_CONCURRENT_SESSIONS</code> của worker → assert đủ 3 vế: vượt cap bị close <code>4029</code>, <code>/health/ready</code> trả <code>503</code>, và hồi phục sau khi xả tải. Fail vế nào verdict = fail.</td></tr>
+  <tr><td><code>--component</code></td><td class="def">None</td><td><i>Chỉ target service, và bắt buộc khi đó:</i> <code>stt</code> | <code>tts</code> | <code>speaker</code>.</td></tr>
+</table></div>
+<pre><code><span class="c"># Chat: tìm knee tới 64 CCU, giữ 60s/bậc, kèm kiểm admission control (cap = giá trị worker):</span>
+<span class="cmd">make eval-load ARGS="--max 64 --hold 60 --host ws://localhost:8766 --admission-cap 200"</span>
+
+<span class="c"># Voice qua LiveKit — --max 1 chính là phép đo full-pipeline voice đơn lẻ:</span>
+<span class="cmd">python -m evals load --target voice --max 32 --hold 60</span>
+
+<span class="c"># Ramp riêng TTS service — trả lời "component nào nghẽn trước":</span>
+<span class="cmd">python -m evals load --target service --component tts --max 16</span></code></pre>
+</div>
+
+<div class="cmd-card" id="lenh-report">
+<h3><code>python -m evals report</code> <span class="make">make eval-report</span></h3>
+<p class="entry">Entrypoint: <code>_cmd_report</code> — đọc toàn bộ <code>evals/registry.jsonl</code>, render bảng trend (run mới nhất theo suite, lịch sử, Δ so với run pass gần nhất) ra <span class="kbd-path">evals/reports/TREND.md</span> và in ra màn hình. Không tham số, offline.</p>
+<pre><code><span class="cmd">make eval-report</span>   <span class="c"># in trend + ghi evals/reports/TREND.md</span></code></pre>
+</div>
+
+<div class="cmd-card" id="lenh-with-key">
+<h3><code>scripts/eval_with_key.sh</code> <span class="make">wrapper của evals run</span></h3>
+<p class="entry">Dành cho tenant db-mode: config nằm sau RLS, chỉ PG role per-tenant đọc được. Script POST API key lên <code>GATEWAY_CREDENTIALS_API_URL</code> (đúng việc gateway làm) → nhận <code>tenant_id</code> + role/password PG → dựng <code>POSTGRES_DSN</code> per-tenant chỉ trong process này → <code>exec python -m evals run --tenant &lt;tenant&gt; …</code>. Credential hết hạn ~1h, fetch mới mỗi lần chạy.</p>
+<div class="callout warn"><b>Fetch một lần, không gia hạn.</b> Lượt dài hơn TTL (~1h — bộ 100 case tuần tự đã ≈40–60 phút) có thể hỏng giữa đường khi pool cần mở connection mới bằng password đã hết hạn. Lượt dài thì dùng <code>EVAL_TENANT_API_KEY</code> (<a href="#quality-cred">cách A</a>): harness gọi lại mỗi case và tự lấy credential mới đúng lúc hết hạn. Key ở đây nằm trong <b>argv</b> nên hiện ra trong <code>ps</code> và history của shell — cách A truyền qua env nên kín hơn.</div>
+<div class="table-scroll"><table>
+  <tr><th>Tham số</th><th>Default</th><th>Ý nghĩa</th></tr>
+  <tr><td>tham số 1: <code>API_KEY</code></td><td class="def"><span class="req">bắt buộc</span></td><td>API key Portal của tenant (<code>ody_ag_…</code>). Tenant tự suy ra từ key — <b>không</b> cần và không nên tự truyền <code>--tenant</code>.</td></tr>
+  <tr><td>các tham số sau</td><td class="def">—</td><td>Chuyển nguyên văn cho <code>evals run</code> — nhận mọi flag trong bảng <a href="#lenh-run">evals run</a> (<code>--case</code>, <code>--judge</code>, <code>--model</code>…).</td></tr>
+</table></div>
+<p>Env cần trong <code>.env</code>: <code>GATEWAY_CREDENTIALS_API_URL</code> và <code>POSTGRES_SERVER_DSN</code> (DSN không userinfo — script lắp role/password vào). Script cũng tự <code>env -u AGENT_CONFIG_SOURCE</code> để giá trị <code>db</code> trong <code>.env</code> không bị shell export đè.</p>
+<pre><code><span class="c"># Smoke 4 case cho tenant của key (tenant tự suy ra, không gõ --tenant):</span>
+<span class="cmd">scripts/eval_with_key.sh ody_ag_&lt;API_KEY&gt; --case POL-001,TOOL-001,QA-001</span>
+
+<span class="c"># Full bộ case + judge có trần chi phí:</span>
+<span class="cmd">scripts/eval_with_key.sh ody_ag_&lt;API_KEY&gt; --judge --judge-budget-usd 2</span></code></pre>
+</div>
+
+<h2 id="labeller">Tạo &amp; duyệt case — Labeller</h2>
+<p>Case quality và golden RAG đều là JSONL schema v2, sống trong repo. Đường tạo/duyệt chính là labeller — không sửa tay bằng editor nữa (labeller validate bằng đúng loader nên không lưu được file hỏng):</p>
+<pre><code><span class="cmd">make eval-labeller</span>   <span class="c"># http://127.0.0.1:8765</span></code></pre>
+<p><b>Scorer kích hoạt theo NỘI DUNG block, không theo tag</b> — khi viết case, chọn block theo thứ muốn đo:</p>
+<div class="table-scroll"><table>
+  <tr><th>Muốn đo</th><th>Điền block</th><th>Scorer / metric</th></tr>
+  <tr><td>Chính sách trả lời</td><td><code>expect</code> (reply_contains / reply_not_matches / escalated / customer_field…)</td><td>policy → <code>policy_violations</code></td></tr>
+  <tr><td>Chọn tool + tham số</td><td><code>golden.tools</code> (matcher <code>contains</code>/<code>equals</code> cho từng arg), <code>golden.banned_tools</code></td><td>tool_selection → <code>tool_selection_accuracy</code>, <code>arg_accuracy</code>, <code>banned_call_rate</code></td></tr>
+  <tr><td>Chất lượng câu trả lời</td><td><code>golden.answer</code> (đáp án chuẩn — đúng ý là đạt)</td><td>judge (<code>--judge</code>) → correctness + groundedness</td></tr>
+  <tr><td>Giữ ngữ cảnh nhiều lượt</td><td>case ≥2 <code>turns</code></td><td>judge multiturn → <code>context_retention_score</code>, <code>consistency_score</code></td></tr>
+</table></div>
+<p><code>tags</code> (<code>policy</code>·<code>tool</code>·<code>qa</code>·<code>multiturn</code>·<code>smoke</code>) chỉ để lọc bằng <code>--tag</code>. Ba key <code>tool_called</code>/<code>tool_not_called</code>/<code>tool_arg</code> của schema cũ bị loader <b>từ chối</b> trong <code>expect</code> — chúng đã chuyển sang <code>golden.tools</code>/<code>banned_tools</code>. Case phải bật <code>reviewed</code> (phím <code>a</code>) mới được chấm. File mẫu đủ 7 pattern: <span class="kbd-path">evals/quality/data/cases/du_test/p1_examples.jsonl</span>.</p>
+
+<h2 id="quality">Chạy Quality — đánh giá agent per-turn / multi-turn</h2>
+
+<h3 id="quality-cred">Credential per-tenant — làm trước, không thì cả bộ case chết</h3>
+<p>Harness drive agent <b>in-process</b>, mà gateway là chỗ duy nhất trong production đổi API key → PG role/password per-tenant rồi đăng ký vào <code>storage.tenant_credentials</code>. Không có entry đó, <code>pool_for_tenant</code> rơi về shared <code>POSTGRES_DSN</code>; với tenant db-mode thì RLS trả <b>0 row chứ không lỗi</b> → mọi case chết bằng <code>RuntimeError: no published config for tenant '…'</code>. Hai đường làm việc của gateway, chọn một:</p>
+<div class="table-scroll"><table>
+  <tr><th>Cách</th><th>Dùng khi</th></tr>
+  <tr><td><b>A. <code>EVAL_TENANT_API_KEY</code></b> — harness tự lấy credential (<span class="kbd-path">evals/tenant_creds.py</span>), gọi lại <b>mỗi case</b> nên tự gia hạn khi hết TTL</td><td>Mặc định. Chạy được với mọi <code>make eval-*</code>, và là cách duy nhất an toàn cho lượt <b>dài hơn 1 giờ</b> (bộ 100 case chạy tuần tự ≈ 40–60 phút, sát trần TTL)</td></tr>
+  <tr><td><b>B. <code>scripts/eval_with_key.sh</code></b> — wrapper dựng <code>POSTGRES_DSN</code> per-tenant rồi <code>exec python -m evals run</code></td><td>Chạy nhanh một bộ nhỏ; tiện vì tự suy <code>--tenant</code> từ chính key. Fetch <b>một lần</b>, không gia hạn giữa lượt</td></tr>
+</table></div>
+<pre><code><span class="c"># A — đường mặc định (key đi qua env, không nằm trong argv nên không lộ ra `ps`):</span>
+<span class="cmd">export EVAL_TENANT_API_KEY=ody_ag_&lt;API_KEY_CỦA_TENANT&gt;</span>
+<span class="cmd">make eval-quality ARGS="--tenant du_test --case POL-001,TOOL-001,QA-001"</span>
+
+<span class="c"># B — wrapper, tự suy tenant từ key:</span>
+<span class="cmd">scripts/eval_with_key.sh ody_ag_&lt;API_KEY_CỦA_TENANT&gt; --case POL-001,TOOL-001,QA-001</span></code></pre>
+<p>Kết quả mong đợi: từng case <span class="pill pass">ok</span>, 6 gate <span class="pill pass">✓</span>, verdict <b>PASS</b>, một dòng mới trong registry.</p>
+<div class="callout"><b>Không đặt biến mà tenant vẫn cần credential?</b> Harness in đúng một dòng hướng dẫn rồi <b>dừng sớm</b> ở case đầu tiên gặp <code>no published config</code> — thay vì để bạn đọc 100 dòng ERROR giống nhau. Tenant chạy shared DSN (<code>noble</code>) thì không cần đặt gì, <code>ensure()</code> tự no-op.</div>
+<div class="callout warn"><b>Auth API có rate-limit (429).</b> Gọi <code>authorize</code> liên tục sẽ ăn <code>auth_api_unavailable</code>. Cách A chỉ gọi khi credential hết hạn nên an toàn; nếu bạn tự viết script grounding thì phải cache credential ra file <b>ngoài repo</b> (chmod 600), đừng fetch mỗi process.</div>
+
+<h3>Chạy full bộ case + LLM judge</h3>
+<pre><code><span class="c"># toàn bộ case của tenant (deterministic, rẻ):</span>
+<span class="cmd">make eval-quality ARGS="--tenant aina_prod"</span>
+<span class="c"># kèm 3 rubric judge — correctness / groundedness / multiturn (có cache + trần chi phí):</span>
+<span class="cmd">make eval-quality ARGS="--tenant aina_prod --judge --judge-budget-usd 2"</span>
+<span class="c"># hoặc qua wrapper (cách B), tenant suy từ key:</span>
+<span class="cmd">scripts/eval_with_key.sh ody_ag_… --judge --judge-budget-usd 2</span></code></pre>
+<div class="callout warn"><b>Case chưa duyệt không được chấm.</b> Mọi scorer bỏ qua case <code>reviewed: false</code> — chúng vẫn <i>chạy</i> và vẫn ghi trace, nhưng không dịch chuyển bất kỳ số nào. Duyệt thiếu một nhóm là gate của nhóm đó hiện <code>missing</code> và FAIL (fail-closed). Ví dụ đã gặp: duyệt 95/100 case nhưng bỏ sót 5 case <code>policy</code> → gate <code>policy_violations</code> = <code>missing</code>.</div>
+
+<h3>Chấm lại không tốn tiền</h3>
+<p>RUN (đắt — gọi LLM) và SCORE (rẻ — đọc trace) tách đôi. Đổi ngưỡng/scorer xong chỉ cần:</p>
+<pre><code><span class="cmd">make eval-score RUN=&lt;run_id&gt; ARGS="--tenant du_test"</span>
+<span class="c"># thêm judge cho run đã có sẵn trace:</span>
+<span class="cmd">python -m evals score --run-dir evals/reports/&lt;run_id&gt; --tenant du_test --judge</span></code></pre>
+
+<div class="callout fail"><b>Đừng chạy lẻ một case.</b> Mỗi gate cần đúng loại case làm mẫu — chạy thiếu loại thì gate không có mẫu và <b>fail-closed</b> (cố ý: thiếu bằng chứng không bao giờ được đọc thành đạt). Bộ smoke tối thiểu 3 case (du_test): POL-001 có <code>expect</code> (gate policy) + TOOL-001 có <code>golden.tools</code> với arg matcher <b>và</b> <code>banned_tools</code> (gate arg_accuracy + banned_call_rate) + QA-001. Tự soạn bộ khác thì phải giữ đủ các loại block đó, đặc biệt ≥1 case khai <code>banned_tools</code> — thiếu là gate <code>banned_call_rate</code> hiện <code>missing</code> và FAIL.</div>
+
+<h2 id="rag">Chạy RAG — đo retrieval tách khỏi agent</h2>
+<div class="step"><div class="step-no">1</div><div class="step-body">
+  <h3>Sinh golden set nháp từ corpus (read-only)</h3>
+  <pre><code><span class="cmd">python -m evals gen-golden --tenant du_test --limit 50</span></code></pre>
+</div></div>
+<div class="step"><div class="step-no">2</div><div class="step-body">
+  <h3>Duyệt bằng labeller — bước bắt buộc</h3>
+  <p><code>make eval-labeller</code> → mode <b>RAG golden</b>, mở file <span class="kbd-path">du_test/draft-*.jsonl</span>: xoá/sửa câu hỏi kém, xác nhận <code>evidence</code> là câu <b>trích nguyên văn</b> từ chunk, sửa <code>answer</code> cho chuẩn, rồi bấm <code>a</code> từng case (draft → approved), <code>Ctrl+S</code> lưu. Runner từ chối file còn dòng draft. Case cần nhiều chunk vàng: thêm chunk bằng nút trong editor.</p>
+</div></div>
+<div class="step"><div class="step-no">3</div><div class="step-body">
+  <h3>Chạy và đọc số</h3>
+  <pre><code><span class="cmd">python -m evals rag --golden evals/rag/data/golden/du_test/draft-&lt;ts&gt;.jsonl --tenant du_test</span>
+<span class="c"># kèm stage generation nếu muốn đo cả vế sinh câu trả lời:</span>
+<span class="cmd">python -m evals rag --golden &lt;file&gt; --tenant du_test --judge</span></code></pre>
+  <p>Ra <code>recall_at_1/3/5</code>, <code>context_recall/precision@k</code> (precision là lower bound), <code>mrr</code>, latency p50/p95 và <code>empty_rate</code>; thêm <code>--judge</code> có <code>faithfulness_rate</code> / <code>rag_answer_correctness_mean</code> / <code>rag_refusal_rate</code>. Nếu &gt;50% case trả rỗng, harness cảnh báo "backend degrade im lặng?" — kiểm tunnel Qdrant / <code>EMBED_BACKEND</code> trước khi đổ lỗi cho dữ liệu.</p>
+</div></div>
+
+<h2 id="bench">Chạy Bench — latency từng component</h2>
+<pre><code><span class="cmd">make eval-bench</span>                                    <span class="c"># tất cả: stt, tts, speaker, vad, llm</span>
+<span class="cmd">python -m evals bench --components vad,llm --runs 20</span>   <span class="c"># chọn lẻ, tăng số lần đo</span></code></pre>
+<p>Mỗi component: 1 lần warm-up (bỏ) + N lần đo → p50/p95/p99 và error rate. Service chưa chạy hoặc thiếu env (<code>SPEAKER_REMOTE_URL</code>…) thì bị skip, không chặn phần còn lại. VAD chạy in-process bằng đúng model Silero mà worker dùng; LLM đo TTFT qua đúng provider chain đang pin.</p>
+
+<h2 id="load">Chạy Load / CCU — khả năng chịu tải</h2>
+<div class="callout warn"><b>Chỉ chạy trên staging/dev.</b> LiveKit Cloud dùng chung giữa các môi trường — worker load test có thể "giật" cuộc gọi của server đang phục vụ khách thật.</div>
+<pre><code><span class="c"># Chat: ramp 1,2,4,8,… tìm knee; --admission-cap kiểm close 4029 + /health/ready 503:</span>
+<span class="cmd">make eval-load ARGS="--max 64 --hold 60 --host ws://localhost:8766 --admission-cap 200"</span>
+
+<span class="c"># Voice qua LiveKit (--max 1 = đo full-pipeline voice đơn lẻ):</span>
+<span class="cmd">python -m evals load --target voice --max 32 --hold 60</span>
+
+<span class="c"># Ramp riêng từng service — trả lời "component nào nghẽn trước":</span>
+<span class="cmd">python -m evals load --target service --component tts --max 16</span></code></pre>
+<p><b>Knee</b> = bậc concurrency cao nhất mà throughput còn scale ≥15% và lỗi &lt;1% — chính là CCU bền vững tối đa của hệ.</p>
+
+<h2 id="ket-qua">Đọc kết quả ở đâu</h2>
+<div class="table-scroll"><table>
+  <tr><th>File</th><th>Nội dung</th></tr>
+  <tr><td><span class="kbd-path">evals/reports/&lt;run_id&gt;/scorecard.md</span></td><td>Verdict, từng gate, metrics, findings chỉ đích danh case + turn sai</td></tr>
+  <tr><td><span class="kbd-path">…/traces.jsonl</span></td><td>Mọi turn: reply, tool call + args + raw result, ttft/total — bằng chứng gốc để chấm lại</td></tr>
+  <tr><td><span class="kbd-path">…/rag.json · bench.json · chat_ccu.md</span></td><td>Kết quả chi tiết của suite tương ứng</td></tr>
+  <tr><td><code>evals/registry.jsonl</code></td><td>1 dòng/run: run_id, git sha, config (model, tenant…), metrics tổng hợp, gates, verdict. <b>Commit cùng code.</b></td></tr>
+  <tr><td><span class="kbd-path">evals/reports/TREND.md</span></td><td>Sinh bởi <code>make eval-report</code>: run mới nhất theo suite, lịch sử, và Δ so với run pass gần nhất</td></tr>
+</table></div>
+<p>Verdict có 3 giá trị: <span class="pill pass">pass</span> mọi gate đạt · <span class="pill fail">fail</span> chạy được nhưng rớt gate · <span class="pill none">error</span> hạ tầng lỗi, không đo được gì (kể cả preflight fail cũng để lại dòng error — cron không bao giờ "xanh giả").</p>
+
+<h2 id="dinh-ky">Monitoring định kỳ</h2>
+<pre><code><span class="cmd">crontab -e</span>
+<span class="c"># 6h sáng hằng ngày — smoke + bench + report; exit ≠ 0 nếu bất kỳ suite nào fail:</span>
+0 6 * * * cd /path/to/santa-hotline-agent &amp;&amp; make eval-periodic &gt;&gt; /tmp/eval-periodic.log 2&gt;&amp;1</code></pre>
+<p>Vài metric (như <code>arg_accuracy</code>) dao động giữa các run do LLM nondeterministic — kết luận từ trend trong registry, đừng từ một run đơn lẻ.</p>
+
+<h2 id="tenant-moi">Thêm tenant mới (công thức du_test)</h2>
+<div class="step"><div class="step-no">1</div><div class="step-body"><h3>Tạo bộ case bằng labeller</h3><p><code>make eval-labeller</code> → nút <b>＋ File mới</b> với đường dẫn <span class="kbd-path">&lt;tenant&gt;/&lt;file&gt;.jsonl</span> (thư mục tenant tự tạo). Tham khảo pattern từ <span class="kbd-path">du_test/p1_examples.jsonl</span>, sửa: field <code>tenant</code>, tên dự án trong câu hỏi theo corpus tenant mới, và kiểm tool trong <code>golden.tools</code>/<code>banned_tools</code> có nằm trong <code>skills</code> đã publish không. Nhớ ≥1 case khai <code>banned_tools</code> để gate <code>banned_call_rate</code> có mẫu, rồi duyệt (<code>a</code>) từng case.</p></div></div>
+<div class="step"><div class="step-no">2</div><div class="step-body"><h3>Chạy bằng API key của tenant</h3><pre><code><span class="cmd">export EVAL_TENANT_API_KEY=ody_ag_&lt;key&gt;</span>
+<span class="cmd">make eval-quality ARGS="--tenant &lt;tenant&gt; --case &lt;ids&gt;"</span>
+<span class="c"># hoặc: scripts/eval_with_key.sh ody_ag_&lt;key&gt; --case &lt;ids&gt;</span></code></pre><p>Chi tiết hai đường và khi nào chọn cái nào: <a href="#quality-cred">Credential per-tenant</a>.</p></div></div>
+<div class="step"><div class="step-no">4</div><div class="step-body"><h3>Sinh 100 case synthetic thay vì viết tay</h3><p>Muốn một bộ case dày cho tenant mới thì đi theo <span class="kbd-path">docs/handoff/2026-08-25-synthetic-quality-cases-v2-guide.md</span>: thiết kế trước toàn bộ kịch bản → probe hàng loạt qua <code>NobleAgent.stream_response</code> → viết <code>golden.answer</code> từ raw tool result thu được. Guide có sẵn preflight, script tự kiểm arg matcher với <code>schemas.py</code>, và ba bẫy đã sập thật (token embed, credential 429, bộ lọc <code>status='published'</code> khi tự tính SQL). Bộ <code>aina_prod</code> ship trong repo được sinh bằng đúng quy trình đó.</p></div></div>
+<div class="step"><div class="step-no">3</div><div class="step-body"><h3>Golden set RAG riêng</h3><pre><code><span class="cmd">python -m evals gen-golden --tenant &lt;tenant&gt; --limit 50</span></code></pre><p>Rồi duyệt bằng labeller (mode RAG golden, phím <code>a</code> → approved) → <code>evals rag</code> như mục RAG ở trên.</p></div></div>
+
+<h2 id="loi">Lỗi thường gặp — đã gặp thật, đã có thuốc</h2>
+<div class="table-scroll"><table>
+  <tr><th>Triệu chứng</th><th>Nguyên nhân &amp; cách sửa</th></tr>
+  <tr><td><code>preflight: Redis không sẵn sàng tại redis://127.0.0.1:6379</code></td><td>Redis local chưa chạy (<code>docker start local-redis</code>) — hoặc shell còn <code>export REDIS_URL</code> cũ đè lên <code>.env</code>: <code>unset REDIS_URL</code>.</td></tr>
+  <tr><td><code>RuntimeError: no published config for tenant '…'</code> ở <b>mọi</b> case</td><td>Thiếu credential per-tenant: đang đọc PG bằng role không thấy config sau RLS (RLS trả 0 row chứ không lỗi). Đặt <code>EVAL_TENANT_API_KEY</code> hoặc dùng <code>scripts/eval_with_key.sh</code> — xem <a href="#quality-cred">Credential per-tenant</a>. (Tenant chưa publish config thì không eval db-mode được.)</td></tr>
+  <tr><td><code>EVAL_TENANT_API_KEY không đổi được credential (auth_api_unavailable)</code></td><td>Auth API rate-limit <b>429</b> vì bị gọi quá dày, hoặc không phản hồi. Chờ vài phút rồi chạy lại; đừng vòng lặp retry sát nhau. <code>bad_credential</code> thì là key sai / đã revoke.</td></tr>
+  <tr><td><code>EVAL_TENANT_API_KEY thuộc tenant 'X', không phải 'Y'</code></td><td>Key không thuộc tenant đang eval. Nhãn key dễ gây nhầm: key tên "aina…" có thể thuộc <code>aina_prod</code>. Harness chặn từ preflight vì nếu đăng ký sai tenant thì pool đúng role nhưng <code>app.current_tenant</code> khác ⇒ lại 0 row im lặng.</td></tr>
+  <tr><td>Case <span class="pill pass">ok</span> hết nhưng scorecard trống / mọi gate <code>missing</code></td><td>Case chưa duyệt. Scorer bỏ qua <code>reviewed: false</code> — mở <code>make eval-labeller</code>, phím <code>a</code>. Kiểm nhanh: <code>python -m evals list --tenant &lt;t&gt;</code> in <code>(unreviewed — excluded from scorecard)</code> ở từng dòng chưa duyệt.</td></tr>
+  <tr><td><code>kb_search</code> trả rỗng ở mọi case QA, agent vẫn "trả lời bình thường"</td><td><b>Không phải tenant thiếu data.</b> Embed service 401 vì <code>SANTA_MODELS_TOKEN</code> stale → <code>kb_search</code> degrade im lặng. Kiểm bằng <code>python scripts/test_search_tools.py -t &lt;tenant&gt; --kb "…"</code> (401 nổi thành traceback). Chi tiết ở <a href="#setup">Setup → .env</a>.</td></tr>
+  <tr><td>Gate hiện <code>= missing</code> và FAIL dù case đều ok</td><td>Fail-closed do thiếu loại case làm mẫu (vd. chạy lẻ 1 case, hoặc selection không có case nào khai <code>banned_tools</code>/arg matcher). Chạy đủ bộ smoke 3 case trở lên.</td></tr>
+  <tr><td>Labeller báo 422 khi lưu</td><td>Có dòng sai schema v2 — banner ghi rõ dòng/field. File trên đĩa <b>không đổi</b> (validate trước, atomic write sau); sửa theo lỗi rồi <code>Ctrl+S</code> lại. Hay gặp: dùng key <code>tool_called</code>/<code>tool_arg</code> trong <code>expect</code> (đã chuyển sang <code>golden.tools</code>), tag lạ ngoài 5 tag chuẩn.</td></tr>
+  <tr><td>Redis trả <code>MISCONF … unable to persist to disk</code></td><td>Đĩa server Redis đầy/lỗi — mọi write bị từ chối. Sửa đĩa, hoặc chuyển <code>REDIS_URL</code> sang Redis local.</td></tr>
+  <tr><td>RAG <code>empty_rate</code> cao bất thường</td><td>Backend degrade im lặng: tunnel Qdrant chưa mở, collection thiếu, hoặc <code>EMBED_BACKEND</code> lệch với model đã ingest.</td></tr>
+  <tr><td>Judge dừng giữa chừng, case <code>ungraded</code></td><td>Chạm trần <code>--judge-budget-usd</code> hoặc lỗi API tạm thời — coverage giảm nhưng gate deterministic không ảnh hưởng. Chấm lại bằng <code>evals score --judge</code> (cache giữ phần đã chấm).</td></tr>
+</table></div>
+
+<footer>
+  Spec thiết kế: <span class="kbd-path">docs/superpowers/specs/2026-08-24-unified-evals-harness-design.md</span> · Refactor v2: <span class="kbd-path">docs/superpowers/specs/2026-08-25-evals-quality-refactor-design.md</span> · Sinh case synthetic: <span class="kbd-path">docs/handoff/2026-08-25-synthetic-quality-cases-v2-guide.md</span> · Bản text: <span class="kbd-path">evals/README.md</span> · Cập nhật 2026-08-25 (thêm <code>EVAL_TENANT_API_KEY</code>, bẫy <code>SANTA_MODELS_TOKEN</code>, bộ case <code>aina_prod</code>)
+</footer>
+</main>
+</div>
+
+<script>
+  document.querySelectorAll("pre").forEach(function (pre) {
+    var btn = document.createElement("button");
+    btn.className = "copy-btn"; btn.type = "button"; btn.textContent = "copy";
+    btn.addEventListener("click", function () {
+      var text = Array.from(pre.querySelectorAll(".cmd")).map(function (el) { return el.textContent; }).join("\n")
+        || pre.textContent;
+      try {
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "đã copy"; setTimeout(function () { btn.textContent = "copy"; }, 1500);
+        });
+      } catch (e) { /* clipboard bị chặn — bỏ qua */ }
+    });
+    pre.appendChild(btn);
+  });
+</script>

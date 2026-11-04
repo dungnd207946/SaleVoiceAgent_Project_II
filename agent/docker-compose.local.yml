@@ -1,0 +1,53 @@
+# santa-hotline-agent — LOCAL self-hosted deploy (this PC replaces EC2).
+#
+# Architecture (see Dockerfile.local):
+#   - LLM   → OpenAI API (no local vLLM / llm-tunnel)
+#   - TTS   → native tts-santa microservice on :8011 (GPU) via vieneu_http
+#   - STT   → sherpa-onnx (CPU, model bind-mounted from ./models)
+#   - RTC   → LiveKit Cloud (LIVEKIT_URL in .env) — NO self-hosted livekit server
+#
+# Shared stores (MongoDB, Redis, Qdrant) are provided by **santa-infra**, NOT by
+# this compose — the agents reach them on localhost via network_mode: host
+# (MONGODB_URI / REDIS_URL / QDRANT_URL in .env). Bring santa-infra up first.
+#
+# The agent containers are CPU-only and use network_mode: host so they reach the
+# host-native tts-santa + santa-infra stores on localhost.
+# Cutover: stop the native systemd units (noble-hotline, noble-hotline-lk) first —
+# they bind the same :8766 and register the same LiveKit worker.
+
+# Ghim tên project: không ghim thì Compose lấy tên folder, đổi folder là đổi tên container.
+name: odyssey-agent
+
+services:
+  # WebSocket / aiortc transport — serves the /chat UI + browser RTC + telephony
+  # AudioSocket. Pinned to aiortc so a shared TRANSPORT_BACKEND can't reroute it.
+  agent:
+    image: santa-hotline-agent:local
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+    env_file: .env
+    environment:
+      - TRANSPORT_BACKEND=aiortc
+    network_mode: host
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data        # RAG artifacts + small data files (host is source of truth)
+      - ./models:/app/models    # sherpa STT model (gitignored; not baked into the image)
+    restart: unless-stopped
+
+  # LiveKit worker — registers with LiveKit Cloud and joins dispatched rooms.
+  agent-lk:
+    image: santa-hotline-agent:local
+    env_file: .env
+    environment:
+      - TRANSPORT_BACKEND=livekit
+    command: ["noble-agent", "--transport", "livekit", "start"]
+    network_mode: host
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./models:/app/models
+    depends_on:
+      - agent
+    restart: unless-stopped

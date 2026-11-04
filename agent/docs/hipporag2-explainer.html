@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HippoRAG 2 cho Luna Voice Agent — Giải thích & Animation</title>
+<style>
+  :root{
+    --bg:#080b16; --bg2:#0d1222; --panel:#111830; --panel2:#0f1528;
+    --ink:#e8ecf6; --muted:#93a0c0; --faint:#5a6788;
+    --gold:#f0b64a; --gold2:#ffd479;
+    --teal:#3fd6c9; --violet:#8b7cf0; --rose:#ff7a92; --green:#5fd88b;
+    --line:#26304e;
+    --phrase:#8b7cf0;   /* phrase / entity node */
+    --passage:#3fd6c9;  /* passage node */
+    --seed:#f0b64a;     /* seed node */
+    --shadow:0 20px 60px rgba(0,0,0,.5);
+    --radius:18px;
+    font-synthesis:none;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:radial-gradient(1200px 700px at 80% -10%, #16204010, transparent),
+                radial-gradient(1000px 600px at -10% 20%, #1a123010, transparent), var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"Noto Sans",sans-serif;
+    line-height:1.65; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  h1,h2,h3{line-height:1.2;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3vw,2.1rem);margin:0 0 .3em}
+  h3{font-size:1.15rem;margin:1.6em 0 .5em;color:var(--gold2)}
+  p{margin:.7em 0;color:#cfd6ea}
+  a{color:var(--teal)}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.86em;
+    background:#1a2340;color:#a9e7e0;padding:.12em .42em;border-radius:6px;border:1px solid #24314f}
+  .mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+
+  /* ---------- top nav ---------- */
+  nav{position:sticky;top:0;z-index:50;background:rgba(8,11,22,.78);backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;align-items:center;height:56px;overflow-x:auto;scrollbar-width:none}
+  nav .wrap::-webkit-scrollbar{display:none}
+  nav .brand{font-weight:700;color:var(--gold2);margin-right:14px;white-space:nowrap;letter-spacing:.02em}
+  nav a{color:var(--muted);text-decoration:none;font-size:.85rem;padding:6px 11px;border-radius:9px;white-space:nowrap;transition:.2s}
+  nav a:hover{background:#18213c;color:var(--ink)}
+
+  /* ---------- hero ---------- */
+  header.hero{padding:74px 0 40px;position:relative;overflow:hidden}
+  .kicker{display:inline-block;font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--gold);border:1px solid #3a3115;background:#1c160899;padding:6px 14px;border-radius:100px;margin-bottom:20px}
+  header.hero h1{font-size:clamp(2.1rem,5.5vw,3.6rem);margin:0 0 .35em;
+    background:linear-gradient(120deg,#fff 20%,var(--gold2) 60%,var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{font-size:clamp(1.05rem,2vw,1.3rem);color:var(--muted);max-width:760px}
+  .hero-tags{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px}
+  .tag{font-size:.8rem;color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:7px 13px;border-radius:100px}
+  .tag b{color:var(--teal)}
+
+  /* ---------- section ---------- */
+  section{padding:52px 0;border-top:1px solid var(--line)}
+  .snum{font-family:"SF Mono",monospace;color:var(--gold);font-size:.9rem;letter-spacing:.1em}
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.in{opacity:1;transform:none}
+
+  /* ---------- cards / grid ---------- */
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr 1fr 1fr}
+  @media(max-width:760px){.g2,.g3{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+    border-radius:var(--radius);padding:20px 22px}
+  .card h3{margin-top:0}
+  .card .ic{font-size:1.5rem;margin-bottom:6px}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:.82rem;padding:5px 12px;border-radius:100px;border:1px solid var(--line);background:#0e1428}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .d-phrase{background:var(--phrase)} .d-passage{background:var(--passage)} .d-seed{background:var(--seed);box-shadow:0 0 10px var(--seed)}
+
+  /* ---------- brain analogy ---------- */
+  .brain{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:22px}
+  @media(max-width:760px){.brain{grid-template-columns:1fr}}
+  .brain .b{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;position:relative}
+  .brain .b .role{font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  .brain .b .bio{font-weight:700;font-size:1.05rem;margin:3px 0 2px}
+  .brain .b .maps{color:var(--teal);font-size:.92rem}
+  .brain .arrow{text-align:center;color:var(--faint);font-size:1.4rem}
+
+  /* ---------- pipeline (offline) ---------- */
+  .pipe{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:24px;position:relative}
+  @media(max-width:760px){.pipe{grid-template-columns:1fr}}
+  .step{position:relative;padding:20px 18px;background:var(--panel);border:1px solid var(--line);margin:6px}
+  .step{border-radius:14px}
+  .step .n{position:absolute;top:-12px;left:16px;width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1305;
+    font-weight:800;font-size:.85rem;display:grid;place-items:center;box-shadow:0 4px 14px rgba(240,182,74,.4)}
+  .step h4{margin:.4em 0 .3em;font-size:1rem}
+  .step p{font-size:.88rem;color:var(--muted);margin:.3em 0}
+
+  /* ---------- graph viz ---------- */
+  .stage{background:radial-gradient(700px 380px at 50% 30%,#131c3a,transparent),var(--bg2);
+    border:1px solid var(--line);border-radius:var(--radius);padding:8px;margin-top:22px;position:relative;overflow:hidden}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:12px 14px}
+  .btn{cursor:pointer;border:1px solid var(--line);background:#16203e;color:var(--ink);
+    padding:9px 16px;border-radius:11px;font-size:.9rem;font-weight:600;transition:.18s;display:inline-flex;gap:8px;align-items:center}
+  .btn:hover{background:#1f2c52;border-color:#3a4b7e}
+  .btn.primary{background:linear-gradient(120deg,var(--gold),#e0a02f);color:#1a1305;border:none;box-shadow:0 6px 20px rgba(240,182,74,.28)}
+  .btn.primary:hover{filter:brightness(1.07)}
+  .btn:disabled{opacity:.45;cursor:default}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-left:auto;font-size:.8rem;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  svg.graph{width:100%;height:auto;display:block}
+  .node circle{transition:r .3s,fill .3s,opacity .3s}
+  .node text{font-size:11px;fill:var(--ink);font-weight:600;pointer-events:none}
+  .node .sub{font-size:8.5px;fill:var(--faint)}
+  .edge{stroke:#2c3860;stroke-width:1.6;fill:none;transition:stroke .3s,stroke-width .3s,opacity .3s}
+  .edge.hot{stroke:var(--gold);stroke-width:2.6;opacity:1}
+  .flow{fill:var(--gold2);opacity:0}
+  .node.seed circle{fill:var(--seed);stroke:#fff3d6;stroke-width:2.5}
+  .node.lit circle{stroke:var(--gold2);stroke-width:2.2}
+  .rankbar{fill:var(--teal);transition:width .6s ease}
+  .caption{min-height:52px;padding:14px 18px;border-top:1px solid var(--line);
+    background:#0b1striped;font-size:.95rem;color:var(--ink)}
+  .caption{background:#0b1densi}
+  .caption{background:#0b1122}
+  .caption b{color:var(--gold2)}
+  .stagechip{font-family:"SF Mono",monospace;font-size:.75rem;color:var(--gold);margin-right:8px}
+
+  /* ---------- latency bars ---------- */
+  .lat{margin-top:22px;display:grid;gap:14px}
+  .latrow{display:grid;grid-template-columns:180px 1fr 84px;align-items:center;gap:14px}
+  @media(max-width:620px){.latrow{grid-template-columns:120px 1fr 66px}}
+  .latrow .name{font-size:.9rem;color:var(--ink)}
+  .latrow .name small{display:block;color:var(--faint);font-size:.76rem}
+  .track{height:26px;background:#0f1densi;border-radius:8px;overflow:hidden;background:#0f1densit;position:relative;background:#0e1densi}
+  .track{background:#0e1428;border:1px solid var(--line)}
+  .fill{height:100%;width:0;border-radius:7px;transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+  .latrow .ms{font-family:"SF Mono",monospace;text-align:right;font-size:.9rem;color:var(--muted)}
+  .f-bad{background:linear-gradient(90deg,#ff7a92,#c94f66)}
+  .f-mid{background:linear-gradient(90deg,#f0b64a,#d89321)}
+  .f-good{background:linear-gradient(90deg,#5fd88b,#37b06a)}
+  .f-teal{background:linear-gradient(90deg,#3fd6c9,#2a9aad)}
+
+  /* ---------- PPR iteration stepper ---------- */
+  .pbar{display:grid;grid-template-columns:150px 1fr 60px;align-items:center;gap:12px;margin:10px 0}
+  @media(max-width:620px){.pbar{grid-template-columns:110px 1fr 52px}}
+  .pbar .pl{font-size:.88rem;display:flex;align-items:center;gap:9px;color:var(--ink)}
+  .pbar .pt{height:22px;background:#0e1428;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .pbar .pf{height:100%;width:0;border-radius:6px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+  .pbar .pv{font-family:"SF Mono",ui-monospace,monospace;font-size:.85rem;text-align:right;color:var(--muted)}
+
+  /* ---------- code block ---------- */
+  pre{background:#0b1densi;background:#0a0f20;border:1px solid var(--line);border-radius:14px;padding:18px 20px;overflow-x:auto;font-size:.83rem;line-height:1.6}
+  pre code{background:none;border:none;padding:0;color:#c7d2ee}
+  .cmt{color:#5a6788} .kw{color:#c792ea} .str{color:#a5e8b0} .fn{color:#82b1ff} .num{color:#f0b64a}
+
+  /* ---------- callout ---------- */
+  .note{border-left:3px solid var(--gold);background:#161densi;background:#15100a;padding:14px 18px;border-radius:0 12px 12px 0;margin:18px 0}
+  .note.warn{border-color:var(--rose);background:#1a0f13}
+  .note.good{border-color:var(--green);background:#0d1a12}
+  .note .lb{font-weight:700;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase}
+  .note.warn .lb{color:var(--rose)} .note.good .lb{color:var(--green)} .note .lb{color:var(--gold)}
+
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:.9rem}
+  th,td{text-align:left;padding:11px 13px;border-bottom:1px solid var(--line)}
+  th{color:var(--faint);font-weight:600;font-size:.8rem;letter-spacing:.04em;text-transform:uppercase}
+  td b{color:var(--gold2)}
+  .ok{color:var(--green)} .no{color:var(--rose)}
+
+  footer{padding:50px 0 70px;border-top:1px solid var(--line);color:var(--faint);font-size:.86rem}
+  footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <span class="brand">◆ HippoRAG 2 × Luna</span>
+    <a href="#analogy">Ẩn dụ não bộ</a>
+    <a href="#offline">Indexing (offline)</a>
+    <a href="#online">Truy hồi (online)</a>
+    <a href="#ppr">PPR — Animation</a>
+    <a href="#ppr-deep">PPR chi tiết</a>
+    <a href="#apply">Áp dụng vào Noble</a>
+    <a href="#realtime">Realtime & code</a>
+    <a href="#latency">Latency</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="kicker reveal">Graph-based RAG · Realtime</span>
+    <h1 class="reveal">HippoRAG 2 cho voice agent<br>khi latency là tối quan trọng</h1>
+    <p class="lede reveal">Một mô hình RAG lấy cảm hứng từ hồi hải mã (hippocampus): dựng <b>đồ thị tri thức offline</b>, và tại query-time chỉ chạy <b>Personalized PageRank</b> trên đồ thị tĩnh — mili-giây, không thêm lời gọi LLM. Trang này giải thích từng bước và cách ghép nó vào tầng RAG hiện có của Luna (<code>agent/rag/</code>).</p>
+    <div class="hero-tags reveal">
+      <span class="tag">Truy hồi <b>một bước</b>, suy luận <b>đa bước</b></span>
+      <span class="tag">Query-time: <b>không LLM</b> (bản realtime)</span>
+      <span class="tag">Ghép trên <b>hybrid RRF</b> sẵn có</span>
+      <span class="tag">Cập nhật <b>tăng dần</b> khi CMS đổi dự án</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============ ANALOGY ============ -->
+<section id="analogy">
+  <div class="wrap">
+    <div class="reveal"><span class="snum">01</span>
+      <h2>Ẩn dụ não bộ — vì sao gọi là "Hippo"</h2>
+      <p>HippoRAG mô phỏng <b>lý thuyết chỉ mục hồi hải mã</b> (hippocampal indexing theory) của trí nhớ dài hạn ở người. Trí nhớ con người không lưu mọi thứ dày đặc — nó lưu một <b>chỉ mục thưa các khái niệm</b> và các <b>liên kết</b> giữa chúng, rồi khi cần thì "kích hoạt lan truyền" từ vài khái niệm gợi ý ra toàn mạng liên tưởng.</p>
+    </div>
+    <div class="brain reveal">
+      <div class="b">
+        <div class="role">Neocortex (vỏ não)</div>
+        <div class="bio">🧠 LLM</div>
+        <div class="maps">Trích khái niệm & quan hệ (offline)</div>
+      </div>
+      <div class="b">
+        <div class="role">Parahippocampal</div>
+        <div class="bio">🔡 Encoder (e5-large)</div>
+        <div class="maps">Nối câu hỏi ↔ node bằng embedding</div>
+      </div>
+      <div class="b">
+        <div class="role">Hippocampus (hồi hải mã)</div>
+        <div class="bio">🕸️ Đồ thị tri thức + PPR</div>
+        <div class="maps">Kích hoạt lan truyền → truy hồi</div>
+      </div>
+    </div>
+    <div class="note">
+      <div class="lb">Ý tưởng cốt lõi</div>
+      Thay vì "một cú embedding rồi lấy top-K chunk gần nhất" (RAG cổ điển — mỗi chunk là một hòn đảo), HippoRAG dựng <b>một mạng lưới</b> nối các thực thể/khái niệm và đoạn văn lại. Truy hồi = thả "xác suất" vào vài node gợi ý rồi để nó <b>lan qua các cạnh</b>, nên một câu hỏi có thể kéo về những đoạn văn <b>liên quan gián tiếp</b> mà embedding thuần bỏ sót.
+    </div>
+  </div>
+</section>
+
+<!-- ============ OFFLINE INDEXING ============ -->
+<section id="offline">
+  <div class="wrap">
+    <div class="reveal"><span class="snum">02</span>
+      <h2>Giai đoạn OFFLINE — dựng đồ thị (một lần, lúc build)</h2>
+      <p>Toàn bộ chi phí "nặng" nằm ở đây, chạy lúc build/ingest — <b>không đụng vào latency của cuộc gọi</b>. Trong repo của bạn, đây chính là chỗ móc của <code>sparse_reconcile.reconcile()</code> / lúc dựng FlatStore.</p>
+    </div>
+    <div class="pipe reveal">
+      <div class="step">
+        <div class="n">1</div>
+        <h4>Cắt đoạn (chunk)</h4>
+        <p>15 file <code>ABOUT_&lt;Name&gt;.md</code> → 285 chunk. Mỗi chunk thành một <b>passage node</b>.</p>
+      </div>
+      <div class="step">
+        <div class="n">2</div>
+        <h4>OpenIE bằng LLM</h4>
+        <p>LLM trích <b>bộ ba</b> (chủ thể · quan hệ · đối tượng) từ mỗi chunk. VD: <span class="mono">(Noble Crystal, ở, Tây Hồ)</span>.</p>
+      </div>
+      <div class="step">
+        <div class="n">3</div>
+        <h4>Dựng KG mở</h4>
+        <p>Mỗi thực thể → <b>phrase node</b>; quan hệ → cạnh. Passage nối với phrase của nó bằng cạnh <b>"contains"</b>. Phát hiện đồng nghĩa gộp node.</p>
+      </div>
+      <div class="step">
+        <div class="n">4</div>
+        <h4>Nhúng & lưu</h4>
+        <p>Embed cả passage lẫn phrase (e5-large sẵn có). Lưu graph + vector. Thêm doc mới = cập nhật <b>tăng dần</b>, không rebuild.</p>
+      </div>
+    </div>
+    <div class="note good reveal">
+      <div class="lb">Khác biệt của HippoRAG <b>2</b> so với v1</div>
+      v1 chỉ có phrase node. <b>v2 đưa passage node vào chung một đồ thị</b> với phrase node (nối bằng cạnh "contains"). Nhờ đó xác suất PPR chảy được <em>phrase → passage → phrase</em>, hợp nhất được thế mạnh của tìm kiếm thưa (khái niệm) và dày (ngữ cảnh) ngay trong một lần chạy.
+    </div>
+  </div>
+</section>
+
+<!-- ============ ONLINE RETRIEVAL ============ -->
+<section id="online">
+  <div class="wrap">
+    <div class="reveal"><span class="snum">03</span>
+      <h2>Giai đoạn ONLINE — truy hồi (mỗi câu hỏi)</h2>
+      <p>Đây là phần chạy trong lúc gọi điện. HippoRAG 2 gốc gồm 4 bước dưới. Ở phần <a href="#realtime">Realtime</a> tôi sẽ chỉ cách <b>bỏ bước LLM (3b)</b> để giữ TTFA cho voice.</p>
+    </div>
+    <div class="grid g2 reveal" style="margin-top:20px">
+      <div class="card">
+        <div class="ic">①</div><h3>Chọn seed dày (passage)</h3>
+        <p>Embed câu hỏi → chấm điểm tương đồng với các <b>passage node</b>. Passage giống nhất trở thành seed "dày".</p>
+      </div>
+      <div class="card">
+        <div class="ic">②</div><h3>Chọn seed thưa (triple)</h3>
+        <p>Đồng thời chấm điểm câu hỏi với các <b>bộ ba/phrase</b>. Thực thể/quan hệ khớp trở thành seed "thưa".</p>
+      </div>
+      <div class="card">
+        <div class="ic">③</div><h3>Recognition memory <span style="color:var(--rose);font-size:.8rem">(LLM — sẽ bỏ ở bản realtime)</span></h3>
+        <p>Một LLM <b>lọc</b> các triple top để chỉ giữ seed thật sự liên quan → tăng precision. Đây là lời gọi LLM query-time duy nhất, và là thứ đắt latency nhất.</p>
+      </div>
+      <div class="card">
+        <div class="ic">④</div><h3>Personalized PageRank</h3>
+        <p>Bơm xác suất vào các seed rồi chạy PPR trên KG tĩnh. Xác suất <b>lan qua cạnh</b>. Passage node điểm cao nhất = kết quả trả về. <b>Mili-giây, không LLM.</b></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PPR ANIMATION ============ -->
+<section id="ppr">
+  <div class="wrap">
+    <div class="reveal"><span class="snum">04</span>
+      <h2>Personalized PageRank — xem tận mắt</h2>
+      <p>Bấm <b>▶ Chạy kịch bản</b> để xem một câu hỏi thật của khách chảy qua đồ thị tri thức thu nhỏ của Noble. Node tím = khái niệm (phrase), node lục lam = đoạn văn (passage), node vàng phát sáng = seed khởi tạo.</p>
+    </div>
+
+    <div class="stage reveal">
+      <div class="controls">
+        <button class="btn primary" id="play">▶ Chạy kịch bản</button>
+        <button class="btn" id="reset">↺ Đặt lại</button>
+        <div class="legend">
+          <span><i class="dot d-seed"></i> Seed (gợi ý)</span>
+          <span><i class="dot d-phrase"></i> Khái niệm</span>
+          <span><i class="dot d-passage"></i> Đoạn văn</span>
+        </div>
+      </div>
+
+      <svg class="graph" id="svg" viewBox="0 0 900 470" role="img" aria-label="Đồ thị tri thức Noble với hoạt hình PageRank">
+        <defs>
+          <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="4" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <g id="edges"></g>
+        <g id="flows"></g>
+        <g id="nodes"></g>
+      </svg>
+
+      <div class="caption"><span class="stagechip" id="chip">SẴN SÀNG</span><span id="cap">Câu hỏi của khách: <b>“Dự án nào ở Tây Hồ có bể bơi, tầm 5 tỷ?”</b> — bấm ▶ để xem xác suất lan truyền.</span></div>
+    </div>
+
+    <div class="note reveal">
+      <div class="lb">Đọc animation này thế nào</div>
+      Câu hỏi khớp trực tiếp 3 khái niệm gợi ý: <b>Tây Hồ</b>, <b>bể bơi</b>, <b>~5 tỷ</b> (các node vàng). Embedding thuần chỉ kéo về đoạn văn chứa đúng chữ đó. PPR thì bơm xác suất vào 3 seed này rồi để nó chảy qua cạnh — nên nó tìm ra <b>“Noble Crystal”</b> là điểm giao của cả ba, dù không đoạn văn đơn lẻ nào nói đủ cả 3 ý. Đó chính là "suy luận đa bước trong một lần truy hồi".
+    </div>
+  </div>
+</section>
+
+<!-- ============ PPR DEEP DIVE ============ -->
+<section id="ppr-deep">
+  <div class="wrap">
+    <div class="reveal"><span class="snum">05</span>
+      <h2>Personalized PageRank — mổ xẻ từng bước</h2>
+      <p>Chính xác: sau bước 1 & 2, <b>tập seed</b> gồm cả hai loại node — <span class="mono">phrase</span> (từ seed thưa) và <span class="mono">passage</span> (từ seed dày). Cả hai sống chung <b>một đồ thị duy nhất</b> (điểm mấu chốt của HippoRAG 2), nên PPR đối xử với chúng như nhau. Dưới đây là toàn bộ cơ chế.</p>
+    </div>
+
+    <h3>a) Trực giác — người đi bộ ngẫu nhiên "có thiên vị"</h3>
+    <p>PageRank tưởng tượng một người đi bộ nhảy lung tung trên đồ thị. Điểm của một node = <b>tần suất người đó ghé thăm</b> nếu đi mãi mãi. "Personalized" chỉ thay đổi <b>đúng một chỗ</b>: khi người đi bộ "teleport", thay vì nhảy tới node bất kỳ, họ luôn <b>quay về các seed</b>.</p>
+    <div class="grid g2 reveal">
+      <div class="card">
+        <div class="ic">🌐</div><h3>PageRank cổ điển</h3>
+        <p>Đi theo cạnh; thỉnh thoảng teleport tới <b>một node bất kỳ, đều nhau</b>. Trả lời câu hỏi <em>"node nào quan trọng nói chung"</em> — như Google xếp hạng web.</p>
+      </div>
+      <div class="card">
+        <div class="ic">🎯</div><h3>Personalized (PPR)</h3>
+        <p>Y hệt, nhưng teleport <b>chỉ quay về các seed</b> của câu hỏi. Khối xác suất bị "ghim" quanh vùng liên quan → trả lời <em>"node nào quan trọng <b>đối với các seed này</b>"</em>.</p>
+      </div>
+    </div>
+
+    <h3>b) Công thức — đọc bằng lời</h3>
+<pre><code>r  =  (1 − d) · s   +   d · Aᵀ · r
+      └─ quay về seed ─┘   └─ đi bộ tiếp một bước ─┘</code></pre>
+    <p style="margin-top:14px">Lặp lại phép tính này tới khi <code>r</code> gần như không đổi. Ý nghĩa từng ký hiệu:</p>
+    <table class="reveal">
+      <tbody>
+        <tr><td><span class="mono">r</span></td><td>Vector điểm của <b>mọi</b> node (tổng luôn = 1). Đây là thứ ta đang tính.</td></tr>
+        <tr><td><span class="mono">s</span></td><td><b>Reset vector</b> — chỉ seed khác 0. Vd: <span class="mono">Tây Hồ=0.5, Bể bơi=0.5</span>, mọi node khác = 0. <b>Đây chính là chỗ "personalized".</b></td></tr>
+        <tr><td><span class="mono">d</span></td><td><b>Damping</b> (ở đây 0.5): xác suất "đi bộ tiếp". <span class="mono">1−d</span> là xác suất "teleport về seed". d cao → lan xa hơn, d thấp → bám sát seed.</td></tr>
+        <tr><td><span class="mono">Aᵀ</span></td><td>Ma trận kề <b>chuẩn hoá theo bậc</b>: từ một node, chia đều xác suất cho các hàng xóm.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>c) Chạy tay trên đồ thị Noble thu nhỏ</h3>
+    <p>5 node, 5 cạnh vô hướng. Hai seed là <span class="mono">Tây Hồ</span> + <span class="mono">Bể bơi</span> (từ câu hỏi <em>"dự án nào ở Tây Hồ có bể bơi?"</em>). Cấu trúc:</p>
+<pre><code>  Tây Hồ ───── Noble Crystal ───── P·Tổng quan
+  (seed)        │        │
+  Bể bơi ───────┘        └───────── P·Tiện ích
+  (seed) ───────────────────────────────┘
+
+  Cạnh: Tây Hồ–NobleCrystal · Bể bơi–NobleCrystal
+        NobleCrystal–P·Tổng quan · NobleCrystal–P·Tiện ích · Bể bơi–P·Tiện ích</code></pre>
+
+    <p style="margin-top:14px">Đánh số node: <span class="mono">1=Tây Hồ, 2=Bể bơi, 3=Noble Crystal, 4=P·Tổng quan, 5=P·Tiện ích</span>. Bậc mỗi node: <span class="mono">deg = [1, 2, 4, 1, 2]</span>.</p>
+
+    <p style="margin:20px 0 6px;color:var(--teal);font-weight:700;font-size:.95rem">① Ma trận kề A &nbsp;<span style="color:var(--faint);font-weight:400">— đối xứng, ô = 1 nếu có cạnh</span></p>
+<pre><code>        1   2   3   4   5
+   1 [  0   0   1   0   0  ]
+   2 [  0   0   1   0   1  ]
+   3 [  1   1   0   1   1  ]   ← Noble Crystal nối 4 node
+   4 [  0   0   1   0   0  ]
+   5 [  0   1   1   0   0  ]</code></pre>
+
+    <p style="margin:20px 0 6px;color:var(--teal);font-weight:700;font-size:.95rem">② Ma trận chuyển tiếp M &nbsp;<span style="color:var(--faint);font-weight:400">— chuẩn hoá mỗi CỘT theo bậc (chính là Aᵀ trong công thức)</span></p>
+    <p style="margin:.3em 0">Từ node <span class="mono">j</span> đi sang hàng xóm <span class="mono">i</span> với xác suất <span class="mono">1/deg(j)</span> → chia mỗi <b>cột</b> cho bậc của node cột đó. Mỗi cột cộng lại = 1.</p>
+<pre><code>     từ →   1     2      3     4     5
+  tới 1 [  0     0    0.25    0     0   ]
+      2 [  0     0    0.25    0    0.5  ]
+      3 [ 1.0   0.5     0    1.0   0.5  ]
+      4 [  0     0    0.25    0     0   ]
+      5 [  0    0.5   0.25    0     0   ]
+          ───   ───   ────   ───   ───
+   cột Σ = 1     1      1      1     1     ✓</code></pre>
+
+    <p style="margin:20px 0 6px;color:var(--teal);font-weight:700;font-size:.95rem">③ Thế vào công thức — vòng lặp 1</p>
+<pre><code>r₁ = (1−d)·s  +  d·M·r₀        với  d = 0.5,   s = r₀ = [0.5, 0.5, 0, 0, 0]ᵀ
+
+bước 1 — nhân M·r₀  (chỉ cột 1 & 2 khác 0 vì r₀ chỉ có seed):
+   hàng 3 = 1.0·0.5 + 0.5·0.5 = 0.75      ← xác suất dồn vào Noble Crystal
+   hàng 5 =           0.5·0.5 = 0.25      ← và một phần sang P·Tiện ích
+   ⇒ M·r₀ = [ 0, 0, 0.75, 0, 0.25 ]ᵀ
+
+bước 2 — trộn với reset:
+   r₁ = 0.5·[0.5, 0.5, 0,    0, 0   ]     (số hạng quay-về-seed)
+      + 0.5·[0,   0,   0.75, 0, 0.25]     (số hạng đi-bộ-tiếp)
+      = [ 0.25, 0.25, 0.375, 0, 0.125 ]ᵀ   (tổng = 1 ✓)</code></pre>
+    <p>Các vòng sau <b>lặp lại đúng phép này</b> (thay <span class="mono">r₀→r₁→r₂…</span>). Bảng dưới là kết quả từng vòng — bấm <b>▶ Bước lặp tiếp theo</b> để chạy. Để ý: seed không "giữ" hết xác suất — nó chảy ra rồi được số hạng reset kéo về, cân bằng dần tới khi hội tụ.</p>
+
+    <div class="stage reveal">
+      <div class="controls">
+        <button class="btn primary" id="ppr-step">▶ Bước lặp tiếp theo</button>
+        <button class="btn" id="ppr-reset">↺ Reset (t=0)</button>
+        <span class="pill mono">t = <b id="ppr-t" style="color:var(--gold2)">0</b></span>
+        <div class="legend">
+          <span><i class="dot d-seed"></i> seed</span>
+          <span><i class="dot d-phrase"></i> phrase</span>
+          <span><i class="dot d-passage"></i> passage</span>
+        </div>
+      </div>
+      <div style="padding:8px 18px 16px" id="ppr-bars"></div>
+      <div class="caption"><span class="stagechip" id="ppr-chip">t=0 · KHỞI TẠO</span><span id="ppr-cap"></span></div>
+    </div>
+
+    <div class="note good reveal">
+      <div class="lb">Đọc kết quả cuối</div>
+      HippoRAG trả về <b>passage</b>, nên chỉ xếp hạng 2 node passage: <span class="mono">P·Tiện ích (0.109) &gt; P·Tổng quan (0.027)</span> → trả passage tiện ích của Noble Crystal cho Luna (nó khẳng định đúng: "Noble Crystal ở Tây Hồ có bể bơi"). Node phrase <b>Noble Crystal</b> tuy điểm cao nhưng <em>không</em> phải văn bản để nhét vào prompt — nó chỉ cho biết câu trả lời <b>nói về dự án nào</b>. Đáng chú ý: P·Tiện ích thắng vì nó nối thẳng tới <b>cả hai</b> seed-region, dù embedding câu hỏi không trỏ trực tiếp vào nó — đó là "suy luận đa bước".
+    </div>
+    <div class="note reveal">
+      <div class="lb">Vì sao PPR không phá TTFA</div>
+      Thực tế lặp ~10–50 vòng (hoặc tới khi thay đổi &lt; ε). Trên đồ thị BĐS nhỏ của bạn (vài nghìn node), <code>igraph</code>/<code>scipy</code> giải bằng đại số ma trận <b>thưa</b> trong &lt;1ms. Ma trận <span class="mono">Aᵀ</span> được precompute <b>một lần lúc bootstrap</b> — mỗi query chỉ là vài phép nhân vector. Đó là lý do bước nặng duy nhất (dựng graph + OpenIE) nằm hoàn toàn ở offline.
+    </div>
+  </div>
+</section>
+
+<!-- ============ APPLY TO NOBLE ============ -->
+<section id="apply">
+  <div class="wrap">
+    <div class="reveal"><span class="snum">06</span>
+      <h2>Áp dụng vào bài toán BĐS của Noble</h2>
+      <p>Corpus của bạn cực kỳ hợp để dựng đồ thị vì nó <b>đã có cấu trúc quan hệ tự nhiên</b>: dự án ↔ khu vực ↔ tiện ích ↔ loại căn ↔ khoảng giá ↔ chủ đầu tư. Đây là các loại node/cạnh nên trích:</p>
+    </div>
+    <div class="grid g3 reveal">
+      <div class="card"><div class="ic">🏙️</div><h3>Dự án</h3><p><span class="mono">Noble Crystal, Alumi, Noble Palace…</span> — trùng với 15 mã trong <code>catalog.py</code>.</p></div>
+      <div class="card"><div class="ic">📍</div><h3>Khu vực</h3><p><span class="mono">Tây Hồ, Long Biên, Tây Thăng Long</span> — chính các token "mơ hồ" bạn đang phải xử lý ở <code>find_project</code>.</p></div>
+      <div class="card"><div class="ic">🏊</div><h3>Tiện ích</h3><p><span class="mono">bể bơi, gym, công viên, trường học</span> — quan hệ <span class="mono">(dự án)-[có]->(tiện ích)</span>.</p></div>
+      <div class="card"><div class="ic">🛏️</div><h3>Loại căn</h3><p><span class="mono">2PN, 3PN, penthouse, shophouse</span>.</p></div>
+      <div class="card"><div class="ic">💰</div><h3>Khoảng giá</h3><p>Node giá rời rạc hoá (<span class="mono">~3 tỷ, ~5 tỷ, &gt;10 tỷ</span>) để câu hỏi ngân sách bắt được.</p></div>
+      <div class="card"><div class="ic">🏗️</div><h3>Chủ đầu tư</h3><p>Nối các dự án cùng chủ đầu tư — trả lời "còn dự án nào của CĐT này?".</p></div>
+    </div>
+    <div class="note good reveal">
+      <div class="lb">Điểm cộng riêng cho bạn</div>
+      Cùng một đồ thị này <b>tăng cường cả <code>find_project</code></b>: khi khách nói một cái tên nghe mơ hồ, PPR từ các gợi ý (khu vực + tiện ích khách vừa nhắc) có thể giúp phân định dự án — bổ trợ cho <code>ProjectNameIndex</code> hiện tại thay vì chỉ dựa trên phonetic.
+    </div>
+  </div>
+</section>
+
+<!-- ============ REALTIME & CODE ============ -->
+<section id="realtime">
+  <div class="wrap">
+    <div class="reveal"><span class="snum">07</span>
+      <h2>Biến thể REALTIME + chỗ ghép vào code</h2>
+      <p>HippoRAG 2 gốc có <b>1 lời gọi LLM query-time</b> (recognition memory, bước ③). Với voice, ta <b>bỏ nó khỏi hot path</b> — đây là toàn bộ bí quyết giữ TTFA:</p>
+    </div>
+    <div class="grid g2 reveal">
+      <div class="card">
+        <h3 style="color:var(--rose)">✗ Bản gốc (chậm cho voice)</h3>
+        <p>Query → embed → chọn seed → <b>LLM lọc triple (~0.5–2s)</b> → PPR → trả về. Lời gọi LLM này cộng thẳng vào latency mỗi lượt.</p>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--green)">✓ Bản realtime (đề xuất)</h3>
+        <p>Query → embed (đã có) → hybrid RRF (đã có) → lấy top-K làm <b>seed</b> → PPR trên KG tĩnh (<b>~5–30ms, không LLM</b>) → fuse điểm vào RRF → trả về.</p>
+      </div>
+    </div>
+
+    <h3>Nơi nó sống trong <code>agent/rag/</code></h3>
+    <p>Không thay thế gì cả — thêm <b>một tầng mở rộng đồ thị mỏng</b> ngay sau bước hybrid, trong <code>query_noble_kb</code> (file <code>noble_kb.py</code> bạn đang dùng):</p>
+<pre><code><span class="cmt"># agent/rag/graph_expand.py  (module mới — thuần Python, không LLM)</span>
+<span class="kw">import</span> igraph, numpy <span class="kw">as</span> np
+
+<span class="kw">class</span> <span class="fn">GraphExpander</span>:
+    <span class="cmt"># Nạp 1 lần lúc bootstrap (giống ProjectNameIndex). Graph nhỏ → nằm gọn RAM.</span>
+    <span class="kw">def</span> <span class="fn">expand</span>(self, seed_chunk_ids, seed_weights, top_k=<span class="num">5</span>):
+        reset = np.zeros(self.n_nodes)
+        <span class="kw">for</span> cid, w <span class="kw">in</span> <span class="fn">zip</span>(seed_chunk_ids, seed_weights):
+            reset[self.node_index[cid]] = w        <span class="cmt"># bơm xác suất vào seed</span>
+        pr = self.g.<span class="fn">personalized_pagerank</span>(       <span class="cmt"># ← PPR, vài ms</span>
+                reset=reset.tolist(), damping=<span class="num">0.5</span>)
+        <span class="kw">return</span> self.<span class="fn">rank_passages</span>(pr, top_k)  <span class="cmt"># điểm PPR theo passage node</span>
+</code></pre>
+<pre><code><span class="cmt"># noble_kb.py — trong _query_via_qdrant / _query_via_flat_store</span>
+hits = <span class="kw">await</span> query_hybrid(query, project_filter, top_k=<span class="num">20</span>)   <span class="cmt"># như hiện tại</span>
+<span class="kw">if</span> settings.noble_graph_expand:                              <span class="cmt"># env bật/tắt như các backend khác</span>
+    seeds   = [(h.chunk_id, h.rrf_score) <span class="kw">for</span> h <span class="kw">in</span> hits[:<span class="num">8</span>]]
+    graph_hits = expander.<span class="fn">expand</span>(*<span class="fn">zip</span>(*seeds), top_k=<span class="num">5</span>)      <span class="cmt"># +~10ms</span>
+    hits = <span class="fn">fuse_rrf</span>(hits, graph_hits)                          <span class="cmt"># gộp điểm, dedupe theo content_hash</span>
+<span class="kw">return</span> _format_hits(hits[:<span class="num">5</span>])
+</code></pre>
+    <div class="note reveal">
+      <div class="lb">Bám đúng hạ tầng bạn có</div>
+      Dùng lại <code>content_hash</code> làm định danh chunk (đã có trong payload Qdrant), <code>_format_hits</code> của <code>flat_store_adapter</code> để giữ nguyên shape output, và dựng graph trong cùng <code>reconcile()</code> đã đọc root collection. Bật bằng env <code>NOBLE_GRAPH_EXPAND</code> — hỏng thì fallback về hybrid thuần, đúng pattern degrade sẵn có.
+    </div>
+  </div>
+</section>
+
+<!-- ============ LATENCY ============ -->
+<section id="latency">
+  <div class="wrap">
+    <div class="reveal"><span class="snum">08</span>
+      <h2>Ngân sách latency — vì sao bản realtime an toàn</h2>
+      <p>Chi phí query-time (chưa tính sinh câu trả lời của LLM chính). Bấm cuộn tới đây để xem thanh chạy.</p>
+    </div>
+    <div class="lat reveal" id="latbox">
+      <div class="latrow">
+        <div class="name">Microsoft GraphRAG<small>global · map-reduce LLM</small></div>
+        <div class="track"><div class="fill f-bad" data-w="100" data-ms="~14 000ms">&nbsp;</div></div>
+        <div class="ms">~14s ✗</div>
+      </div>
+      <div class="latrow">
+        <div class="name">HippoRAG 2 gốc<small>có recognition-memory LLM</small></div>
+        <div class="track"><div class="fill f-mid" data-w="30" data-ms="~2 400ms">&nbsp;</div></div>
+        <div class="ms">~2.4s ⚠</div>
+      </div>
+      <div class="latrow">
+        <div class="name">Hybrid hiện tại của Luna<small>e5 + BM25 RRF</small></div>
+        <div class="track"><div class="fill f-teal" data-w="2.2" data-ms="~40ms">&nbsp;</div></div>
+        <div class="ms">~40ms</div>
+      </div>
+      <div class="latrow">
+        <div class="name">Hybrid + PPR (đề xuất)<small>không LLM query-time</small></div>
+        <div class="track"><div class="fill f-good" data-w="3.2" data-ms="~55ms">&nbsp;</div></div>
+        <div class="ms">~55ms ✓</div>
+      </div>
+    </div>
+
+    <div class="note warn reveal">
+      <div class="lb">Lời khuyên trung thực trước khi bạn xây</div>
+      Với corpus chỉ ~285 chunk và phần lớn câu hỏi là <b>single-hop</b> ("dự án X có bể bơi không?"), lợi ích của graph thường <b>khiêm tốn</b> — benchmark cho thấy single-hop factual thì RAG thường vẫn ngang hoặc hơn GraphRAG. Nên: (1) chạy <code>make eval-estate</code> để xác định lỗi thật là <em>recall</em>, <em>ranking</em> hay <em>chunking</em>; (2) cân nhắc một <b>cross-encoder reranker nhẹ (~10ms)</b> trước — ROI thường cao hơn và rẻ hơn graph. Graph tỏa sáng nhất ở câu <b>đa bước / liên tưởng</b> ("dự án nào cùng chủ đầu tư với X mà rẻ hơn?").
+    </div>
+
+    <table class="reveal">
+      <thead><tr><th>Tiêu chí</th><th>RAG cổ điển (nay)</th><th>Hybrid + PPR</th><th>MS GraphRAG</th></tr></thead>
+      <tbody>
+        <tr><td>Latency query</td><td class="ok">~40ms</td><td class="ok">~55ms</td><td class="no">~14s</td></tr>
+        <tr><td>LLM ở query-time</td><td class="ok">Không</td><td class="ok">Không</td><td class="no">Có (nhiều)</td></tr>
+        <tr><td>Suy luận đa bước</td><td class="no">Yếu</td><td class="ok">Tốt</td><td class="ok">Rất tốt</td></tr>
+        <tr><td>Chi phí build</td><td class="ok">Thấp</td><td>Trung bình (1 lần)</td><td class="no">Cao</td></tr>
+        <tr><td>Cập nhật tăng dần</td><td class="ok">Có</td><td class="ok">Có</td><td class="no">Rebuild cộng đồng</td></tr>
+        <tr><td>Hợp voice realtime</td><td class="ok">✓</td><td class="ok">✓</td><td class="no">✗</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p><b>Nguồn:</b>
+      <a href="https://arxiv.org/html/2502.14802">From RAG to Memory (HippoRAG 2, arXiv 2502.14802)</a> ·
+      <a href="https://github.com/osu-nlp-group/hipporag">OSU-NLP-Group/HippoRAG (GitHub)</a> ·
+      <a href="https://www.marktechpost.com/2025/03/03/hipporag-2-advancing-long-term-memory-and-contextual-retrieval-in-large-language-models/">MarkTechPost — HippoRAG 2</a> ·
+      <a href="https://arxiv.org/html/2502.11371v3">RAG vs GraphRAG: A Systematic Evaluation (arXiv 2502.11371)</a>
+    </p>
+    <p>Trang giải thích tự chứa · dựng cho tầng RAG của Luna voice agent · mọi animation chạy offline, không phụ thuộc mạng.</p>
+  </div>
+</footer>
+
+<script>
+/* ---------- scroll reveal ---------- */
+const io = new IntersectionObserver((es)=>{
+  es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+},{threshold:.12});
+document.querySelectorAll('.reveal').forEach((el,i)=>{ el.style.transitionDelay=(i%6*40)+'ms'; io.observe(el); });
+
+/* ---------- latency bars fill on view ---------- */
+const latIO = new IntersectionObserver((es)=>{
+  es.forEach(e=>{ if(e.isIntersecting){
+    e.target.querySelectorAll('.fill').forEach(f=>{ f.style.width=f.dataset.w+'%'; });
+    latIO.unobserve(e.target);
+  }});
+},{threshold:.3});
+const latbox=document.getElementById('latbox'); if(latbox) latIO.observe(latbox);
+
+/* ================= GRAPH + PPR ANIMATION ================= */
+// node: id, x, y, type: 'phrase'|'passage', label, sub
+const N = [
+  {id:'q_tayho',  x:120, y:90,  t:'phrase', l:'Tây Hồ',      s:'khu vực'},
+  {id:'q_pool',   x:120, y:230, t:'phrase', l:'Bể bơi',      s:'tiện ích'},
+  {id:'q_price',  x:120, y:370, t:'phrase', l:'~5 tỷ',       s:'giá'},
+
+  {id:'p_crystal',x:450, y:230, t:'passage',l:'Noble Crystal', s:'đoạn: tổng quan'},
+  {id:'ph_cry',   x:450, y:90,  t:'phrase', l:'Noble Crystal', s:'dự án'},
+  {id:'p_amen',   x:450, y:370, t:'passage',l:'Tiện ích khu',  s:'đoạn: tiện ích'},
+
+  {id:'ph_2pn',   x:730, y:120, t:'phrase', l:'2PN',        s:'loại căn'},
+  {id:'p_price',  x:730, y:260, t:'passage',l:'Bảng giá',   s:'đoạn: giá'},
+  {id:'ph_cdt',   x:730, y:390, t:'phrase', l:'CĐT Noble',  s:'chủ đầu tư'},
+];
+// edges [a,b]
+const E = [
+  ['q_tayho','ph_cry'], ['q_pool','p_amen'], ['q_price','p_price'],
+  ['ph_cry','p_crystal'], ['ph_cry','ph_2pn'], ['ph_cry','ph_cdt'],
+  ['p_crystal','p_amen'], ['p_crystal','p_price'], ['p_crystal','ph_2pn'],
+  ['p_amen','q_pool'], ['p_price','q_price'], ['ph_cdt','p_crystal']
+];
+const SEEDS = ['q_tayho','q_pool','q_price'];
+
+const byId = Object.fromEntries(N.map(n=>[n.id,n]));
+const gEdges=document.getElementById('edges');
+const gNodes=document.getElementById('nodes');
+const gFlows=document.getElementById('flows');
+const chip=document.getElementById('chip'), cap=document.getElementById('cap');
+
+// build edges
+const edgeEls={};
+E.forEach(([a,b])=>{
+  const A=byId[a],B=byId[b];
+  const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+  const mx=(A.x+B.x)/2, my=(A.y+B.y)/2;
+  const d=`M${A.x},${A.y} Q${mx},${my} ${B.x},${B.y}`;
+  p.setAttribute('d',d); p.setAttribute('class','edge');
+  gEdges.appendChild(p);
+  edgeEls[a+'>'+b]=p; edgeEls[b+'>'+a]=p;
+});
+
+// build nodes
+const nodeEls={};
+N.forEach(n=>{
+  const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+  g.setAttribute('class','node'); g.setAttribute('transform',`translate(${n.x},${n.y})`);
+  const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  c.setAttribute('r', n.t==='passage'?22:18);
+  c.setAttribute('fill', n.t==='passage'?'#153a3a':'#241d47');
+  c.setAttribute('stroke', n.t==='passage'?'#3fd6c9':'#8b7cf0');
+  c.setAttribute('stroke-width','1.6');
+  const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+  t.setAttribute('text-anchor','middle'); t.setAttribute('y','-28'); t.textContent=n.l;
+  const s=document.createElementNS('http://www.w3.org/2000/svg','text');
+  s.setAttribute('text-anchor','middle'); s.setAttribute('y','40'); s.setAttribute('class','sub'); s.textContent=n.s;
+  g.appendChild(c); g.appendChild(t); g.appendChild(s);
+  gNodes.appendChild(g);
+  nodeEls[n.id]={g,c,t};
+});
+
+function reset(){
+  N.forEach(n=>{ const e=nodeEls[n.id];
+    e.g.classList.remove('seed','lit');
+    e.c.setAttribute('r', n.t==='passage'?22:18);
+    e.c.removeAttribute('filter');
+  });
+  Object.values(edgeEls).forEach(p=>p.classList.remove('hot'));
+  gFlows.innerHTML='';
+  chip.textContent='SẴN SÀNG';
+  cap.innerHTML='Câu hỏi của khách: <b>“Dự án nào ở Tây Hồ có bể bơi, tầm 5 tỷ?”</b> — bấm ▶ để xem xác suất lan truyền.';
+}
+
+function flow(a,b,delay,color){
+  const A=byId[a],B=byId[b], mx=(A.x+B.x)/2,my=(A.y+B.y)/2;
+  const path=`M${A.x},${A.y} Q${mx},${my} ${B.x},${B.y}`;
+  const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  c.setAttribute('r','5'); c.setAttribute('class','flow'); c.setAttribute('fill',color||'#ffd479');
+  const anim=document.createElementNS('http://www.w3.org/2000/svg','animateMotion');
+  anim.setAttribute('dur','0.9s'); anim.setAttribute('begin', (delay/1000)+'s');
+  anim.setAttribute('path',path); anim.setAttribute('fill','freeze');
+  const fade=document.createElementNS('http://www.w3.org/2000/svg','animate');
+  fade.setAttribute('attributeName','opacity'); fade.setAttribute('values','0;1;1;0');
+  fade.setAttribute('dur','0.9s'); fade.setAttribute('begin',(delay/1000)+'s'); fade.setAttribute('fill','freeze');
+  c.appendChild(anim); c.appendChild(fade);
+  gFlows.appendChild(c);
+}
+
+let running=false;
+function wait(ms){return new Promise(r=>setTimeout(r,ms));}
+
+async function run(){
+  if(running) return; running=true;
+  document.getElementById('play').disabled=true;
+  reset();
+
+  // stage 1: seeds
+  chip.textContent='① EMBED + SEED';
+  cap.innerHTML='Câu hỏi khớp trực tiếp <b>3 khái niệm</b>: Tây Hồ · Bể bơi · ~5 tỷ. Bơm xác suất vào 3 <b>seed</b> (node vàng phát sáng).';
+  SEEDS.forEach((id,i)=>setTimeout(()=>{
+    const e=nodeEls[id]; e.g.classList.add('seed'); e.c.setAttribute('filter','url(#glow)');
+    e.c.setAttribute('r', byId[id].t==='passage'?26:22);
+  }, i*260));
+  await wait(1100);
+
+  // stage 2: hop 1 (probability leaves seeds)
+  chip.textContent='② PPR — LAN TRUYỀN (hop 1)';
+  cap.innerHTML='Xác suất <b>chảy qua cạnh</b> sang các node kề: Tây Hồ→Noble Crystal, Bể bơi→Tiện ích khu, ~5 tỷ→Bảng giá.';
+  const hop1=[['q_tayho','ph_cry'],['q_pool','p_amen'],['q_price','p_price']];
+  hop1.forEach(([a,b],i)=>{ edgeEls[a+'>'+b].classList.add('hot'); flow(a,b,i*120,'#ffd479'); });
+  await wait(1100);
+  hop1.forEach(([a,b])=>{ nodeEls[b].g.classList.add('lit'); });
+
+  // stage 3: hop 2 — mass converges on Noble Crystal passage
+  chip.textContent='② PPR — LAN TRUYỀN (hop 2)';
+  cap.innerHTML='Từ Noble Crystal + Tiện ích + Bảng giá, xác suất tiếp tục hội tụ về đoạn văn <b>“Noble Crystal”</b> — giao điểm của cả ba manh mối.';
+  const hop2=[['ph_cry','p_crystal'],['p_amen','p_crystal'],['p_price','p_crystal']];
+  hop2.forEach(([a,b],i)=>{ edgeEls[a+'>'+b].classList.add('hot'); flow(a,b,i*140,'#3fd6c9'); });
+  await wait(1200);
+
+  // stage 4: winner
+  chip.textContent='④ XẾP HẠNG → TRẢ VỀ';
+  const w=nodeEls['p_crystal'];
+  w.g.classList.add('lit'); w.c.setAttribute('filter','url(#glow)');
+  w.c.setAttribute('fill','#1f6b63'); w.c.setAttribute('r','30'); w.c.setAttribute('stroke','#7dffef'); w.c.setAttribute('stroke-width','3');
+  cap.innerHTML='✅ Passage <b>“Noble Crystal”</b> đạt điểm PPR cao nhất → trả về cho Luna. Không đoạn văn đơn lẻ nào chứa đủ cả 3 ý, nhưng <b>cấu trúc đồ thị</b> đã suy luận ra nó — trong một lần truy hồi, không cần LLM.';
+  running=false;
+  document.getElementById('play').disabled=false;
+}
+
+document.getElementById('play').addEventListener('click',run);
+document.getElementById('reset').addEventListener('click',()=>{ if(!running) reset(); });
+reset();
+
+/* ================= PPR ITERATION STEPPER ================= */
+(function(){
+  const PN=[
+    {l:'Tây Hồ',       t:'seed'},
+    {l:'Bể bơi',       t:'seed'},
+    {l:'Noble Crystal',t:'phrase'},
+    {l:'P·Tổng quan',  t:'passage'},
+    {l:'P·Tiện ích',   t:'passage'},
+  ];
+  // r[t] = phân bố xác suất sau vòng lặp t (tính tay, d=0.5, seed reset 0.5/0.5)
+  const R=[
+    [.500,.500,.000,.000,.000],
+    [.250,.250,.375,.000,.125],
+    [.297,.328,.219,.047,.109],
+    [.277,.305,.281,.027,.109],
+  ];
+  const COL={seed:'#f0b64a',phrase:'#8b7cf0',passage:'#3fd6c9'};
+  const CHIP=['t=0 · KHỞI TẠO','t=1 · HOP 1','t=2 · HOP 2','t=3 · HỘI TỤ'];
+  const CAP=[
+    'Khởi tạo: toàn bộ xác suất đặt ở <b>2 seed</b> (mỗi seed 0.5). Chưa lan ra đâu cả.',
+    'Vòng 1: một nửa khối ở seed "đi bộ" sang hàng xóm. <b>Noble Crystal</b> — giao điểm của cả hai seed — hứng <b>0.375</b>, vọt lên cao nhất. Số hạng (1−d) kéo seed về lại 0.25.',
+    'Vòng 2: xác suất chảy thêm một hop tới các passage. <b>P·Tiện ích</b> (nối thẳng Bể bơi + Noble Crystal) đạt <b>0.109</b> — gấp ~2× P·Tổng quan (0.047, chỉ nối qua Noble Crystal).',
+    'Vòng 3: thứ hạng đã <b>ổn định (hội tụ)</b>. Đọc điểm ở các node <b>passage</b>: P·Tiện ích 0.109 &gt; P·Tổng quan 0.027 → đây là passage được trả về.',
+  ];
+  const box=document.getElementById('ppr-bars');
+  if(!box) return;
+  const fills=[],vals=[];
+  PN.forEach(n=>{
+    const row=document.createElement('div'); row.className='pbar';
+    const shadow = n.t==='seed' ? 'box-shadow:0 0 8px '+COL[n.t] : '';
+    row.innerHTML =
+      '<div class="pl"><span class="dot" style="background:'+COL[n.t]+';'+shadow+'"></span>'+n.l+'</div>'+
+      '<div class="pt"><div class="pf" style="background:'+COL[n.t]+'"></div></div>'+
+      '<div class="pv">0.000</div>';
+    box.appendChild(row);
+    fills.push(row.querySelector('.pf'));
+    vals.push(row.querySelector('.pv'));
+  });
+  let t=0;
+  const tEl=document.getElementById('ppr-t'),
+        chip=document.getElementById('ppr-chip'),
+        cap=document.getElementById('ppr-cap'),
+        stepBtn=document.getElementById('ppr-step');
+  function render(){
+    R[t].forEach((p,i)=>{ fills[i].style.width=Math.min(100,p*200)+'%'; vals[i].textContent=p.toFixed(3); });
+    tEl.textContent=t; chip.textContent=CHIP[t]; cap.innerHTML=CAP[t];
+    stepBtn.disabled = t>=R.length-1;
+    stepBtn.textContent = t>=R.length-1 ? '✓ Đã hội tụ' : '▶ Bước lặp tiếp theo';
+  }
+  stepBtn.addEventListener('click',()=>{ if(t<R.length-1){t++;render();} });
+  document.getElementById('ppr-reset').addEventListener('click',()=>{ t=0;render(); });
+  render();
+})();
+</script>
+</body>
+</html>

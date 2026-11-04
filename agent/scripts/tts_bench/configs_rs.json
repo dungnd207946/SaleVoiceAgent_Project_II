@@ -1,0 +1,10 @@
+[
+  {
+    "name": "soniox-v2-Nina-sp1.15-rs",
+    "provider": "soniox",
+    "model": "tts-rt-v2",
+    "voice": "Nina",
+    "speed": 1.15,
+    "reduce_silence": true
+  }
+]

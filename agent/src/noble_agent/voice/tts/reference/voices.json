@@ -1,0 +1,18 @@
+{
+  "gemini": {
+    "wav": "gemini.wav",
+    "text": "Dạ để em cập nhật lịch thanh toán đợt tiếp theo của Noble Crystal Long Biên cho Anh/Chị nhé.",
+    "source_run": "20260611_184719",
+    "source_id": "22426b5d1e31",
+    "duration": 6.0,
+    "ref_sec": 6.0
+  },
+  "luna": {
+    "wav": "luna.wav",
+    "text": "Nếu anh/chị muốn cập nhật hình ảnh thực tế công trường hoặc tiến độ từng tháng, em gửi thêm ngay nhé!",
+    "source_run": "sts_full",
+    "source_id": "7fe3c2014974",
+    "duration": 6.0,
+    "ref_sec": 6.0
+  }
+}

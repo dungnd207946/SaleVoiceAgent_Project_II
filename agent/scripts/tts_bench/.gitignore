@@ -1,0 +1,5 @@
+# Sản phẩm của mỗi lượt đo — audio nặng vài MB, đừng commit
+out/
+results_*.json
+report.html
+*.log

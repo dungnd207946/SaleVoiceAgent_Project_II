@@ -1,0 +1,28 @@
+[
+  {
+    "name": "soniox-v2-Nina-emo",
+    "provider": "soniox",
+    "model": "tts-rt-v2",
+    "voice": "Nina",
+    "speed": 1.1
+  },
+  {
+    "name": "el-v3-AnhVien-emo",
+    "provider": "elevenlabs",
+    "model": "eleven_v3",
+    "voice": "iSFxP4Z6YNcx9OXl62Ic",
+    "stability": 0.5,
+    "similarity_boost": 0.75,
+    "speed": 1.0
+  },
+  {
+    "name": "el-flash-v2_5-AnhVien-emo",
+    "provider": "elevenlabs",
+    "model": "eleven_flash_v2_5",
+    "voice": "iSFxP4Z6YNcx9OXl62Ic",
+    "language_code": "vi",
+    "stability": 1.0,
+    "similarity_boost": 0.75,
+    "speed": 1.13
+  }
+]

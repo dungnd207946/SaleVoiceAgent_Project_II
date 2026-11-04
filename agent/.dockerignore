@@ -1,0 +1,31 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.env
+.env.*
+!.env.example
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.claude/
+tests/
+scripts/
+!scripts/pull-rag-data.sh
+models/
+logs/
+sessions/
+# Heavy data dirs: eval output, the on-disk RAG backup, and the RAG artifacts that
+# are provided at runtime (mounted ./data on this box, or pulled by pull-rag-data.sh
+# elsewhere). The small top-level data/*.json|*.txt the app reads are still baked.
+data/eval_results/
+data/eval_processed/
+data/rag.bak/
+data/rag/
+data/flat_store/
+data/faq_cache/
+*.md
+.gitlab-ci.yml
+docker-compose*.yml
+Makefile

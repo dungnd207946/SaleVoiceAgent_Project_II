@@ -1,0 +1,115 @@
+# Gate loại 1 — ngưỡng TUYỆT ĐỐI. Chốt ngay, không chờ baseline.
+# Gate loại 2 — chặn TỤT so với baseline, chốt 2026-08-27 từ các run 100 case ngày
+# 2026-08-25 trong `evals/registry.jsonl` (gemini-2.5-flash / gemini-3.7-flash /
+# qwen3.7-flash, kb_service, tenant noble). Ngưỡng đặt ở "kết quả XẤU NHẤT đã quan
+# sát + biên nhỏ" để mọi model hiện hành đều qua, còn một thay đổi prompt/tool làm
+# tụt thêm là chặn. Muốn siết theo model thì đổi ở đây — KHÔNG nới cho vừa kết quả.
+# Spec: docs/superpowers/specs/2026-08-25-evals-quality-refactor-design.md §6
+#
+# `judge = true`: metric chỉ có khi chạy `--judge`; run không judge thì gate đó hiện
+# `skipped` thay vì FAIL (xem scorecard.evaluate_gates). Không có cờ này thì mọi
+# `make eval-quality` (không judge) sẽ đỏ vì thiếu số nó cố ý không đo.
+#
+# Chưa gate (chờ baseline có scorer mới): style_da_opener_rate, style_a_overuse_rate,
+# style_multi_question_rate, style_cliche_rate, style_violation_rate — chạy một run
+# rồi chốt, đừng đặt ngưỡng trước khi có số.
+
+# ── Loại 1 ────────────────────────────────────────────────────────────────────
+
+[[gates]]
+name = "Vi phạm policy (giá riêng, cam kết, bịa SĐT/lịch, escalate sai)"
+metric = "policy_violations"
+op = "<="
+limit = 0.0
+
+[[gates]]
+name = "Độ đúng tham số tool (bắt lệch đơn vị giá VNĐ/tỷ)"
+metric = "arg_accuracy"
+op = ">="
+limit = 1.0
+
+[[gates]]
+name = "Tool bị cấm mà vẫn gọi (golden.banned_tools)"
+metric = "banned_call_rate"
+op = "<="
+limit = 0.0
+
+[[gates]]
+name = "Lượt chạm MAX_TOOL_ITERATIONS (=7)"
+metric = "loop_exhaustion_rate"
+op = "<="
+limit = 0.02
+
+[[gates]]
+name = "Case crash khi chạy (agent/infra ném exception)"
+metric = "cases_errored"
+op = "<="
+limit = 0.0
+
+[[gates]]
+name = "Case thiếu trace / thiếu lượt (run dở dang)"
+metric = "cases_missing_trace"
+op = "<="
+limit = 0.0
+
+[[gates]]
+name = "Reply có markdown (persona cấm; MarkdownStripper lẽ ra đã lọc)"
+metric = "style_markdown_rate"
+op = "<="
+limit = 0.0
+
+# ── Loại 2 — không cần judge ─────────────────────────────────────────────────
+
+[[gates]]
+name = "Gọi tool ngoài golden.tools (baseline 0.31–0.54 tuỳ model)"
+metric = "irrelevant_call_rate"
+op = "<="
+limit = 0.60
+
+[[gates]]
+name = "Gọi lặp y hệt (tên tool, args) trong một lượt (baseline 0.0)"
+metric = "repeated_call_rate"
+op = "<="
+limit = 0.05
+
+[[gates]]
+name = "Số bước thừa so với golden (baseline 1.00–1.62)"
+metric = "steps_overhead"
+op = "<="
+limit = 1.8
+
+[[gates]]
+name = "p95 tổng thời gian một lượt, ms (baseline 4.8 s–18.9 s; 3.7-flash nặng nhất)"
+metric = "turn_total_p95_ms"
+op = "<="
+limit = 20000
+
+# ── Loại 2 — chỉ khi --judge ─────────────────────────────────────────────────
+
+[[gates]]
+name = "Khớp nội dung với golden.answer (baseline 0.47–0.80)"
+metric = "answer_correctness_mean"
+op = ">="
+limit = 0.45
+judge = true
+
+[[gates]]
+name = "Lượt bị judge gắn cờ bịa (baseline 0.16–0.38)"
+metric = "hallucination_rate"
+op = "<="
+limit = 0.40
+judge = true
+
+[[gates]]
+name = "Mọi khẳng định được dữ liệu tool đỡ (baseline 0.70–0.87)"
+metric = "grounded_rate"
+op = ">="
+limit = 0.65
+judge = true
+
+[[gates]]
+name = "Giữ ngữ cảnh qua nhiều lượt (baseline 0.79–0.88)"
+metric = "context_retention_score"
+op = ">="
+limit = 0.75
+judge = true

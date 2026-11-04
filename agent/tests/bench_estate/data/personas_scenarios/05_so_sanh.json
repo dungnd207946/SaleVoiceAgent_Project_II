@@ -1,0 +1,29 @@
+{
+  "case_id": "S-5",
+  "title": "Khách so sánh dự án khác",
+  "setup": "Anh Minh, 38 tuổi, nhà đầu tư có kinh nghiệm đang cân nhắc giữa Vinhomes Green Paradise và dự án X cùng khu vực. Đã tự tìm hiểu cả hai và nghĩ dự án X cũng tốt. DISC type: D+C (quyết đoán nhưng cần dữ liệu để tự kết luận). Sale phải so sánh khách quan, không dèm pha đối thủ.",
+  "turns": [
+    {
+      "speaker": "KH",
+      "text": "Anh thấy dự án X cũng tốt, có gì hơn không?"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: ngưỡng mộ tư duy so sánh của KH; tuyên bố không nói xấu đối thủ; đặt 3 câu hỏi khung so sánh khách quan: (1) sổ hồng riêng từng căn hay sổ chung, (2) CĐT đã giao bao nhiêu dự án đúng tiến độ, (3) đơn vị vận hành sau bàn giao là ai; CTA gửi bảng so sánh có nguồn để KH tự kết luận"
+    }
+  ],
+  "rubric_checkpoints": [
+    [
+      "M1 ghi nhận tư duy nhà đầu tư khôn ngoan — không đối đầu với lựa chọn của KH",
+      "tuyên bố rõ ràng sẽ không nói xấu đối thủ — đạo đức nghề",
+      "M2 đặt 3 câu hỏi differentiator cụ thể: pháp lý sổ hồng, track record CĐT, đơn vị vận hành",
+      "các câu hỏi mang tính khách quan — để KH tự đánh giá, không áp đặt kết luận",
+      "M3 CTA gửi bảng so sánh có nguồn (CBRE, VARS, báo cáo CĐT) — không chỉ nói miệng",
+      "M5 không cố chốt ngay — để KH tự kết luận từ dữ liệu"
+    ]
+  ],
+  "judge_extras": "Sales rubric P3+P4 — tập trung M3 (dữ liệu so sánh có nguồn) + đạo đức nghề (không dèm pha đối thủ). Phạt nếu nói xấu dự án X hoặc thiếu 3 câu hỏi differentiator (sổ hồng/track record/vận hành).",
+  "max_extra_turns": 1,
+  "points": 20.0,
+  "delivery_mode": "scripted_multiturn"
+}

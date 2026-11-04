@@ -1,0 +1,29 @@
+{
+  "case_id": "S-3",
+  "title": "Khách hàng khó tính gắt gỏng",
+  "setup": "Anh Đức, 40 tuổi, từng bị môi giới khác cung cấp thông tin sai về một dự án trước đây, mất tiền và mất niềm tin. Hiện rất hoài nghi và gắt gỏng ngay từ đầu cuộc tiếp xúc. DISC type: C (cẩn trọng, cần dữ liệu và bằng chứng, không chịu được lời nói suông). Sale phải phá vỡ tường phòng thủ bằng đồng cảm chân thành + thách thức ngược.",
+  "turns": [
+    {
+      "speaker": "KH",
+      "text": "Mấy đứa môi giới chúng mày nói toàn vẽ vời, anh không tin được."
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: đồng cảm chân thành — thừa nhận ngành có vấn đề; chia sẻ cá nhân (bản thân từng bị lừa); cam kết làm việc khác biệt — tất cả có giấy tờ; thách thức ngược: mời KH hỏi 3 câu khó nhất, nếu không trả lời được bằng tài liệu CĐT thì đuổi về"
+    }
+  ],
+  "rubric_checkpoints": [
+    [
+      "M4 HEAR-D step H+E: im lặng nghe hết, đồng cảm thực sự — KHÔNG biện hộ ngay",
+      "thừa nhận vấn đề của ngành môi giới một cách trung thực (không phủ nhận)",
+      "chia sẻ cá nhân có tính xác thực: bản thân từng trải qua — xây dựng kết nối cảm xúc",
+      "cam kết minh bạch: 'tất cả những gì nói đều có giấy tờ in ra được'",
+      "thách thức ngược tạo tin tưởng: mời KH hỏi 3 câu khó nhất — cho KH kiểm soát",
+      "M1 tone bình tĩnh, không phòng thủ, không xin lỗi thay người khác"
+    ]
+  ],
+  "judge_extras": "Sales rubric P4 — tập trung M4 (đồng cảm + phá vỡ phòng thủ bằng thách thức ngược) + M1 (tone chuyên nghiệp không phòng thủ). Phạt nặng nếu Sale biện hộ cho ngành hoặc phủ nhận kinh nghiệm tiêu cực của KH.",
+  "max_extra_turns": 1,
+  "points": 20.0,
+  "delivery_mode": "scripted_multiturn"
+}

@@ -1,0 +1,35 @@
+name: sosanh_da_du_an
+description: >-
+  Khách so sánh nhiều dự án ở các khu khác nhau (Long Biên vs Tây Hồ vs Quận 7).
+  Kiểm tra Luna tra cứu đúng, không lẫn khu vực giữa các dự án, không bịa dữ liệu.
+
+turns:
+  - user: "Em ơi cho anh hỏi bên mình có những dự án nào ở Hà Nội?"
+    expect:
+      reply_contains_any: ["Long Biên", "Tây Hồ", "Noble", "Sunshine", "dự án"]
+
+  - user: "So sánh giúp anh Noble Crystal Long Biên với Noble Palace Tây Hồ đi"
+    expect:
+      # Phải nhắc CẢ HAI đúng khu — không gán nhầm Tây Hồ cho Long Biên hay ngược lại.
+      reply_contains: "Long Biên"
+      reply_contains: "Tây Hồ"
+
+  - user: "Thế còn Sunshine Sky City trong Quận 7 thì sao, khác gì ngoài này?"
+    expect:
+      reply_contains_any: ["Quận 7", "Sky City", "TP.HCM", "Hồ Chí Minh", "trong đó"]
+
+  - user: "Dự án nào phù hợp để ở lâu dài cho gia đình 2 con hơn?"
+    expect:
+      # Tư vấn có định hướng, không né. Không được bịa số liệu tuyệt đối.
+      reply_contains_any: ["gia đình", "phù hợp", "phòng ngủ", "tiện ích", "trường"]
+
+  - user: "Ừ cái nào rẻ hơn em?"
+    expect:
+      # Giá so sánh cụ thể có thể là private → defer/không tự chốt con số bịa.
+      reply_contains_any: ["chuyên viên", "báo giá", "liên hệ", "tùy", "cụ thể", "khoảng"]
+
+  - user: "Ok em gửi anh brochure 2 dự án ngoài Hà Nội qua Zalo với"
+    expect:
+      # Yêu cầu gửi tài liệu → send_via_app là hành vi đúng.
+      # [strict/flaky] tool_called: send_via_app
+      reply_contains_any: ["gửi", "app", "NobleX", "Zalo", "chờ em"]

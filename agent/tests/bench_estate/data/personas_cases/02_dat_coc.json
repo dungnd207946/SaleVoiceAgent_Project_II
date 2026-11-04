@@ -1,0 +1,45 @@
+{
+  "case_id": "C-2",
+  "title": "Tranh chấp đặt cọc — BLDS Điều 328",
+  "case_text": "KH đã đặt cọc 20 triệu mua nhà. Bên bán đổi ý, tuyên bố không bán nữa. KH gọi sale hỏi làm thế nào để đòi lại tiền cọc và được bồi thường.",
+  "turns": [
+    {
+      "speaker": "KH",
+      "text": "Em ơi anh vừa đặt cọc 20 triệu mua nhà, nhưng bên bán giờ nói không bán nữa. Anh phải làm sao đây em? Tiền cọc của anh có đòi lại được không?"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: đồng cảm với KH; giải thích Điều 328 BLDS 2015 — bên nhận cọc vi phạm phải trả lại cọc + đền bằng giá trị cọc; tổng = 40 triệu"
+    },
+    {
+      "speaker": "KH",
+      "text": "Vậy anh được nhận lại bao nhiêu tiền cụ thể? Và nếu anh còn thiệt hại khác thì sao?"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: tính cụ thể 20tr hoàn cọc + 20tr đền bù = 40tr; nêu thêm quyền yêu cầu bồi thường thiệt hại thực tế nếu chứng minh được; tư vấn lộ trình xử lý"
+    }
+  ],
+  "rubric_checkpoints": [
+    [
+      "trích Điều 328 BLDS 2015",
+      "giải thích bên nhận cọc vi phạm phải trả cọc + đền bằng giá trị cọc",
+      "đồng cảm với tình huống của KH",
+      "tone tư vấn chứ không phán xét"
+    ],
+    [
+      "nêu đúng số tiền: 20tr hoàn cọc + 20tr đền bù = 40 triệu",
+      "đề cập quyền yêu cầu bồi thường thiệt hại thực tế nếu chứng minh được",
+      "tư vấn lộ trình: thương lượng → văn bản yêu cầu → hòa giải UBND xã → khởi kiện"
+    ]
+  ],
+  "key_answers": {
+    "luat_ap_dung": "Điều 328 BLDS 2015",
+    "so_tien": "Trả lại 20tr cọc + đền 20tr (= giá trị cọc) = 40 triệu",
+    "boi_thuong_them": "Có thể yêu cầu thiệt hại thực tế nếu chứng minh được",
+    "tu_van_xu_ly": "Thương lượng → Văn bản yêu cầu → Hòa giải UBND xã → Khởi kiện"
+  },
+  "judge_extras": "Case pháp lý — chấm chặt T2 (trích đúng Điều 328 BLDS 2015) và T3 (tổng 40 triệu đúng). T4 tư vấn lộ trình 4 bước.",
+  "points": 20.0,
+  "delivery_mode": "scripted_multiturn"
+}

@@ -1,0 +1,29 @@
+{
+  "case_id": "S-9",
+  "title": "Giới thiệu dự án mới pre-launch",
+  "setup": "Anh Đức, khách VIP trong danh sách 20 khách thân thiết của sàn. Chưa biết gì về dự án Vinhomes Green Paradise Cần Giờ sắp mở bán. Sale gọi để thông báo pre-launch confidential với ưu đãi suất pre-sale 8% trước công bố chính thức ngày 15/12. DISC type: D (quyết đoán, thích cảm giác được ưu tiên và có thông tin trước người khác).",
+  "turns": [
+    {
+      "speaker": "KH",
+      "text": "Alo?"
+    },
+    {
+      "speaker": "Sale",
+      "text": "REFERENCE: chào + giới thiệu tên/đơn vị; reciprocity frame: được sếp giao gọi cho 20 khách VIP nhất — anh nằm trong list; scarcity + exclusivity: dự án confidential sắp công bố 15/12, 50 căn pre-sale cho khách thân thiết giá rẻ hơn 8% giá công bố; CTA: gửi tài liệu confidential qua Zalo trong 24h, hỏi anh tiện nhận lúc nào"
+    }
+  ],
+  "rubric_checkpoints": [
+    [
+      "M1 reciprocity + exclusivity: nhấn mạnh anh trong danh sách 20 khách VIP được chọn lọc",
+      "scarcity cụ thể: 50 căn pre-sale / giá rẻ hơn 8% giá công bố chính thức",
+      "FOMO + time pressure: mở bán đợt 1 ngày 15/12, cơ hội chỉ dành cho khách thân thiết",
+      "confidential framing: tài liệu bí mật — tạo cảm giác đặc quyền thực sự",
+      "CTA cụ thể: gửi tài liệu Zalo trong 24h + hỏi giờ tiện nhận (không hỏi 'có muốn không')",
+      "không reveal quá nhiều thông tin trong cuộc gọi — giữ lại để KH tự tìm hiểu từ tài liệu"
+    ]
+  ],
+  "judge_extras": "Sales rubric P1+P5 — tập trung M1 (reciprocity + exclusivity frame) + M5 (scarcity/FOMO pre-launch). Phạt nếu không nhấn mạnh tính VIP/được chọn lọc hoặc không có CTA gửi tài liệu confidential trong 24h.",
+  "max_extra_turns": 2,
+  "points": 20.0,
+  "delivery_mode": "scripted_multiturn"
+}
