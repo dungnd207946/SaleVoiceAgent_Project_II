@@ -1,0 +1,117 @@
+# File DEPLOY (dev-server + prod). Máy dev dùng docker-compose.local.yml.
+# Không có postgres/minio: ở đây là Aurora PostgreSQL và S3.
+#
+#   docker network create odyssey-network      # một lần mỗi máy, tạo tay
+#   IMAGE_TAG=<sha> docker compose -f docker-compose.dev.yml pull
+#   IMAGE_TAG=<sha> docker compose -f docker-compose.dev.yml run --rm migrate
+#   IMAGE_TAG=<sha> docker compose -f docker-compose.dev.yml up -d --wait
+name: odyssey-portal-backend
+
+services:
+  redis:
+    image: redis:7-alpine
+    # Dùng chung file env với backend: REDIS_PASSWORD ở đó, cạnh REDIS_URL — một chỗ
+    # để đổi mật khẩu.
+    env_file:
+      - deploy/odyssey-portal-backend.env
+    # `$$` để compose KHÔNG nội suy — shell trong container mới mở biến ra (compose
+    # không đọc được biến từ `env_file` lúc nội suy `command`).
+    # `:?` làm container chết ngay nếu biến rỗng/thiếu: `--requirepass ""` là một
+    # Redis KHÔNG mật khẩu trên network dùng chung, và nó khởi động im lặng.
+    # `--appendonly yes` đi kèm volume, không có nó thì volume chỉ là thư mục rỗng.
+    command:
+      - sh
+      - -c
+      - ': "$${REDIS_PASSWORD:?chưa có trong deploy/odyssey-portal-backend.env}"; exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"'
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    volumes:
+      - qdrant-storage:/qdrant/storage
+    restart: unless-stopped
+    # ⚠️ KHÔNG bật xác thực ở đây cho tới khi làm đủ bước 1–2 của
+    # `docs/contracts/dau-noi-agent.md` §"Bật xác thực Qdrant".
+    #
+    # Bỏ comment hai dòng dưới là BẮT ĐẦU CƯỠNG CHẾ NGAY: mọi pod agent nối
+    # không kèm khoá `403` từ giây đó, và credential chúng đang giữ có thể còn
+    # hiệu lực tới một giờ nữa — tức không tự khỏi bằng cách chờ.
+    #
+    # Chuỗi này phải TRÙNG `QDRANT_API_KEY` mà portal đang dùng (Qdrant verify
+    # JWT của pod bằng đúng nó). Không có khoá ký thứ hai.
+    # environment:
+    #   QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?bat buoc khi bat xac thuc}
+    #   QDRANT__SERVICE__JWT_RBAC: "true"
+
+  # Một image, hai vai — migration và runtime phải cùng một bản code (README §8).
+  migrate:
+    # `up --wait` KHÔNG được thấy service này: nó sẽ (1) chạy migration lần hai sau
+    # `run --rm migrate`, và (2) trả exit 1 vì `--wait` coi container thoát — kể cả
+    # exit 0 — là thất bại. `run --rm migrate` tự bật profile nên vẫn chạy bình thường.
+    profiles: ["migration"]
+    image: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-portal-backend:${IMAGE_TAG:-dev-latest}
+    command: ["migrate"]
+    # HAI file env chứ không một: entrypoint từ chối vai `serve` nếu thấy
+    # MIGRATOR_URL. Dùng chung một file thì không có gì báo sai — container xanh,
+    # request 200, chỉ là runtime cầm quyền DDL (README §1-§2).
+    env_file:
+      - deploy/odyssey-portal-migrate.env
+    restart: "no"
+
+  backend:
+    image: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-portal-backend:${IMAGE_TAG:-dev-latest}
+    # Tên nginx của repo frontend trỏ tới (ODYSSEY_PORTAL_API_UPSTREAM).
+    container_name: odyssey-portal-backend
+    env_file:
+      - deploy/odyssey-portal-backend.env
+    ports:
+      - "${PORTAL_API_PORT:-8100}:8100"
+    depends_on:
+      redis:
+        condition: service_started
+      qdrant:
+        condition: service_started
+      # KHÔNG `migrate: service_completed_successfully`: với `run --rm` compose
+      # không thấy migrate completed nên `up` chạy migration lần hai, tranh khoá DDL.
+    restart: unless-stopped
+
+  # Hàng đợi `shop.jobs`. Thêm 2026-08-05 — README §8.4 đặt điều kiện "cùng lúc
+  # với `jobs.py` đầu tiên", và `modules/kb/jobs.py` đã tới.
+  #
+  # KHÔNG có `ports`: worker không phục vụ HTTP. Không có `container_name`: nginx của
+  # repo frontend không trỏ vào nó, và tên cố định là thứ chặn chạy nhiều bản — mà
+  # nhiều bản ở đây là AN TOÀN và có lúc cần (`FOR UPDATE SKIP LOCKED`, xem
+  # portal/core/jobs.py), nên đừng khoá lại bằng một cái tên.
+  #
+  # CHUNG file env với `backend`: cùng role `portal_api`, cùng bị entrypoint chặn
+  # MIGRATOR_URL. Devops không phải cấp thêm credential nào cho service này.
+  worker:
+    image: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com/aidc/odyssey-portal-backend:${IMAGE_TAG:-dev-latest}
+    command: ["worker"]
+    # HEALTHCHECK của image là của vai `serve` (gọi /healthz) — worker không phục
+    # vụ HTTP, thừa kế check đó là unhealthy sau 3 lượt và `up --wait` đánh đỏ cả
+    # job deploy dù worker chạy tốt (đã xảy ra: deploy 478d579f, 2026-08-05).
+    # Disable chứ KHÔNG chế một check giả (kiểu pgrep): image slim không có procps,
+    # và một phép kiểm không đo được "worker còn poll DB" thì chỉ dạy người đọc
+    # tin nhầm — cùng lý lẽ entrypoint.sh không kiểm REDIS_URL cho vai worker.
+    healthcheck:
+      disable: true
+    env_file:
+      - deploy/odyssey-portal-backend.env
+    depends_on:
+      redis:
+        condition: service_started
+      qdrant:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  qdrant-storage:
+
+networks:
+  default:
+    name: odyssey-network
+    external: true

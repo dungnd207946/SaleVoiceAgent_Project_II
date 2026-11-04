@@ -1,0 +1,339 @@
+stages: [lint, test, build, deploy]
+
+# Ba môi trường: dev (`develop`), uat (`uat`) và prod (`prod`). Không có pipeline cho MR,
+# nên các cổng ở stage `test` chạy SAU khi merge — thêm
+# `- if: $CI_PIPELINE_SOURCE == "merge_request_event"` nếu muốn chặn ngay ở MR.
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+    - if: $CI_COMMIT_BRANCH == "uat"
+      variables:
+        LINT_RUNNER: odyssey-uat-runner
+    - if: $CI_COMMIT_BRANCH == "prod"
+
+variables:
+  APP_NAME: aidc/odyssey-portal-backend
+  AWS_DEFAULT_REGION: ap-southeast-1
+  ECR_URL: 418295696099.dkr.ecr.ap-southeast-1.amazonaws.com
+  IMAGE_TAG: ${CI_COMMIT_SHORT_SHA}
+  UV_IMAGE: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+  LINT_RUNNER: odyssey-dev-runner # uat đè thành odyssey-uat-runner ở workflow
+
+# ⚠️ Runner là SHELL executor → GitLab BỎ QUA `image:`, job chạy thẳng trên host.
+# Nên mọi lệnh python gọi tường minh qua `docker run`:
+#   -u $(id -u):$(id -g)  file sinh ra (.venv, __pycache__) thuộc user runner chứ
+#                         không phải root — nếu không `git clean` job sau gãy permission
+#   -e HOME/UV_CACHE_DIR  uv cần chỗ ghi cache
+#   --network host        testcontainers map cổng ra HOST, tiến trình test phải thấy
+#                         `localhost:<cổng đã map>` y như khi chạy trên host
+#   -v docker.sock        testcontainers dựng container anh em qua docker của host
+#
+# KHÔNG đặt TESTCONTAINERS_RYUK_DISABLED. Ryuk là container dọn rác của
+# testcontainers: nó theo dõi phiên test và xoá các container postgres/redis/qdrant/
+# minio khi phiên chết. Cấu hình dind cũ phải tắt nó; với docker.sock của host thì nó
+# chạy được — và cần chạy, vì job bị cancel/kill mà không có Ryuk sẽ để lại container
+# nằm lại VĨNH VIỄN trên máy runner (cũng là máy deploy), mỗi lần một bộ 4 cái.
+.uv:
+  tags:
+    - ${LINT_RUNNER}
+  before_script:
+    - docker pull ${UV_IMAGE}
+
+lint:
+  extends: .uv
+  stage: lint
+  script:
+    # Cache uv nằm trên host để lượt sau không tải lại; timeout dài vì mạng runner chập chờn.
+    - mkdir -p "$HOME/.cache/uv"
+    - >
+      docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -e UV_CACHE_DIR=/tmp/.uv
+      -e UV_HTTP_TIMEOUT=300 -e UV_HTTP_RETRIES=10
+      -v "$HOME/.cache/uv":/tmp/.uv
+      -v "$CI_PROJECT_DIR":/app -w /app ${UV_IMAGE}
+      sh -c "uv sync --frozen && uv run ruff check . && uv run ruff format --check ."
+
+# TẠM COMMENT: tắt các job test trong pipeline (yêu cầu 2026-08-05)
+# unit:
+#   extends: .uv
+#   stage: test
+#   script:
+#     - >
+#       docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -e UV_CACHE_DIR=/tmp/.uv
+#       -v "$CI_PROJECT_DIR":/app -w /app ${UV_IMAGE}
+#       sh -c "uv sync --frozen && uv run pytest tests/unit -v"
+
+# KHÔNG có `rules: changes:` — cổng cách ly chạy cho mọi commit.
+# isolation:
+#   extends: .uv
+#   stage: test
+#   script:
+#     - >
+#       docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -e UV_CACHE_DIR=/tmp/.uv
+#       --network host
+#       --group-add "$(stat -c '%g' /var/run/docker.sock)"
+#       -v /var/run/docker.sock:/var/run/docker.sock
+#       -v "$CI_PROJECT_DIR":/app -w /app ${UV_IMAGE}
+#       sh -c "uv sync --frozen && uv run pytest tests/isolation tests/test_module_boundaries.py -v"
+
+# integration:
+#   extends: .uv
+#   stage: test
+#   script:
+#     - >
+#       docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -e UV_CACHE_DIR=/tmp/.uv
+#       --network host
+#       --group-add "$(stat -c '%g' /var/run/docker.sock)"
+#       -v /var/run/docker.sock:/var/run/docker.sock
+#       -v "$CI_PROJECT_DIR":/app -w /app ${UV_IMAGE}
+#       sh -c "uv sync --frozen && uv run pytest tests/integration tests/modules -v"
+
+# Nhánh `exit 0` biến mất khi T1 tạo tests/api/ — không phải cửa mở vĩnh viễn.
+# api:
+#   extends: .uv
+#   stage: test
+#   script:
+#     - |
+#       if [ ! -d tests/api ]; then
+#         echo "tests/api/ chưa tồn tại — nó được tạo ở Task 1 (vỏ API)."
+#         exit 0
+#       fi
+#     - >
+#       docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -e UV_CACHE_DIR=/tmp/.uv
+#       --network host
+#       --group-add "$(stat -c '%g' /var/run/docker.sock)"
+#       -v /var/run/docker.sock:/var/run/docker.sock
+#       -v "$CI_PROJECT_DIR":/app -w /app ${UV_IMAGE}
+#       sh -c "uv sync --frozen && uv run pytest tests/api -v"
+
+# TÊN JOB KHÔNG ĐƯỢC LÀ `image` — đó là từ khoá toàn cục, cả file thành invalid.
+.ecr-build:
+  stage: build
+  before_script:
+    - aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${ECR_URL}
+  script:
+    # Không `--build-arg` nào: Dockerfile không khai ARG, mọi cấu hình vào lúc chạy.
+    - docker build --pull --target runtime
+        -t ${ECR_URL}/${APP_NAME}:${IMAGE_TAG}
+        -t ${ECR_URL}/${APP_NAME}:${LATEST_TAG} .
+    # Image thứ hai cho vai crawl-worker: cùng code, thêm Chromium (Dockerfile tầng `crawl`).
+    - docker build --target crawl
+        -t ${ECR_URL}/${APP_NAME}:${IMAGE_TAG}-crawl
+        -t ${ECR_URL}/${APP_NAME}:${LATEST_TAG}-crawl .
+    - docker push ${ECR_URL}/${APP_NAME}:${IMAGE_TAG}
+    - docker push ${ECR_URL}/${APP_NAME}:${LATEST_TAG}
+    - docker push ${ECR_URL}/${APP_NAME}:${IMAGE_TAG}-crawl
+    - docker push ${ECR_URL}/${APP_NAME}:${LATEST_TAG}-crawl
+  after_script:
+    - echo "Image ${ECR_URL}/${APP_NAME}:${IMAGE_TAG}"
+
+# Đăng nhập ECR bằng access key tĩnh (GitLab CI/CD Variables).
+build:image:dev:
+  extends: .ecr-build
+  tags:
+    - odyssey-dev-runner
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+      variables:
+        ENV: dev
+        LATEST_TAG: dev-latest
+  before_script:
+    - |
+      if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+        echo "AWS credentials not set — đặt trong GitLab CI/CD Variables"
+        exit 1
+      fi
+    - aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${ECR_URL}
+
+# UAT giống hệt dev (key tĩnh ECR), chỉ khác runner.
+build:image:uat:
+  extends: build:image:dev
+  tags:
+    - odyssey-uat-runner
+  rules:
+    - if: $CI_COMMIT_BRANCH == "uat"
+      variables:
+        ENV: uat
+        LATEST_TAG: uat-latest
+
+# Runner prod lấy quyền ECR từ IAM role của EC2 — key tĩnh ở đây sẽ đè quyền role.
+build:image:prod:
+  extends: .ecr-build
+  tags:
+    - odyssey-prod-runner
+  rules:
+    - if: $CI_COMMIT_BRANCH == "prod"
+      variables:
+        ENV: prod
+        LATEST_TAG: prod-latest
+
+# ------------------------
+# BƯỚC PHẢI LÀM TAY, pipeline cố ý không làm:
+#
+# 1. `docker network create odyssey-network` — một lần mỗi máy deploy.
+# 2. CŨ: điền giá trị sensitive vào 2 secret trên AWS Console (Secrets Manager):
+#      noblex-<env>-odyssey-secrets-migrate-env    chỉ MIGRATOR_URL (role odyssey_migrator)
+#      noblex-<env>-odyssey-secrets-backend-env    DATABASE_URL (role odyssey_app),
+#                                                  REDIS_PASSWORD, REDIS_URL, ...
+#    MỚI (2026-08-19): điền vào 2 biến trong GitLab CI/CD Variables (Settings → CI/CD →
+#    Variables), Environment scope `dev`/`prod`, bật Protected:
+#      ODYSSEY_SECRET_MIGRATE_ENV    chỉ MIGRATOR_URL (role odyssey_migrator)
+#      ODYSSEY_SECRET_BACKEND_ENV    DATABASE_URL (role odyssey_app),
+#                                    REDIS_PASSWORD, REDIS_URL, ...
+#    Nội dung nhận JSON phẳng một tầng (copy y nguyên giá trị secret cũ sang) HOẶC
+#    dotenv KEY=VALUE mỗi dòng. Không mask được vì nhiều dòng — đừng echo nó ra log.
+#    `fetch_secrets.sh` (gọi trong before_script của .deploy) render chúng thành
+#    deploy/odyssey-portal-{backend,migrate}.env. HAI biến chứ không một: entrypoint
+#    từ chối vai `serve` nếu thấy MIGRATOR_URL.
+#    ⚠️ Mật khẩu trong REDIS_URL phải khớp REDIS_PASSWORD, lệch thì lỗi là WRONGPASS.
+#    ⚠️ Máy deploy cần `jq` khi giá trị ở dạng JSON — `apt-get install -y jq`. Dạng
+#       dotenv thì không cần gì thêm. `aws` cli KHÔNG còn cần nữa.
+#    ⚠️ TỪ 2026-08-19 (on-prem): $ODYSSEY_SECRET_BACKEND_ENV phải có THÊM
+#       POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB (bootstrap superuser của
+#       container postgres), MINIO_ROOT_USER / MINIO_ROOT_PASSWORD, và
+#       S3_ENDPOINT_URL=http://minio:9000 (rỗng là gọi ra AWS thật) cùng
+#       S3_ACCESS_KEY / S3_SECRET_KEY. DATABASE_URL và MIGRATOR_URL phải trỏ host
+#       `postgres:5432`, không còn endpoint Aurora.
+# 3. Lần deploy đầu mỗi môi trường, trên Aurora:
+#      ALTER ROLE odyssey_app LOGIN PASSWORD '<bí mật>';   -- migration KHÔNG đặt
+#      GRANT portal_api, agent_all TO odyssey_app;         -- CHẠY SAU migration
+#    rồi đặt DATABASE_URL cho khớp (deploy/README.md §3, §8.2).
+# 4. TRƯỚC LẦN CHẠY `migrate` ĐẦU TIÊN mỗi môi trường (tức ngay sau bước 3, TRƯỚC migration),
+#    trên Aurora, bằng superuser/master user:
+#      GRANT odyssey_app TO odyssey_migrator WITH ADMIN OPTION;
+#    Vỡ ở đây (2026-08-06) khi `0907_view_control_plane_cho_agent_dbmode.py` chạy
+#    `ALTER ROLE odyssey_app SET search_path = ...`:
+#      permission denied to alter role
+#      DETAIL: Only roles with the CREATEROLE attribute and the ADMIN OPTION on role
+#      "odyssey_app" may alter this role.
+#    Từ Postgres 16, có CREATEROLE (odyssey_migrator có) không còn đủ để ALTER một role bất
+#    kỳ — phải thêm ADMIN OPTION trên ĐÚNG role đó. Thiếu dòng GRANT này thì mọi migration nào
+#    có ALTER ROLE odyssey_app (0907 trở đi) đỏ ngay ở lần chạy đầu môi trường, dù đã chạy
+#    trót lọt ở môi trường khác tạo trước khi lên PG16.
+# 5. Lần deploy đầu mỗi môi trường, SAU khi service lên xanh — tạo owner đầu tiên:
+#      SEED_OWNER_EMAIL=<email> SEED_ORG_ID=<org> SEED_PORTAL_URL=<https://…> \
+#        docker compose -f docker-compose.onprem.yaml run --rm seed-owner
+#    Migration không seed người dùng nào và KHÔNG có route đăng ký công khai, nên
+#    thiếu bước này thì /healthz trả 200 và không một ai đăng nhập được. Lệnh in ra
+#    một link mời — owner tự đặt mật khẩu, không ai khác biết nó. deploy/README.md §8.2.1.
+#    ⚠️ ĐỪNG cắm vào pipeline: link dùng một lần, và chạy lần hai sẽ bị chính script
+#    từ chối khi đã có tài khoản active.
+# ------------------------
+.deploy:
+  stage: deploy
+  variables:
+    GIT_STRATEGY: none # tự pull vào $DEPLOY_PATH ở dưới
+    # ── CŨ (AWS): file deploy không có postgres/minio vì dùng Aurora + S3.
+    # COMPOSE_FILE: docker-compose.dev.yml
+    # ── MỚI (2026-08-19, chuyển sang server on-prem): file có thêm service
+    #    `postgres` (thay Aurora) và `minio` (thay S3). `docker-compose.dev.yml`
+    #    vẫn còn trong repo, dùng lại nếu quay về Aurora + S3.
+    COMPOSE_FILE: docker-compose.onprem.yaml
+  before_script:
+    - aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${ECR_URL}
+    - git config --global url."https://cicd:${CI_TOKEN}@gitlab.noble.vn/".insteadOf "https://gitlab.noble.vn/"
+    - |
+      REPO_URL="https://gitlab.noble.vn/fintech-and-ai-development-center/ai-projects/odyssey-project/odyssey-portal-backend.git"
+
+      if [ ! -d "$DEPLOY_PATH" ]; then
+        git clone "$REPO_URL" "$DEPLOY_PATH"
+        cd "$DEPLOY_PATH"
+      else
+        cd "$DEPLOY_PATH"
+        git reset --hard
+      fi
+    - git checkout ${CI_COMMIT_BRANCH}
+    - git pull
+    # ── CŨ: HAI file env cho compose lấy từ Secrets Manager (fetch_secrets.sh).
+    #    `unset` key tĩnh TRƯỚC khi gọi: GitLab CI/CD Variables có AWS_ACCESS_KEY_ID cho
+    #    job build, và env đó ĐÈ instance role của EC2 — IAM user kia chỉ có quyền ECR
+    #    nên GetSecretValue trả AccessDeniedException. Login ECR ở trên đã xong nên bỏ
+    #    key đi không ảnh hưởng `compose pull`.
+    # - unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+    #
+    # ── MỚI (2026-08-19): HAI file env lấy từ GitLab CI/CD Variables
+    #    ($ODYSSEY_SECRET_BACKEND_ENV + $ODYSSEY_SECRET_MIGRATE_ENV). Không gọi AWS nữa
+    #    nên KHÔNG cần unset key tĩnh, máy deploy không cần `aws` cli và instance role
+    #    không cần GetSecretValue.
+    - ODYSSEY_ENV=${ENV} bash ./fetch_secrets.sh
+  script:
+    # CHỈ pull image APP (ba service dùng chung image ECR theo IMAGE_TAG) — nó là thứ
+    # DUY NHẤT đổi giữa hai lần deploy. `pull` trần kéo cả image hạ tầng, và ngày
+    # `minio/minio` biến khỏi Docker Hub (2026-09-29: «pull access denied, repository
+    # does not exist») là MỌI deploy gãy trong khi container minio trên host vẫn chạy
+    # tốt. Image hạ tầng đã có sẵn trên host; `up -d` chỉ kéo khi THIẾU (pull_policy
+    # mặc định `missing`). KHÔNG dùng `--ignore-pull-failures`: nó nuốt luôn lỗi pull
+    # của image app, và deploy "xanh" với image cũ.
+    - docker compose -f ${COMPOSE_FILE} pull migrate backend worker crawl-worker
+    # Migration TRƯỚC, và `run --rm` chứ không `up -d migrate`: `up -d` trả về ngay
+    # nên migration đỏ vẫn cho job xanh. `run` chạy đồng bộ, trả đúng exit code.
+    - docker compose -f ${COMPOSE_FILE} run --rm migrate
+    # `--no-build`: image vắng mặt thì PHẢI gãy, không build tại chỗ từ $DEPLOY_PATH.
+    - docker compose -f ${COMPOSE_FILE} up -d --no-build --wait
+  after_script:
+    # `after_script` chạy CẢ KHI job đỏ — khẳng định "Deployed" vô điều kiện đã in ra
+    # ngay sau ba lần deploy hỏng liên tiếp. $CI_JOB_STATUS có sẵn ở đây đúng vì việc
+    # này. Khi hỏng thì in trạng thái + log: lỗi tầng container (healthcheck đỏ,
+    # initdb chết) không nằm trong log ứng dụng, và không có nó thì phải SSH vào máy
+    # deploy mới biết chuyện gì xảy ra.
+    - |
+      # after_script mở shell mới ở thư mục build (GIT_STRATEGY: none) nên phải cd lại.
+      cd "$DEPLOY_PATH" || exit 0
+      if [ "$CI_JOB_STATUS" = "success" ]; then
+        echo "Deployed ${ECR_URL}/${APP_NAME}:${IMAGE_TAG} — kiểm tra GET /healthz"
+      else
+        echo "=== DEPLOY HỎNG (${IMAGE_TAG}) — trạng thái container ==="
+        docker compose -f ${COMPOSE_FILE} ps -a || true
+        echo "=== log 40 dòng cuối mỗi service ==="
+        docker compose -f ${COMPOSE_FILE} logs --tail=40 || true
+        echo "=== kết quả healthcheck gần nhất của postgres ==="
+        docker inspect --format '{{json .State.Health}}' \
+          "$(docker compose -f ${COMPOSE_FILE} ps -aq postgres)" 2>/dev/null || true
+      fi
+
+deploy:dev:
+  extends: .deploy
+  tags:
+    - odyssey-dev-runner
+  environment:
+    name: dev
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+      when: on_success
+      variables:
+        ENV: dev
+        # Home của user runner (shell executor chạy dưới `gitlab-runner`, KHÔNG phải
+        # `ubuntu`) — trỏ ra ngoài home đó thì `git clone` gãy ở mkdir: Permission denied.
+        DEPLOY_PATH: /home/gitlab-runner/odyssey/odyssey-portal-backend
+  needs:
+    - build:image:dev
+
+# UAT giống dev: postgres + minio on-prem, env từ GitLab Variables scope `uat`.
+deploy:uat:
+  extends: deploy:dev
+  tags:
+    - odyssey-uat-runner
+  environment:
+    name: uat
+  rules:
+    - if: $CI_COMMIT_BRANCH == "uat"
+      when: on_success
+      variables:
+        ENV: uat
+        DEPLOY_PATH: /home/gitlab-runner/odyssey/odyssey-portal-backend
+  needs:
+    - build:image:uat
+
+deploy:prod:
+  extends: .deploy
+  tags:
+    - odyssey-prod-runner
+  environment:
+    name: prod
+  rules:
+    - if: $CI_COMMIT_BRANCH == "prod"
+      when: on_success
+      variables:
+        ENV: prod
+        DEPLOY_PATH: /home/gitlab-runner/odyssey/odyssey-portal-backend
+  needs:
+    - build:image:prod

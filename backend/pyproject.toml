@@ -1,0 +1,61 @@
+[project]
+name = "portal"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "asyncpg>=0.30",
+    "pydantic-settings>=2.6",
+    "alembic>=1.14",
+    "psycopg[binary]>=3.2",
+    "sqlalchemy>=2.0",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    # Hạ tầng giữ sẵn (compose có redis) — chưa module nào dùng; core/redis.py là factory.
+    "redis>=5.2",
+    # Kho tệp S3/MinIO (core/storage.py) — async vì upload nằm trên đường người dùng chờ.
+    "aioboto3>=13.2",
+    # Bóc chữ «Tài liệu tra cứu» (kb/clients/extract.py): PDF có lớp chữ · DOCX · XLSX.
+    "pypdf>=5.1",
+    "python-docx>=1.1",
+    "openpyxl>=3.1",
+    "qdrant-client>=1.12",
+    # Thumbnail WebP cho ảnh kéo về kho (kb/storage/thumbnail.py).
+    "pillow>=10.2",
+    # FastAPI cần để đọc multipart (POST /kb/files) — không import trực tiếp.
+    "python-multipart>=0.0.20",
+    "httpx>=0.28",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=1.0",
+    # Postgres thật (chạy migration) — dịch vụ ngoài khác (embed, Qdrant, S3) được fake trong test.
+    "testcontainers[postgres]>=4.15",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/portal"]
+
+[tool.ruff]
+line-length = 120
+src = ["src", "tests"]
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.flake8-bugbear]
+# B008 bắt default là lời gọi hàm (mutable dựng một lần). FastAPI cố ý dùng đúng cơ chế đó:
+# `Depends(...)`/`Query(...)`/`File(...)`/`Form(...)` trả marker bất biến — miễn trừ, không tắt luật.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.File", "fastapi.Form"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = ["integration: cần Postgres container"]
